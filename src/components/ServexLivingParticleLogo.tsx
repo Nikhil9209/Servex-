@@ -22,6 +22,10 @@ export interface ServexLivingParticleLogoProps {
    */
   showWordmark?: boolean;
   /**
+   * Particle shape: 'dots' (crisp white circular points) or 'dashes' (slanted line segments). Defaults to 'dots'.
+   */
+  particleShape?: 'dots' | 'dashes';
+  /**
    * Shared progress animation for intro timing (0 to 1)
    */
   introProgress?: Animated.Value;
@@ -41,6 +45,7 @@ interface FramePaths {
 export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> = ({
   width: customWidth,
   showWordmark = true,
+  particleShape = 'dots',
   introProgress,
   containerStyle,
 }) => {
@@ -59,7 +64,7 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
   const fieldDepthPathRef = useRef<any>(null);
 
   // Fallback state for platforms where setNativeProps is bypassed
-  const [initialPaths] = useState(() => generateFramePaths(0, 1.0));
+  const [initialPaths] = useState(() => generateFramePaths(0, 1.0, particleShape));
   const [currentPaths, setCurrentPaths] = useState<FramePaths>(initialPaths);
 
   // Internal time reference
@@ -137,7 +142,7 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
       // Flow strength ramps smoothly from 0.3 to 1.0 during the first 0.8s
       const flowStrength = Math.min(1.0, 0.3 + (Date.now() - startTimeRef.current) * 0.001);
 
-      const paths = generateFramePaths(elapsed, flowStrength);
+      const paths = generateFramePaths(elapsed, flowStrength, particleShape);
 
       const updatedLogoWhite = updatePathD(logoWhitePathRef, paths.logoWhite);
       const updatedLogoAccent = updatePathD(logoAccentPathRef, paths.logoAccent);
@@ -164,7 +169,9 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
         cancelAnimationFrame(rafIdRef.current);
       }
     };
-  }, []);
+  }, [particleShape]);
+
+  const isDots = particleShape === 'dots';
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -186,42 +193,42 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
           viewBox="0 0 270 230"
           style={styles.svg}
         >
-          {/* Layer 1: Ambient field deep dashes (faint slate/silver) */}
+          {/* Layer 1: Ambient field deep dots/dashes (soft slate/silver) */}
           <Path
             ref={fieldDepthPathRef}
             d={currentPaths.fieldDepth}
             stroke="#64748B"
-            strokeWidth={1.15}
+            strokeWidth={isDots ? 2.0 : 1.15}
             strokeLinecap="round"
-            strokeOpacity={0.22}
+            strokeOpacity={0.25}
           />
 
-          {/* Layer 2: Ambient field bright dashes (soft platinum) */}
+          {/* Layer 2: Ambient field bright dots/dashes (soft platinum) */}
           <Path
             ref={fieldWhitePathRef}
             d={currentPaths.fieldWhite}
             stroke="#CBD5E1"
-            strokeWidth={1.35}
+            strokeWidth={isDots ? 2.6 : 1.35}
             strokeLinecap="round"
-            strokeOpacity={0.38}
+            strokeOpacity={0.42}
           />
 
-          {/* Layer 3: Servex SX Logo Main (crisp pure white) */}
+          {/* Layer 3: Servex SX Logo Main (crisp luminous white dots) */}
           <Path
             ref={logoWhitePathRef}
             d={currentPaths.logoWhite}
             stroke="#FFFFFF"
-            strokeWidth={1.85}
+            strokeWidth={isDots ? 3.8 : 1.85}
             strokeLinecap="round"
-            strokeOpacity={0.96}
+            strokeOpacity={0.98}
           />
 
-          {/* Layer 4: Servex SX Logo Accents (electric ocean blue) */}
+          {/* Layer 4: Servex SX Logo Accents (electric ocean blue dots) */}
           <Path
             ref={logoAccentPathRef}
             d={currentPaths.logoAccent}
             stroke="#60A5FA"
-            strokeWidth={1.9}
+            strokeWidth={isDots ? 4.0 : 1.9}
             strokeLinecap="round"
             strokeOpacity={1.0}
           />
@@ -250,7 +257,11 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
 /**
  * Calculates continuous procedural vortex fluid wave paths for all 361 SX particles
  */
-function generateFramePaths(time: number, flowStrength: number): FramePaths {
+function generateFramePaths(
+  time: number,
+  flowStrength: number,
+  shape: 'dots' | 'dashes' = 'dots'
+): FramePaths {
   let logoWhite = '';
   let logoAccent = '';
   let fieldWhite = '';
@@ -261,6 +272,7 @@ function generateFramePaths(time: number, flowStrength: number): FramePaths {
   const CY = 115;
   const SPAN_X = 240;
   const SPAN_Y = 200;
+  const isDots = shape === 'dots';
 
   for (let i = 0; i < count; i++) {
     const p: DashParticle = SX_DASH_PARTICLES[i];
@@ -291,24 +303,28 @@ function generateFramePaths(time: number, flowStrength: number): FramePaths {
     const cx = X0 + dispX;
     const cy = Y0 + dispY;
 
-    // Dynamic dash orientation:
-    // Flow field tangent is alpha + PI / 2, tilted smoothly by the local wave gradient
-    const waveTilt = (radialWave * 0.22 + harmonicWave * 0.16) * flowStrength;
-    const angle = alpha + Math.PI / 2 + waveTilt;
+    let seg = '';
 
-    // Dynamic dash length with subtle breathing
-    const len = p.baseLength * (1 + breathWave * 0.12);
-    const halfL = len * 0.5;
+    if (isDots) {
+      // Circular white dot: zero-displacement segment with strokeLinecap="round"
+      seg = `M${(cx - 0.05).toFixed(1)} ${cy.toFixed(1)}h0.1`;
+    } else {
+      // Slanted dash particle with flow field tangent
+      const waveTilt = (radialWave * 0.22 + harmonicWave * 0.16) * flowStrength;
+      const angle = alpha + Math.PI / 2 + waveTilt;
+      const len = p.baseLength * (1 + breathWave * 0.12);
+      const halfL = len * 0.5;
 
-    const cosA = Math.cos(angle);
-    const sinA = Math.sin(angle);
+      const cosA = Math.cos(angle);
+      const sinA = Math.sin(angle);
 
-    const x1 = (cx - halfL * cosA).toFixed(1);
-    const y1 = (cy - halfL * sinA).toFixed(1);
-    const x2 = (cx + halfL * cosA).toFixed(1);
-    const y2 = (cy + halfL * sinA).toFixed(1);
+      const x1 = (cx - halfL * cosA).toFixed(1);
+      const y1 = (cy - halfL * sinA).toFixed(1);
+      const x2 = (cx + halfL * cosA).toFixed(1);
+      const y2 = (cy + halfL * sinA).toFixed(1);
 
-    const seg = `M${x1} ${y1}L${x2} ${y2}`;
+      seg = `M${x1} ${y1}L${x2} ${y2}`;
+    }
 
     if (p.isLogo) {
       if (p.isAccent) {

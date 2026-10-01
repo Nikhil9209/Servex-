@@ -124,10 +124,11 @@ export const LoginScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.cardContainer}>
-          {/* Living SX Dash Particle Logo (Continuous Fluid Wave Motion) */}
+          {/* Living SX White Dot Particle Logo (Continuous Fluid Wave Motion) */}
           <ServexLivingParticleLogo
             introProgress={progressAnim}
             showWordmark={true}
+            particleShape="dots"
           />
 
           {/* Animated Authentication Interface (Smoothly appears underneath logo at 1.7s) */}
