@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,16 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
+  Animated,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { fonts } from '../../theme/tokens';
 import { useAuth } from '../../context/AuthContext';
-import { ServexLogo } from '../../components/ServexLogo';
+import { ParticleLogoAssembly } from '../../components/ParticleLogoAssembly';
 import { GoogleIcon } from '../../components/GoogleIcon';
+
+// Track whether the particle assembly has already completed once in this session
+let hasViewedParticleIntro = false;
 
 export const LoginScreen: React.FC = () => {
   const {
@@ -33,6 +37,36 @@ export const LoginScreen: React.FC = () => {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
+
+  // Animation values: if user already saw the intro, start at 1; otherwise run 2.0s choreography
+  const initialProgress = hasViewedParticleIntro ? 1 : 0;
+  const [progressAnim] = useState(() => new Animated.Value(initialProgress));
+
+  useEffect(() => {
+    if (!hasViewedParticleIntro) {
+      hasViewedParticleIntro = true;
+    }
+  }, []);
+
+  const formOpacity = useMemo(
+    () =>
+      progressAnim.interpolate({
+        inputRange: [0, 0.82, 1.0],
+        outputRange: [0, 0, 1],
+        extrapolate: 'clamp',
+      }),
+    [progressAnim]
+  );
+
+  const formTranslateY = useMemo(
+    () =>
+      progressAnim.interpolate({
+        inputRange: [0, 0.82, 1.0],
+        outputRange: [24, 24, 0],
+        extrapolate: 'clamp',
+      }),
+    [progressAnim]
+  );
 
   const handleLogin = async () => {
     if (isSubmitting) return;
@@ -83,20 +117,32 @@ export const LoginScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.cardContainer}>
-          {/* Top Header */}
-          <View style={styles.header}>
-            <ServexLogo size={42} showBadge={true} containerStyle={styles.logoMargin} />
-            <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>Sign in to continue</Text>
-          </View>
+          {/* Hero Servex Logo Particle Assembly Animation */}
+          <ParticleLogoAssembly
+            progressAnim={progressAnim}
+            allowSkip={true}
+          />
 
-          {/* Error Banner */}
-          {authError ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorIcon}>⚠️</Text>
-              <Text style={styles.errorText}>{authError}</Text>
+          {/* Animated Authentication Interface (Smoothly appears underneath logo at 1.7s) */}
+          <Animated.View
+            style={{
+              opacity: formOpacity,
+              transform: [{ translateY: formTranslateY }],
+            }}
+          >
+            {/* Top Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Welcome to Servex</Text>
+              <Text style={styles.subtitle}>Sign in to continue</Text>
             </View>
-          ) : null}
+
+            {/* Error Banner */}
+            {authError ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorIcon}>⚠️</Text>
+                <Text style={styles.errorText}>{authError}</Text>
+              </View>
+            ) : null}
 
           {/* Primary Option: Continue with Google */}
           <Pressable
@@ -247,8 +293,9 @@ export const LoginScreen: React.FC = () => {
               </Pressable>
             </View>
           </View>
-        </View>
-      </ScrollView>
+        </Animated.View>
+      </View>
+    </ScrollView>
 
       {/* Forgot Password Modal */}
       <Modal
@@ -310,14 +357,14 @@ export const LoginScreen: React.FC = () => {
 const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#050505',
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 36,
+    paddingVertical: 24,
   },
   cardContainer: {
     width: '100%',
@@ -325,7 +372,8 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 26,
+    marginTop: 6,
+    marginBottom: 20,
   },
   logoMargin: {
     marginBottom: 16,
