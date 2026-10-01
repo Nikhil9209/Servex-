@@ -9,22 +9,18 @@ import {
   Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { SX_DASH_PARTICLES, DashParticle } from './sxDashParticlesData';
+import { SX_DOT_PARTICLES, SxDotParticle } from './sxDashParticlesData';
 import { fonts } from '../theme/tokens';
 
 export interface ServexLivingParticleLogoProps {
   /**
-   * Width of the particle field in dp (defaults to ~70% of screen width, ~260-280dp)
+   * Width of the SX particle logo in dp (defaults to balanced ~30-32% of screen width, ~115-125dp)
    */
   width?: number;
   /**
    * Whether to show the clean SERVEX wordmark underneath
    */
   showWordmark?: boolean;
-  /**
-   * Particle shape: 'dots' (crisp white circular points) or 'dashes' (slanted line segments). Defaults to 'dots'.
-   */
-  particleShape?: 'dots' | 'dashes';
   /**
    * Shared progress animation for intro timing (0 to 1)
    */
@@ -35,37 +31,26 @@ export interface ServexLivingParticleLogoProps {
   containerStyle?: ViewStyle;
 }
 
-interface FramePaths {
-  logoWhite: string;
-  logoAccent: string;
-  fieldWhite: string;
-  fieldDepth: string;
-}
-
 export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> = ({
   width: customWidth,
   showWordmark = true,
-  particleShape = 'dots',
   introProgress,
   containerStyle,
 }) => {
   const windowDims = Dimensions.get('window');
   const screenWidth = windowDims.width;
 
-  // Proportions matching reference image: ~68-72% of screen width (e.g. ~260-280dp)
-  const width = customWidth || Math.min(Math.max(Math.round(screenWidth * 0.70), 250), 285);
-  // Aspect ratio is 270 / 230 ≈ 1.174
-  const height = Math.round(width * (230 / 270));
+  // Compact, balanced size (~30-32% screen width, ~115 to 128dp)
+  const width = customWidth || Math.min(Math.max(Math.round(screenWidth * 0.31), 110), 128);
+  // SX logo aspect ratio is ~1.428 (width / height)
+  const height = Math.round(width / 1.428);
 
-  // SVG Native Path Refs for ultra-high performance 60 FPS zero-overhead updates
-  const logoWhitePathRef = useRef<any>(null);
-  const logoAccentPathRef = useRef<any>(null);
-  const fieldWhitePathRef = useRef<any>(null);
-  const fieldDepthPathRef = useRef<any>(null);
+  // SVG Native Path Ref for ultra-high performance 60 FPS zero-overhead updates
+  const pathRef = useRef<any>(null);
 
   // Fallback state for platforms where setNativeProps is bypassed
-  const [initialPaths] = useState(() => generateFramePaths(0, 1.0, particleShape));
-  const [currentPaths, setCurrentPaths] = useState<FramePaths>(initialPaths);
+  const [initialPath] = useState(() => generateFramePath(0, 1.0));
+  const [currentPath, setCurrentPath] = useState<string>(initialPath);
 
   // Internal time reference
   const startTimeRef = useRef(0);
@@ -142,19 +127,16 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
       // Flow strength ramps smoothly from 0.3 to 1.0 during the first 0.8s
       const flowStrength = Math.min(1.0, 0.3 + (Date.now() - startTimeRef.current) * 0.001);
 
-      const paths = generateFramePaths(elapsed, flowStrength, particleShape);
+      const pathData = generateFramePath(elapsed, flowStrength);
 
-      const updatedLogoWhite = updatePathD(logoWhitePathRef, paths.logoWhite);
-      const updatedLogoAccent = updatePathD(logoAccentPathRef, paths.logoAccent);
-      const updatedFieldWhite = updatePathD(fieldWhitePathRef, paths.fieldWhite);
-      const updatedFieldDepth = updatePathD(fieldDepthPathRef, paths.fieldDepth);
+      const updated = updatePathD(pathRef, pathData);
 
       // If direct native props / DOM mutation wasn't available, throttle React state update to 30fps fallback
-      if (!updatedLogoWhite || !updatedLogoAccent || !updatedFieldWhite || !updatedFieldDepth) {
+      if (!updated) {
         const now = Date.now();
         if (now - lastStateUpdateTime > 32) {
           lastStateUpdateTime = now;
-          setCurrentPaths(paths);
+          setCurrentPath(pathData);
         }
       }
 
@@ -169,13 +151,11 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
         cancelAnimationFrame(rafIdRef.current);
       }
     };
-  }, [particleShape]);
-
-  const isDots = particleShape === 'dots';
+  }, []);
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {/* The SX Living Particle Field in Vortex Wave Motion */}
+      {/* The Servex SX White Dot Particle Logo in Continuous Fluid Wave Motion */}
       <Animated.View
         style={[
           styles.fieldWrapper,
@@ -190,47 +170,17 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
         <Svg
           width={width}
           height={height}
-          viewBox="0 0 270 230"
+          viewBox="0 0 160 112"
           style={styles.svg}
         >
-          {/* Layer 1: Ambient field deep dots/dashes (soft slate/silver) */}
+          {/* All dots in pure white, forming ONLY the Servex SX logo */}
           <Path
-            ref={fieldDepthPathRef}
-            d={currentPaths.fieldDepth}
-            stroke="#64748B"
-            strokeWidth={isDots ? 2.0 : 1.15}
-            strokeLinecap="round"
-            strokeOpacity={0.25}
-          />
-
-          {/* Layer 2: Ambient field bright dots/dashes (soft platinum) */}
-          <Path
-            ref={fieldWhitePathRef}
-            d={currentPaths.fieldWhite}
-            stroke="#CBD5E1"
-            strokeWidth={isDots ? 2.6 : 1.35}
-            strokeLinecap="round"
-            strokeOpacity={0.42}
-          />
-
-          {/* Layer 3: Servex SX Logo Main (crisp luminous white dots) */}
-          <Path
-            ref={logoWhitePathRef}
-            d={currentPaths.logoWhite}
+            ref={pathRef}
+            d={currentPath}
             stroke="#FFFFFF"
-            strokeWidth={isDots ? 3.8 : 1.85}
+            strokeWidth={2.8}
             strokeLinecap="round"
-            strokeOpacity={0.98}
-          />
-
-          {/* Layer 4: Servex SX Logo Accents (electric ocean blue dots) */}
-          <Path
-            ref={logoAccentPathRef}
-            d={currentPaths.logoAccent}
-            stroke="#60A5FA"
-            strokeWidth={isDots ? 4.0 : 1.9}
-            strokeLinecap="round"
-            strokeOpacity={1.0}
+            strokeOpacity={0.96}
           />
         </Svg>
       </Animated.View>
@@ -255,106 +205,45 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
 };
 
 /**
- * Calculates continuous procedural vortex fluid wave paths for all 361 SX particles
+ * Calculates continuous procedural fluid wave paths for all 182 white SX dots
  */
-function generateFramePaths(
-  time: number,
-  flowStrength: number,
-  shape: 'dots' | 'dashes' = 'dots'
-): FramePaths {
-  let logoWhite = '';
-  let logoAccent = '';
-  let fieldWhite = '';
-  let fieldDepth = '';
+function generateFramePath(time: number, flowStrength: number): string {
+  let pathStr = '';
 
-  const count = SX_DASH_PARTICLES.length;
-  const CX = 135;
-  const CY = 115;
-  const SPAN_X = 240;
-  const SPAN_Y = 200;
-  const isDots = shape === 'dots';
+  const count = SX_DOT_PARTICLES.length;
+  const CX = 80;
+  const CY = 56;
+  const SPAN_X = 140;
+  const SPAN_Y = 98;
 
   for (let i = 0; i < count; i++) {
-    const p: DashParticle = SX_DASH_PARTICLES[i];
-
-    // Base coordinates in 270x230 viewBox
-    const X0 = CX + p.normX * SPAN_X;
-    const Y0 = CY + p.normY * SPAN_Y;
-
-    // Polar coordinates relative to vortex center
-    const dx = X0 - CX;
-    const dy = Y0 - CY;
-    const r = Math.sqrt(dx * dx + dy * dy);
-    const alpha = Math.atan2(dy, dx);
+    const p: SxDotParticle = SX_DOT_PARTICLES[i];
 
     // Procedural fluid harmonic waves (concentric swirl + radial ripple)
-    const radialWave = Math.sin(time * 1.9 - r * 0.042 + p.phase);
-    const harmonicWave = Math.cos(time * 2.3 + p.normX * 4.2 - p.normY * 3.6);
-    const breathWave = Math.sin(time * 1.2 + r * 0.025);
+    const wave1 = Math.sin(time * 2.2 + p.normY * 4.8 + p.normX * 3.2 + p.phase);
+    const wave2 = Math.cos(time * 2.5 + p.normX * 5.2 - p.normY * 3.6);
+    const wave3 = Math.sin(time * 1.5 + (p.normX * p.normX + p.normY * p.normY) * 6.0);
 
-    // Fluid displacement along tangential vortex flow + radial undulation
-    const flowVel = (1.9 + harmonicWave * 1.2) * flowStrength;
-    const radialVel = (radialWave * 1.5) * flowStrength;
+    // Controlled fluid displacement (amplitude ~ 1.2 to 2.2 units in 160x112 space)
+    const dx = (wave1 * 1.6 + wave3 * 0.8) * flowStrength;
+    const dy = (wave2 * 1.4 + wave1 * 0.7) * flowStrength;
 
-    // Clockwise swirl tangent: dx_tangent = -sin(alpha), dy_tangent = cos(alpha)
-    const dispX = -Math.sin(alpha) * flowVel + Math.cos(alpha) * radialVel;
-    const dispY = Math.cos(alpha) * flowVel + Math.sin(alpha) * radialVel;
+    const cx = CX + p.normX * SPAN_X + dx;
+    const cy = CY + p.normY * SPAN_Y + dy;
 
-    const cx = X0 + dispX;
-    const cy = Y0 + dispY;
-
-    let seg = '';
-
-    if (isDots) {
-      // Circular white dot: zero-displacement segment with strokeLinecap="round"
-      seg = `M${(cx - 0.05).toFixed(1)} ${cy.toFixed(1)}h0.1`;
-    } else {
-      // Slanted dash particle with flow field tangent
-      const waveTilt = (radialWave * 0.22 + harmonicWave * 0.16) * flowStrength;
-      const angle = alpha + Math.PI / 2 + waveTilt;
-      const len = p.baseLength * (1 + breathWave * 0.12);
-      const halfL = len * 0.5;
-
-      const cosA = Math.cos(angle);
-      const sinA = Math.sin(angle);
-
-      const x1 = (cx - halfL * cosA).toFixed(1);
-      const y1 = (cy - halfL * sinA).toFixed(1);
-      const x2 = (cx + halfL * cosA).toFixed(1);
-      const y2 = (cy + halfL * sinA).toFixed(1);
-
-      seg = `M${x1} ${y1}L${x2} ${y2}`;
-    }
-
-    if (p.isLogo) {
-      if (p.isAccent) {
-        logoAccent += seg;
-      } else {
-        logoWhite += seg;
-      }
-    } else {
-      if (p.opacity > 0.28) {
-        fieldWhite += seg;
-      } else {
-        fieldDepth += seg;
-      }
-    }
+    // Pure circular white dot using zero-displacement horizontal segment with strokeLinecap="round"
+    pathStr += `M${(cx - 0.05).toFixed(1)} ${cy.toFixed(1)}h0.1`;
   }
 
-  return {
-    logoWhite,
-    logoAccent,
-    fieldWhite,
-    fieldDepth,
-  };
+  return pathStr;
 }
 
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingTop: 10,
+    paddingBottom: 6,
     backgroundColor: 'transparent',
   },
   fieldWrapper: {
@@ -365,16 +254,16 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   wordmarkWrapper: {
-    marginTop: 8,
+    marginTop: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   wordmarkText: {
     fontFamily: fonts.displayBold,
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 8,
+    letterSpacing: 6,
     textTransform: 'uppercase',
   },
 });

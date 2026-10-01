@@ -128,7 +128,6 @@ export const LoginScreen: React.FC = () => {
           <ServexLivingParticleLogo
             introProgress={progressAnim}
             showWordmark={true}
-            particleShape="dots"
           />
 
           {/* Animated Authentication Interface (Smoothly appears underneath logo at 1.7s) */}
