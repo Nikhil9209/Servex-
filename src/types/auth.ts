@@ -29,6 +29,8 @@ export interface PendingRegistration {
   otpCode: string;
   otpExpiresAt: number;
   otpLastSentAt: number;
+  smsDeliveryProvider?: 'twilio' | 'fast2sms' | 'simulation';
+  smsDeliveryMessage?: string;
 }
 
 export interface AuthSession {

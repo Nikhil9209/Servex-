@@ -9,6 +9,7 @@ import {
   UserRole,
 } from '../types/auth';
 import { StorageService } from './storage';
+import { SmsService } from './smsService';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -362,6 +363,9 @@ export const AuthService = {
 
     const { code, expiresAt } = this.generateOtp();
 
+    // Dispatch OTP via live SMS Gateway (Fast2SMS for +91 / Twilio for global / Simulation fallback)
+    const smsResult = await SmsService.sendOtpSms(cleanPhone, countryCode, code);
+
     return {
       ...pending,
       phone: cleanPhone,
@@ -369,6 +373,12 @@ export const AuthService = {
       otpCode: code,
       otpExpiresAt: expiresAt,
       otpLastSentAt: Date.now(),
+      smsDeliveryProvider: smsResult.provider,
+      smsDeliveryMessage: smsResult.success
+        ? smsResult.provider === 'simulation'
+          ? 'Simulation mode active (Add FAST2SMS or TWILIO key to .env for real SMS)'
+          : `Delivered via ${smsResult.provider.toUpperCase()}`
+        : smsResult.error,
     };
   },
 

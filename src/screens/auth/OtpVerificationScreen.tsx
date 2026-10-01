@@ -146,11 +146,32 @@ export const OtpVerificationScreen: React.FC = () => {
             </Pressable>
           </View>
 
-          {/* Test/Dev helper hint so reviewer can immediately test without needing SMS gateway */}
-          {lastGeneratedOtp && (
+          {/* SMS Status: Live Cellular Dispatch vs Test Simulation */}
+          {pendingRegistration?.smsDeliveryProvider &&
+          pendingRegistration.smsDeliveryProvider !== 'simulation' ? (
+            <View style={styles.liveDeliveryBox}>
+              <View style={styles.liveHeaderRow}>
+                <View style={styles.liveIndicatorDot} />
+                <Text style={styles.liveBadgeTitle}>LIVE SMS SENT</Text>
+                <Text style={styles.liveProviderName}>
+                  via {pendingRegistration.smsDeliveryProvider === 'fast2sms' ? 'Fast2SMS' : 'Twilio'}
+                </Text>
+              </View>
+              <Text style={styles.liveDeliveryDesc}>
+                A real SMS with your 6-digit code was sent to your phone SIM card. Check your Messages inbox.
+              </Text>
+            </View>
+          ) : lastGeneratedOtp ? (
             <View style={styles.devCodeBox}>
-              <Text style={styles.devCodeTitle}>Servex Security SMS:</Text>
-              <Text style={styles.devCodeValue}>Your verification code is {lastGeneratedOtp}</Text>
+              <View style={styles.simHeaderRow}>
+                <View style={styles.simIndicatorDot} />
+                <Text style={styles.devCodeTitle}>TEST / SIMULATION MODE</Text>
+                <Text style={styles.simSubtleHint}>(No SMS gateway key in .env)</Text>
+              </View>
+              <Text style={styles.devCodeValue}>Your verification code: {lastGeneratedOtp}</Text>
+              <Text style={styles.simExplainText}>
+                To receive live SMS on your mobile phone, add EXPO_PUBLIC_FAST2SMS_API_KEY in .env
+              </Text>
               <Pressable
                 style={styles.devCodeFillBtn}
                 onPress={() => {
@@ -161,7 +182,7 @@ export const OtpVerificationScreen: React.FC = () => {
                 <Text style={styles.devCodeFillText}>Auto-fill Code</Text>
               </Pressable>
             </View>
-          )}
+          ) : null}
 
           {/* Info Banner */}
           {infoBanner && !displayError ? (
@@ -307,6 +328,43 @@ const styles = StyleSheet.create({
     color: '#1A73E8',
     fontSize: 12.5,
   },
+  liveDeliveryBox: {
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    marginBottom: 16,
+  },
+  liveHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  liveIndicatorDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#10B981',
+  },
+  liveBadgeTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#34D399',
+    fontSize: 11,
+    letterSpacing: 0.8,
+  },
+  liveProviderName: {
+    fontFamily: fonts.bodyMedium,
+    color: '#6EE7B7',
+    fontSize: 11,
+  },
+  liveDeliveryDesc: {
+    fontFamily: fonts.body,
+    color: '#D1FAE5',
+    fontSize: 12,
+    lineHeight: 16,
+  },
   devCodeBox: {
     backgroundColor: '#121620',
     borderRadius: 10,
@@ -316,18 +374,41 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     alignItems: 'center',
   },
+  simHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  simIndicatorDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#F59E0B',
+  },
   devCodeTitle: {
     fontFamily: fonts.bodyMedium,
-    color: '#8B8F95',
-    fontSize: 11,
-    textTransform: 'uppercase',
+    color: '#F59E0B',
+    fontSize: 10.5,
     letterSpacing: 0.8,
+  },
+  simSubtleHint: {
+    fontFamily: fonts.body,
+    color: '#656B77',
+    fontSize: 10,
   },
   devCodeValue: {
     fontFamily: fonts.displayBold,
     color: '#60A5FA',
     fontSize: 14,
     marginVertical: 4,
+  },
+  simExplainText: {
+    fontFamily: fonts.body,
+    color: '#8B8F95',
+    fontSize: 11,
+    textAlign: 'center',
+    marginBottom: 4,
   },
   devCodeFillBtn: {
     backgroundColor: '#1D4ED8',

@@ -172,6 +172,17 @@ async function runAllTests() {
   assert(savedCurrentSession !== null, 'Session is valid upon reopen');
   assert(savedCurrentSession?.user.email === googleEmail, 'Identifies returning user directly');
 
+  // Test 9: SMS Gateway & Delivery Provider Verification
+  console.log('\n[Test Suite 9] SMS Gateway & Delivery Provider Verification');
+  const { SmsService } = await import('./src/services/smsService');
+  const simResult = await SmsService.sendOtpSms('9876543210', '+91', '123456');
+  assert(simResult.success === true, 'SmsService dispatches successfully');
+  assert(
+    simResult.provider === 'simulation' || simResult.provider === 'fast2sms' || simResult.provider === 'twilio',
+    'SmsService provider is identified'
+  );
+  assert(withOtp.smsDeliveryProvider !== undefined, 'AuthService stores SMS delivery provider');
+
   console.log(`\n========================================`);
   console.log(`Results: ${passed} passed, ${failed} failed`);
   console.log(`========================================\n`);
