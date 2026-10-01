@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   useFonts,
   SpaceGrotesk_600SemiBold,
@@ -12,6 +12,7 @@ import { View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from './src/context/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import DiscordSplashScreen from './src/components/DiscordSplashScreen';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -20,6 +21,8 @@ export default function App() {
     IBMPlexSans_400Regular,
     IBMPlexSans_500Medium,
   });
+
+  const [showSplash, setShowSplash] = useState(true);
 
   // While fonts are loading, keep solid pitch-black screen to protect eyes
   if (!fontsLoaded) {
@@ -34,7 +37,16 @@ export default function App() {
     <AuthProvider>
       <View style={styles.container}>
         <StatusBar style="light" />
-        <RootNavigator />
+        <RootNavigator onReplaySplash={() => setShowSplash(true)} />
+
+        {/* Servex Emblem Splash Screen Animation with Rotating Monogram Logo */}
+        {showSplash && (
+          <DiscordSplashScreen
+            durationMs={5000}
+            allowSkip={true}
+            onFinish={() => setShowSplash(false)}
+          />
+        )}
       </View>
     </AuthProvider>
   );

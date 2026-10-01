@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { AuthLoadingScreen } from '../components/AuthLoadingScreen';
 import { AuthNavigator } from './AuthNavigator';
 import { ClientHomeScreen } from '../screens/client/ClientHomeScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
-import DiscordSplashScreen from '../components/DiscordSplashScreen';
 
-export const RootNavigator: React.FC = () => {
+interface RootNavigatorProps {
+  onReplaySplash?: () => void;
+}
+
+export const RootNavigator: React.FC<RootNavigatorProps> = ({ onReplaySplash }) => {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
-  const [showSplash, setShowSplash] = useState(false);
 
   // 1. Initial Authentication Check Loading Screen
   if (isLoading) {
@@ -30,16 +32,7 @@ export const RootNavigator: React.FC = () => {
         <WelcomeScreen
           user={user}
           onLogout={logout}
-          onReplaySplash={() => setShowSplash(true)}
-        />
-      )}
-
-      {/* Servex Emblem Splash Animation */}
-      {showSplash && (
-        <DiscordSplashScreen
-          durationMs={5000}
-          allowSkip={true}
-          onFinish={() => setShowSplash(false)}
+          onReplaySplash={onReplaySplash}
         />
       )}
     </View>
