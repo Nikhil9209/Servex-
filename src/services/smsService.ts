@@ -59,7 +59,9 @@ export const SmsService = {
       const indianTenDigit = cleanPhone.slice(-10);
       try {
         console.log(`[SmsService] Dispatching live cellular SMS via Fast2SMS to +91 ${indianTenDigit}...`);
-        const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+
+        // Attempt 1: Fast2SMS Dedicated OTP Route
+        let response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
           method: 'POST',
           headers: {
             authorization: fast2smsKey.trim(),
@@ -72,7 +74,28 @@ export const SmsService = {
           }),
         });
 
-        const data = await response.json();
+        let data = await response.json();
+
+        // Attempt 2: If OTP route requires website verification or fails, fallback to Quick SMS route ('q')
+        if (!data.return) {
+          console.warn('[SmsService] Fast2SMS OTP route returned:', data.message, '- attempting Quick SMS route (q)...');
+          response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+            method: 'POST',
+            headers: {
+              authorization: fast2smsKey.trim(),
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              route: 'q',
+              message: `Your Servex verification code is ${otpCode}. Valid for 5 minutes. Do not share this code.`,
+              language: 'english',
+              flash: 0,
+              numbers: indianTenDigit,
+            }),
+          });
+          data = await response.json();
+        }
+
         if (data.return) {
           console.log(`[SmsService] Real SMS delivered to +91 ${indianTenDigit} via Fast2SMS. Request ID: ${data.request_id}`);
           return { success: true, messageId: data.request_id, provider: 'fast2sms' };
