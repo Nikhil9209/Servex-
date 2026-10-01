@@ -5,15 +5,13 @@ import {
   StyleSheet,
   Animated,
   Easing,
-  Image,
   Dimensions,
   Pressable,
   ViewStyle,
 } from 'react-native';
 import { LOGO_PARTICLES, LogoParticle } from './logoParticlesData';
 import { fonts } from '../theme/tokens';
-
-const LOGO_SRC = require('../../assets/servex_logo.png');
+import { Servex3DLogo } from './Servex3DLogo';
 
 export interface ParticleLogoAssemblyProps {
   /**
@@ -143,6 +141,27 @@ export const ParticleLogoAssembly: React.FC<ParticleLogoAssemblyProps> = ({
       progress.interpolate({
         inputRange: [0, 0.58, 0.7, 1.0],
         outputRange: [0, 0, 1, 1],
+        extrapolate: 'clamp',
+      }),
+    [progress]
+  );
+
+  // 3D Perspective Rotation for assembling particle cloud
+  const particleRotateY = useMemo(
+    () =>
+      progress.interpolate({
+        inputRange: [0, 0.18, 0.58, 1.0],
+        outputRange: ['24deg', '18deg', '0deg', '0deg'],
+        extrapolate: 'clamp',
+      }),
+    [progress]
+  );
+
+  const particleRotateX = useMemo(
+    () =>
+      progress.interpolate({
+        inputRange: [0, 0.18, 0.58, 1.0],
+        outputRange: ['-14deg', '-10deg', '0deg', '0deg'],
         extrapolate: 'clamp',
       }),
     [progress]
@@ -290,32 +309,38 @@ export const ParticleLogoAssembly: React.FC<ParticleLogoAssemblyProps> = ({
             { width: logoWidth + 40, height: logoHeight + 40 },
           ]}
         >
-          {/* 1. Assembling Particles Layer */}
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          {/* 1. Assembling 3D Particles Layer (Swirls & converges in 3D perspective space) */}
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                transform: [
+                  { perspective: 900 },
+                  { rotateY: particleRotateY as any },
+                  { rotateX: particleRotateX as any },
+                ],
+              },
+            ]}
+            pointerEvents="none"
+          >
             <View style={styles.particlesCenterWrapper}>
               {renderedParticles}
             </View>
-          </View>
+          </Animated.View>
 
-          {/* 2. Solid Servex Monogram Image Layer (fades in cleanly on top) */}
+          {/* 2. 3D Servex Monogram Vector Layer (100% Vector 3D Monogram with continuous 3D tilt animation - NO STATIC IMAGE) */}
           <Animated.View
             pointerEvents="none"
             style={[
               styles.solidLogoWrapper,
               {
-                width: solidImageSize,
-                height: solidImageSize,
                 opacity: solidLogoOpacity,
               },
             ]}
           >
-            <Image
-              source={LOGO_SRC}
-              style={[
-                styles.solidLogoImage,
-                { width: solidImageSize, height: solidImageSize },
-              ]}
-              resizeMode="contain"
+            <Servex3DLogo
+              size={logoHeight}
+              enable3DTilt={true}
             />
           </Animated.View>
         </View>
@@ -380,12 +405,6 @@ const styles = StyleSheet.create({
   solidLogoWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  solidLogoImage: {
-    shadowColor: '#000000',
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
   },
   wordmarkWrapper: {
     marginTop: 8,

@@ -25,9 +25,8 @@ export default function App() {
     IBMPlexSans_500Medium,
   });
 
-  // Splash screen is disabled by default so initial launch goes directly into the integrated auth particle assembly
-  // (Returning authenticated users enter the app immediately; unauthenticated users see the 2.0s integrated particle intro)
-  const [showSplash, setShowSplash] = useState(false);
+  // 1. Initial Splash Screen: Exclusively renders Servex Monogram 3D animation
+  const [showSplash, setShowSplash] = useState(true);
 
   const handleFinishSplash = useCallback(() => {
     setShowSplash(false);
