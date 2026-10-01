@@ -56,8 +56,9 @@ export const SmsService = {
 
     // 1. Fast2SMS (Optimized for India +91 numbers)
     if (fast2smsKey && (cleanCountry === '+91' || cleanCountry === '+091')) {
+      const indianTenDigit = cleanPhone.slice(-10);
       try {
-        console.log(`[SmsService] Dispatching live cellular SMS via Fast2SMS to ${fullNumber}...`);
+        console.log(`[SmsService] Dispatching live cellular SMS via Fast2SMS to +91 ${indianTenDigit}...`);
         const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
           method: 'POST',
           headers: {
@@ -67,17 +68,18 @@ export const SmsService = {
           body: JSON.stringify({
             route: 'otp',
             variables_values: otpCode,
-            numbers: cleanPhone,
+            numbers: indianTenDigit,
           }),
         });
 
         const data = await response.json();
         if (data.return) {
-          console.log(`[SmsService] Real SMS delivered to ${fullNumber} via Fast2SMS. Request ID: ${data.request_id}`);
+          console.log(`[SmsService] Real SMS delivered to +91 ${indianTenDigit} via Fast2SMS. Request ID: ${data.request_id}`);
           return { success: true, messageId: data.request_id, provider: 'fast2sms' };
         } else {
-          console.warn('[SmsService] Fast2SMS returned error:', data.message);
-          return { success: false, provider: 'fast2sms', error: data.message };
+          const errMsg = Array.isArray(data.message) ? data.message.join(', ') : String(data.message || 'Fast2SMS dispatch failed');
+          console.warn('[SmsService] Fast2SMS returned error:', errMsg);
+          return { success: false, provider: 'fast2sms', error: errMsg };
         }
       } catch (err: any) {
         console.warn('[SmsService] Fast2SMS network error:', err?.message);
