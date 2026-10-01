@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import {
@@ -189,8 +190,56 @@ export const AuthService = {
   },
 
   /**
+   * Helper to parse access_token from return URL hash or query params
+   */
+  extractTokenFromUrl(url: string): string | null {
+    // 1. Check hash fragment (#access_token=...)
+    const hashIndex = url.indexOf('#');
+    if (hashIndex !== -1) {
+      const hash = url.substring(hashIndex + 1);
+      const params = new URLSearchParams(hash);
+      const token = params.get('access_token');
+      if (token) return token;
+    }
+    // 2. Check query fragment (?access_token=...)
+    const queryIndex = url.indexOf('?');
+    if (queryIndex !== -1) {
+      const query = url.substring(queryIndex + 1);
+      const params = new URLSearchParams(query);
+      const token = params.get('access_token');
+      if (token) return token;
+    }
+    return null;
+  },
+
+  /**
+   * Fetches user profile from Google and routes to Servex identity processor
+   */
+  async fetchAndProcessGoogleUser(accessToken: string): Promise<GoogleAuthResult> {
+    const userInfoResponse = await fetch(GOOGLE_DISCOVERY.userInfoEndpoint, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (userInfoResponse.ok) {
+      const profile = await userInfoResponse.json();
+      return this.processGoogleIdentity({
+        name: profile.name || 'Google User',
+        email: profile.email,
+        sub: profile.sub,
+        picture: profile.picture,
+      });
+    } else {
+      return {
+        status: 'ERROR',
+        errorMessage: 'Failed to retrieve profile from Google. Please try again.',
+      };
+    }
+  },
+
+  /**
    * Official Google OAuth Sign-In flow
    * Launches Google's official accounts login via browser / In-App Browser tab
+   * Seamlessly bridges Expo Go requests through the authorized Expo Proxy
    */
   async signInWithGoogle(): Promise<GoogleAuthResult> {
     const customClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
@@ -204,51 +253,60 @@ export const AuthService = {
       };
     }
 
+    const cleanClientId = customClientId.trim();
+
     try {
-      const redirectUri = AuthSession.makeRedirectUri({
-        scheme: 'servex-contractor',
-      });
-
-      const request = new AuthSession.AuthRequest({
-        clientId: customClientId.trim(),
-        scopes: ['openid', 'profile', 'email'],
-        redirectUri,
-        responseType: AuthSession.ResponseType.Token,
-        prompt: AuthSession.Prompt.SelectAccount,
-      });
-
-      const result = await request.promptAsync(GOOGLE_DISCOVERY);
-
-      if (result.type === 'cancel' || result.type === 'dismiss') {
-        return { status: 'CANCELLED' };
-      }
-
-      if (result.type === 'success' && result.params?.access_token) {
-        const userInfoResponse = await fetch(GOOGLE_DISCOVERY.userInfoEndpoint, {
-          headers: { Authorization: `Bearer ${result.params.access_token}` },
+      if (Platform.OS === 'web') {
+        const redirectUri = AuthSession.makeRedirectUri();
+        console.log('>>> [Servex Google OAuth] Web redirect URI:', redirectUri);
+        const request = new AuthSession.AuthRequest({
+          clientId: cleanClientId,
+          scopes: ['openid', 'profile', 'email'],
+          redirectUri,
+          responseType: AuthSession.ResponseType.Token,
+          prompt: AuthSession.Prompt.SelectAccount,
         });
 
-        if (userInfoResponse.ok) {
-          const profile = await userInfoResponse.json();
-          return this.processGoogleIdentity({
-            name: profile.name || 'Google User',
-            email: profile.email,
-            sub: profile.sub,
-            picture: profile.picture,
-          });
-        } else {
-          return {
-            status: 'ERROR',
-            errorMessage: 'Failed to retrieve profile from Google. Please try again.',
-          };
+        const result = await request.promptAsync(GOOGLE_DISCOVERY);
+        if (result.type === 'cancel' || result.type === 'dismiss') {
+          return { status: 'CANCELLED' };
         }
-      }
+        if (result.type === 'success' && result.params?.access_token) {
+          return await this.fetchAndProcessGoogleUser(result.params.access_token);
+        }
+      } else {
+        // Native / Expo Go: Google strictly forbids exp:// custom schemes in Web OAuth clients.
+        // Route through authorized Expo Auth Proxy (https://auth.expo.io/@nikhil9209/servex-contractor)
+        // which Google accepts as valid HTTPS, and auth.expo.io deep-links the token back to your phone.
+        const proxyRedirectUri = 'https://auth.expo.io/@nikhil9209/servex-contractor';
+        const returnUrl = AuthSession.makeRedirectUri({ scheme: 'servex-contractor' });
 
-      if (result.type === 'error') {
-        return {
-          status: 'ERROR',
-          errorMessage: result.error?.message || 'Google authentication error occurred.',
-        };
+        const googleAuthUrl =
+          `${GOOGLE_DISCOVERY.authorizationEndpoint}?` +
+          `client_id=${encodeURIComponent(cleanClientId)}&` +
+          `redirect_uri=${encodeURIComponent(proxyRedirectUri)}&` +
+          `response_type=token&` +
+          `scope=${encodeURIComponent('openid profile email')}&` +
+          `prompt=select_account`;
+
+        const startUrl =
+          `https://auth.expo.io/@nikhil9209/servex-contractor/start?` +
+          `authUrl=${encodeURIComponent(googleAuthUrl)}&` +
+          `returnUrl=${encodeURIComponent(returnUrl)}`;
+
+        console.log('>>> [Servex Google OAuth] Opening official Google Auth via proxy...');
+        const result = await WebBrowser.openAuthSessionAsync(startUrl, returnUrl);
+
+        if (result.type === 'cancel' || result.type === 'dismiss') {
+          return { status: 'CANCELLED' };
+        }
+
+        if (result.type === 'success' && result.url) {
+          const token = this.extractTokenFromUrl(result.url);
+          if (token) {
+            return await this.fetchAndProcessGoogleUser(token);
+          }
+        }
       }
 
       return { status: 'CANCELLED' };
