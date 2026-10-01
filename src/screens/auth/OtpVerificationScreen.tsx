@@ -180,10 +180,6 @@ export const OtpVerificationScreen: React.FC = () => {
               >
                 <Text style={styles.devCodeFillText}>Auto-fill Code & Continue →</Text>
               </Pressable>
-
-              <Text style={styles.simSubtleNote}>
-                💡 Real cellular SMS requires ₹100 Fast2SMS recharge. Servex test mode lets you proceed for free!
-              </Text>
             </View>
           ) : null}
 
