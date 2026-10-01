@@ -9,7 +9,7 @@ import {
   Pressable,
   ViewStyle,
 } from 'react-native';
-import { LOGO_PARTICLES, LogoParticle } from './logoParticlesData';
+import { LOGO_3D_PARTICLES, Logo3DParticle } from './logoParticles3DData';
 import { fonts } from '../theme/tokens';
 import { Servex3DLogo } from './Servex3DLogo';
 
@@ -46,6 +46,10 @@ export const ParticleLogoAssembly: React.FC<ParticleLogoAssemblyProps> = ({
   const [internalProgress] = useState(() => new Animated.Value(0));
   const progress = externalProgress || internalProgress;
 
+  // Continuous subtle 3D spatial orbit after assembly
+  const [ambientOrbitY] = useState(() => new Animated.Value(0));
+  const [ambientOrbitX] = useState(() => new Animated.Value(0));
+
   const onLogoSettledRef = useRef(onLogoSettled);
   const onAnimationCompleteRef = useRef(onAnimationComplete);
 
@@ -63,11 +67,9 @@ export const ParticleLogoAssembly: React.FC<ParticleLogoAssemblyProps> = ({
 
   // Logo proportion: ~14-16% of screen height, capped between 85dp and 115dp
   const logoHeight = Math.min(Math.max(Math.round(screenHeight * 0.14), 85), 115);
-  // SX emblem aspect ratio is ~1.42 (width / height)
-  const logoWidth = Math.round(logoHeight * 1.42);
-
-  // Image size for clean solid asset (centered square container)
-  const solidImageSize = Math.round(logoHeight * 1.18);
+  // SX emblem aspect ratio is ~1.428 (width / height)
+  const logoWidth = Math.round(logoHeight * 1.428);
+  const depthScale = Math.round(logoHeight * 0.35); // 3D depth volume
 
   // Run the 2.0-second native animated choreo
   useEffect(() => {
@@ -80,7 +82,7 @@ export const ParticleLogoAssembly: React.FC<ParticleLogoAssemblyProps> = ({
       useNativeDriver: true,
     });
 
-    // Listener for milestone triggers
+    // Milestone listener
     const id = progress.addListener(({ value }: { value: number }) => {
       if (value >= 0.68 && !hasSettledRef.current) {
         hasSettledRef.current = true;
@@ -94,11 +96,47 @@ export const ParticleLogoAssembly: React.FC<ParticleLogoAssemblyProps> = ({
 
     anim.start();
 
+    // Continuous 3D orbit loop
+    const orbitLoop = Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(ambientOrbitY, {
+            toValue: 6,
+            duration: 2600,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(ambientOrbitX, {
+            toValue: -4,
+            duration: 2600,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(ambientOrbitY, {
+            toValue: -6,
+            duration: 2800,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(ambientOrbitX, {
+            toValue: 4,
+            duration: 2800,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    );
+    orbitLoop.start();
+
     return () => {
       progress.removeListener(id);
       anim?.stop();
+      orbitLoop.stop();
     };
-  }, [progress]);
+  }, [progress, ambientOrbitY, ambientOrbitX]);
 
   // Tap to instantly complete animation
   const handleSkip = () => {
@@ -121,67 +159,64 @@ export const ParticleLogoAssembly: React.FC<ParticleLogoAssemblyProps> = ({
     [progress]
   );
 
-  // Subtle logo scale: settle from 1.05 to 1.0
+  // Subtle logo scale settling
   const headerScale = useMemo(
     () =>
       progress.interpolate({
         inputRange: [0, 0.6, 0.75, 1.0],
-        outputRange: [1.08, 1.04, 1.0, 0.94],
+        outputRange: [1.1, 1.04, 1.0, 0.94],
         extrapolate: 'clamp',
       }),
     [progress]
   );
 
-  // Solid logo opacity:
-  // 0.0 to 0.60: 0
-  // 0.60 to 0.70: cross-fades in cleanly from 0 -> 1
-  // 0.70 to 1.0: remains 1
+  // 3D Camera / Spatial Rotation across the assembly sequence
+  // Starts angled in 3D space (-35deg, 18deg) so particles visibly float in 3D space,
+  // then swoops to center (0deg) as they assemble into the 3D logo
+  const stageRotateY = useMemo(
+    () =>
+      progress.interpolate({
+        inputRange: [0, 0.25, 0.65, 1.0],
+        outputRange: ['-35deg', '-22deg', '0deg', '0deg'],
+        extrapolate: 'clamp',
+      }),
+    [progress]
+  );
+
+  const stageRotateX = useMemo(
+    () =>
+      progress.interpolate({
+        inputRange: [0, 0.25, 0.65, 1.0],
+        outputRange: ['18deg', '12deg', '0deg', '0deg'],
+        extrapolate: 'clamp',
+      }),
+    [progress]
+  );
+
+  // 3D Solid Vector Logo opacity (illuminates directly out of the particles)
   const solidLogoOpacity = useMemo(
     () =>
       progress.interpolate({
-        inputRange: [0, 0.58, 0.7, 1.0],
+        inputRange: [0, 0.55, 0.72, 1.0],
         outputRange: [0, 0, 1, 1],
         extrapolate: 'clamp',
       }),
     [progress]
   );
 
-  // 3D Perspective Rotation for assembling particle cloud
-  const particleRotateY = useMemo(
-    () =>
-      progress.interpolate({
-        inputRange: [0, 0.18, 0.58, 1.0],
-        outputRange: ['24deg', '18deg', '0deg', '0deg'],
-        extrapolate: 'clamp',
-      }),
-    [progress]
-  );
-
-  const particleRotateX = useMemo(
-    () =>
-      progress.interpolate({
-        inputRange: [0, 0.18, 0.58, 1.0],
-        outputRange: ['-14deg', '-10deg', '0deg', '0deg'],
-        extrapolate: 'clamp',
-      }),
-    [progress]
-  );
-
-  // Subtle blue ambient aura behind emblem
+  // Subtle ambient glow aura behind 3D logo
   const subtleGlowOpacity = useMemo(
     () =>
       progress.interpolate({
         inputRange: [0, 0.45, 0.68, 1.0],
-        outputRange: [0, 0.35, 0.22, 0.15],
+        outputRange: [0, 0.38, 0.25, 0.18],
         extrapolate: 'clamp',
       }),
     [progress]
   );
 
   // SERVEX wordmark:
-  // 0.0 to 0.70: hidden (0)
-  // 0.70 to 0.84: fades in (0 -> 1) with subtle upward movement (8 -> 0)
-  // 0.84 to 1.0: remains 1
+  // Fades in (0 -> 1) with subtle upward movement (8 -> 0) at 1.4s
   const wordmarkOpacity = useMemo(
     () =>
       progress.interpolate({
@@ -202,50 +237,67 @@ export const ParticleLogoAssembly: React.FC<ParticleLogoAssemblyProps> = ({
     [progress]
   );
 
-  // Render individual particle interpolations
-  const renderedParticles = useMemo(() => {
-    return LOGO_PARTICLES.map((p: LogoParticle) => {
-      // Coordinate calculation
+  // Render 3D particles in space
+  const rendered3DParticles = useMemo(() => {
+    // 3D FOV perspective projection factor
+    const fov = 350;
+
+    return LOGO_3D_PARTICLES.map((p: Logo3DParticle) => {
+      // 3D target coordinates
       const targetX = p.targetX * logoWidth;
       const targetY = p.targetY * logoHeight;
+      const targetZ = p.targetZ * depthScale;
 
-      // Initial scattered position: 1.5x - 2.0x logo radius around center
-      const scatterX = (p.targetX * 0.32 + p.scatterX * 1.38) * logoWidth;
-      const scatterY = (p.targetY * 0.32 + p.scatterY * 1.38) * logoHeight;
+      // Initial 3D space scattered position
+      const scatterX = p.scatterX * logoWidth * 0.95;
+      const scatterY = p.scatterY * logoHeight * 0.95;
+      const scatterZ = p.scatterZ * depthScale * 2.2;
 
-      // Stagger window normalized from delay (0 to 120ms => 0.0 to 0.06 normalized)
-      const stagger = (p.delay / 120) * 0.06;
-      const startMove = 0.14 + stagger;
+      // 3D perspective projection scaling for true space depth
+      const projStart = Math.max(0.4, (fov + scatterZ) / fov);
+      const projEnd = Math.max(0.7, (fov + targetZ) / fov);
+
+      const effectiveScatterX = scatterX * projStart;
+      const effectiveScatterY = scatterY * projStart;
+      const effectiveTargetX = targetX * projEnd;
+      const effectiveTargetY = targetY * projEnd;
+
+      // Stagger window normalized from delay (0 to 140ms => 0.0 to 0.07)
+      const stagger = (p.delay / 140) * 0.07;
+      const startMove = 0.12 + stagger;
       const reachTarget = 0.48 + stagger;
 
-      // X translation: scatter -> target
+      // X translation: space scatter -> 3D logo coordinate
       const translateX = progress.interpolate({
         inputRange: [0, startMove, reachTarget, 1.0],
-        outputRange: [scatterX, scatterX, targetX, targetX],
+        outputRange: [effectiveScatterX, effectiveScatterX, effectiveTargetX, effectiveTargetX],
         extrapolate: 'clamp',
       });
 
-      // Y translation: scatter -> target
+      // Y translation: space scatter -> 3D logo coordinate
       const translateY = progress.interpolate({
         inputRange: [0, startMove, reachTarget, 1.0],
-        outputRange: [scatterY, scatterY, targetY, targetY],
+        outputRange: [effectiveScatterY, effectiveScatterY, effectiveTargetY, effectiveTargetY],
+        extrapolate: 'clamp',
+      });
+
+      // 3D Depth Scale: closer particles are larger
+      const startScale = Math.min(1.4, Math.max(0.5, projStart));
+      const endScale = Math.min(1.2, Math.max(0.7, projEnd));
+      const scale = progress.interpolate({
+        inputRange: [0, startMove, reachTarget, 1.0],
+        outputRange: [startScale, startScale, endScale, endScale],
         extrapolate: 'clamp',
       });
 
       // Opacity:
-      // 0.0 -> 0.12: fades in (0 -> 0.9)
-      // 0.12 -> 0.60: visible while moving and forming (0.9 -> 1.0)
-      // 0.60 -> 0.70: cross-fades out cleanly as solid logo takes over (1.0 -> 0.0)
+      // In space: 0 -> 0.85
+      // During attraction: visible in 3D space
+      // Once logo solidifies: particles remain as glowing vertex nodes on the 3D logo!
+      const baseOpacity = p.layer === 'front' ? 1.0 : p.layer === 'bevel' ? 0.85 : 0.65;
       const opacity = progress.interpolate({
-        inputRange: [0, 0.12, 0.58, 0.68, 1.0],
-        outputRange: [0, 0.88, 1.0, 0, 0],
-        extrapolate: 'clamp',
-      });
-
-      // Scale: slightly smaller initially, crisp at target
-      const scale = progress.interpolate({
-        inputRange: [0, startMove, reachTarget, 1.0],
-        outputRange: [0.75, 0.85, 1.0, 1.0],
+        inputRange: [0, 0.12, 0.58, 0.75, 1.0],
+        outputRange: [0, 0.85, baseOpacity, baseOpacity * 0.7, baseOpacity * 0.55],
         extrapolate: 'clamp',
       });
 
@@ -269,7 +321,7 @@ export const ParticleLogoAssembly: React.FC<ParticleLogoAssemblyProps> = ({
         />
       );
     });
-  }, [progress, logoWidth, logoHeight]);
+  }, [progress, logoWidth, logoHeight, depthScale]);
 
   return (
     <Pressable
@@ -294,41 +346,30 @@ export const ParticleLogoAssembly: React.FC<ParticleLogoAssemblyProps> = ({
           style={[
             styles.ambientGlow,
             {
-              width: solidImageSize * 1.5,
-              height: solidImageSize * 1.5,
-              borderRadius: (solidImageSize * 1.5) / 2,
+              width: logoHeight * 1.8,
+              height: logoHeight * 1.8,
+              borderRadius: (logoHeight * 1.8) / 2,
               opacity: subtleGlowOpacity,
             },
           ]}
         />
 
-        {/* Center Stage for Logo / Particles */}
-        <View
+        {/* 3D Space Stage Container */}
+        <Animated.View
           style={[
             styles.stageContainer,
-            { width: logoWidth + 40, height: logoHeight + 40 },
+            {
+              width: logoWidth + 48,
+              height: logoHeight + 48,
+              transform: [
+                { perspective: 900 },
+                { rotateY: stageRotateY as any },
+                { rotateX: stageRotateX as any },
+              ],
+            },
           ]}
         >
-          {/* 1. Assembling 3D Particles Layer (Swirls & converges in 3D perspective space) */}
-          <Animated.View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                transform: [
-                  { perspective: 900 },
-                  { rotateY: particleRotateY as any },
-                  { rotateX: particleRotateX as any },
-                ],
-              },
-            ]}
-            pointerEvents="none"
-          >
-            <View style={styles.particlesCenterWrapper}>
-              {renderedParticles}
-            </View>
-          </Animated.View>
-
-          {/* 2. 3D Servex Monogram Vector Layer (100% Vector 3D Monogram with continuous 3D tilt animation - NO STATIC IMAGE) */}
+          {/* 1. 3D Servex Monogram Vector Facets (powers up under the particles with metallic gradients) */}
           <Animated.View
             pointerEvents="none"
             style={[
@@ -343,9 +384,16 @@ export const ParticleLogoAssembly: React.FC<ParticleLogoAssemblyProps> = ({
               enable3DTilt={true}
             />
           </Animated.View>
-        </View>
 
-        {/* 3. SERVEX Wordmark (fades in underneath) */}
+          {/* 2. Assembling 3D Dot Particles in Space (Particles combine directly into the 3D logo!) */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <View style={styles.particlesCenterWrapper}>
+              {rendered3DParticles}
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* 3. SERVEX Wordmark (fades in cleanly underneath 3D logo) */}
         <Animated.View
           pointerEvents="none"
           style={[
@@ -378,7 +426,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B82F6',
     shadowColor: '#60A5FA',
     shadowOpacity: 0.8,
-    shadowRadius: 24,
+    shadowRadius: 28,
     shadowOffset: { width: 0, height: 0 },
     elevation: 6,
   },
@@ -398,8 +446,8 @@ const styles = StyleSheet.create({
   particle: {
     position: 'absolute',
     shadowColor: '#60A5FA',
-    shadowOpacity: 0.4,
-    shadowRadius: 2,
+    shadowOpacity: 0.5,
+    shadowRadius: 3,
     shadowOffset: { width: 0, height: 0 },
   },
   solidLogoWrapper: {
@@ -407,7 +455,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   wordmarkWrapper: {
-    marginTop: 8,
+    marginTop: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
