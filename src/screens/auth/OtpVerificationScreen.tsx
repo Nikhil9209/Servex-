@@ -19,6 +19,7 @@ export const OtpVerificationScreen: React.FC = () => {
   const {
     pendingRegistration,
     verifyOtpCode,
+    skipOtpVerification,
     resendOtpCode,
     setAuthScreenStep,
     cancelRegistration,
@@ -72,6 +73,16 @@ export const OtpVerificationScreen: React.FC = () => {
       // Handled in context
     } finally {
       setIsVerifying(false);
+    }
+  };
+
+  const handleSkipVerification = async () => {
+    setLocalError(null);
+    clearAuthError();
+    try {
+      await skipOtpVerification();
+    } catch {
+      // Handled in context
     }
   };
 
@@ -231,6 +242,22 @@ export const OtpVerificationScreen: React.FC = () => {
             ) : (
               <Text style={styles.verifyBtnText}>VERIFY CODE</Text>
             )}
+          </Pressable>
+
+          {/* Skip / Verify Later Action */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.verifyLaterBtn,
+              pressed && styles.verifyLaterBtnPressed,
+            ]}
+            onPress={handleSkipVerification}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Verify phone later"
+          >
+            <Text style={styles.verifyLaterText}>
+              Verify phone later (Enter Servex) →
+            </Text>
           </Pressable>
 
           {/* Resend Cooldown Section */}
@@ -487,6 +514,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14.5,
     letterSpacing: 1.2,
+  },
+  verifyLaterBtn: {
+    marginTop: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#2A303C',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+  },
+  verifyLaterBtnPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#3D4450',
+  },
+  verifyLaterText: {
+    fontFamily: fonts.bodyMedium,
+    color: '#94A3B8',
+    fontSize: 13.5,
+    letterSpacing: 0.3,
   },
   resendSection: {
     alignItems: 'center',

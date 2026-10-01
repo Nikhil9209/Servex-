@@ -420,7 +420,7 @@ export const AuthService = {
       avatarUrl: pending.avatarUrl,
       authProvider: pending.authProvider,
       createdAt: new Date().toISOString(),
-      isPhoneVerified: true,
+      isPhoneVerified: pending.isPhoneVerified ?? true,
       passwordHash: pending.passwordHash,
     };
 
@@ -438,7 +438,7 @@ export const AuthService = {
         avatarUrl: newUser.avatarUrl,
         authProvider: newUser.authProvider,
         createdAt: newUser.createdAt,
-        isPhoneVerified: true,
+        isPhoneVerified: newUser.isPhoneVerified,
       },
       expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
     };

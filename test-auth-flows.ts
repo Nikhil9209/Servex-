@@ -183,6 +183,31 @@ async function runAllTests() {
   );
   assert(withOtp.smsDeliveryProvider !== undefined, 'AuthService stores SMS delivery provider');
 
+  // Test 10: Flow G - Progressive Verification & Verify Later
+  console.log('\n[Test Suite 10] Flow G - Progressive Verification & Verify Later');
+  const progressiveEmail = `builder_${Date.now()}@servex.com`;
+  const pendingBuilder: PendingRegistration = {
+    name: 'Vikram Builder',
+    email: progressiveEmail,
+    phone: '9812345678',
+    countryCode: '+91',
+    passwordHash: 'BuilderPass@2026',
+    authProvider: 'email',
+    otpCode: '112233',
+    otpExpiresAt: Date.now() + 300000,
+    otpLastSentAt: Date.now(),
+    isPhoneVerified: false, // User tapped "Verify phone later"
+  };
+
+  const { user: builderUser, session: builderSession } = await AuthService.finalizeRegistration(
+    pendingBuilder,
+    'contractor'
+  );
+  assert(builderUser.name === 'Vikram Builder', 'Builder name saved');
+  assert(builderUser.phone === '9812345678', 'Phone number preserved on profile');
+  assert(builderUser.isPhoneVerified === false, 'Phone marked unverified pending future verification');
+  assert(Boolean(builderSession.token), 'Instant entry session token generated without blocking');
+
   console.log(`\n========================================`);
   console.log(`Results: ${passed} passed, ${failed} failed`);
   console.log(`========================================\n`);

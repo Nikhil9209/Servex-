@@ -48,6 +48,7 @@ interface AuthContextType {
   }) => Promise<void>;
   submitPhoneForGoogle: (phone: string, countryCode: string) => Promise<void>;
   verifyOtpCode: (enteredOtp: string) => Promise<void>;
+  skipOtpVerification: () => Promise<void>;
   resendOtpCode: () => Promise<void>;
   selectAccountRole: (role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
@@ -317,7 +318,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       try {
         AuthService.verifyOtp(pendingRegistration, enteredOtp);
-        // OTP is verified! Proceed to Role Selection
+        // OTP is verified! Mark verified & proceed to Role Selection
+        setPendingRegistration({
+          ...pendingRegistration,
+          isPhoneVerified: true,
+        });
         setInfoBanner(null);
         setAuthScreenStep('ROLE_SELECT');
       } catch (err: any) {
@@ -327,6 +332,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     },
     [pendingRegistration]
   );
+
+  // Skip Phone Verification for now and proceed directly to Role Selection
+  const skipOtpVerification = useCallback(async () => {
+    setAuthError(null);
+    if (!pendingRegistration) {
+      setAuthError('Session expired. Please restart sign-in.');
+      setAuthScreenStep('LOGIN');
+      return;
+    }
+
+    // Set phone as unverified initially, and proceed to role selection
+    setPendingRegistration({
+      ...pendingRegistration,
+      isPhoneVerified: false,
+    });
+    setInfoBanner(null);
+    setAuthScreenStep('ROLE_SELECT');
+  }, [pendingRegistration]);
 
   // Resend OTP
   const resendOtpCode = useCallback(async () => {
@@ -415,6 +438,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authenticateWithGoogleUser,
     submitPhoneForGoogle,
     verifyOtpCode,
+    skipOtpVerification,
     resendOtpCode,
     selectAccountRole,
     logout,
