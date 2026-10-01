@@ -23,13 +23,29 @@ export const colors = {
   solarCell: '#1E3A5F',
   wallDark: '#1E2128',
   wallLight: '#2A2E37',
-  // Discord & Saw Blade Neon Dark Theme Accents (eye-friendly pitch black & vibrant violet)
-  splashBg: '#000000',
-  neonPurple: '#9D4EDD',
-  neonPurpleBright: '#C77DFF',
-  neonPurpleGlow: 'rgba(157, 78, 221, 0.35)',
-  neonCyan: '#00F5D4',
-  neonCyanGlow: 'rgba(0, 245, 212, 0.25)',
+  // Ocean & Deep Blue Commercial Accents
+  oceanBlue: '#1A73E8',
+  oceanBlueHover: '#1557B0',
+  oceanBlueDark: '#0D47A1',
+  oceanBlueLight: '#4285F4',
+  oceanBlueGlow: 'rgba(26, 115, 232, 0.25)',
+  oceanBlueSubtle: 'rgba(26, 115, 232, 0.12)',
+
+  // Commercial App Neutral Surfaces & Borders
+  black: '#000000',
+  darkBg: '#090A0D',
+  cardBg: '#121419',
+  cardBorder: '#20242D',
+  cardBorderHover: '#2E3440',
+  inputBg: '#111317',
+  inputBorder: '#232730',
+  inputBorderFocused: '#1A73E8',
+  inputPlaceholder: '#585D67',
+  errorText: '#EF4444',
+  errorBg: 'rgba(239, 68, 68, 0.12)',
+  errorBorder: 'rgba(239, 68, 68, 0.35)',
+  successText: '#10B981',
+  successBg: 'rgba(16, 185, 129, 0.12)',
 };
 
 export const fonts = {

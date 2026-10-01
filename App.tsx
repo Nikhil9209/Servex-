@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
-import { useFonts, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
-import { IBMPlexSans_400Regular, IBMPlexSans_500Medium } from '@expo-google-fonts/ibm-plex-sans';
+import React from 'react';
+import {
+  useFonts,
+  SpaceGrotesk_600SemiBold,
+  SpaceGrotesk_700Bold,
+} from '@expo-google-fonts/space-grotesk';
+import {
+  IBMPlexSans_400Regular,
+  IBMPlexSans_500Medium,
+} from '@expo-google-fonts/ibm-plex-sans';
 import { View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import WelcomeScreen from './src/screens/WelcomeScreen';
-import DiscordSplashScreen from './src/components/DiscordSplashScreen';
+import { AuthProvider } from './src/context/AuthContext';
+import { RootNavigator } from './src/navigation/RootNavigator';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -13,8 +20,6 @@ export default function App() {
     IBMPlexSans_400Regular,
     IBMPlexSans_500Medium,
   });
-
-  const [showSplash, setShowSplash] = useState(true);
 
   // While fonts are loading, keep solid pitch-black screen to protect eyes
   if (!fontsLoaded) {
@@ -26,21 +31,12 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-
-      {/* Main Contractor Application */}
-      <WelcomeScreen onReplaySplash={() => setShowSplash(true)} />
-
-      {/* 5-Second Discord-style Rotating Tool Splash Screen */}
-      {showSplash && (
-        <DiscordSplashScreen
-          durationMs={5000}
-          allowSkip={true}
-          onFinish={() => setShowSplash(false)}
-        />
-      )}
-    </View>
+    <AuthProvider>
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <RootNavigator />
+      </View>
+    </AuthProvider>
   );
 }
 

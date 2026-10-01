@@ -7,9 +7,11 @@ import {
   ScrollView,
   Image,
   Animated,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { fonts } from '../theme/tokens';
+import { User } from '../types/auth';
 
 const LOGO_IMAGE = require('../../assets/servex_logo.png');
 
@@ -18,9 +20,11 @@ export interface WelcomeScreenProps {
    * Triggers the Discord-style opening animation again.
    */
   onReplaySplash?: () => void;
+  user?: User;
+  onLogout?: () => void;
 }
 
-export default function WelcomeScreen({ onReplaySplash }: WelcomeScreenProps) {
+export default function WelcomeScreen({ onReplaySplash, user, onLogout }: WelcomeScreenProps) {
   const ctaScale = useMemo(() => new Animated.Value(1), []);
   const replayScale = useMemo(() => new Animated.Value(1), []);
 
@@ -33,6 +37,17 @@ export default function WelcomeScreen({ onReplaySplash }: WelcomeScreenProps) {
     Animated.spring(replayScale, { toValue: 0.93, useNativeDriver: true, friction: 6 }).start();
   const onPressReplayOut = () =>
     Animated.spring(replayScale, { toValue: 1, useNativeDriver: true, friction: 5 }).start();
+
+  const handleLogoutPress = () => {
+    Alert.alert('Confirm Logout', 'Are you sure you want to log out of your Servex account?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: onLogout,
+      },
+    ]);
+  };
 
   return (
     <View style={styles.container}>
@@ -47,24 +62,40 @@ export default function WelcomeScreen({ onReplaySplash }: WelcomeScreenProps) {
         <View style={styles.topHeader}>
           <View style={styles.topBrandPill}>
             <View style={styles.topBrandDot} />
-            <Text style={styles.topBrandText}>SERVEX CONTRACTOR • ONLINE</Text>
+            <Text style={styles.topBrandText}>
+              {user?.name ? `${user.name.toUpperCase()} • CONTRACTOR` : 'SERVEX CONTRACTOR • ONLINE'}
+            </Text>
           </View>
 
-          {onReplaySplash && (
-            <Pressable
-              onPress={onReplaySplash}
-              onPressIn={onPressReplayIn}
-              onPressOut={onPressReplayOut}
-              hitSlop={8}
-            >
-              <Animated.View
-                style={[styles.replayPill, { transform: [{ scale: replayScale }] }]}
+          <View style={styles.headerRightActions}>
+            {onReplaySplash && (
+              <Pressable
+                onPress={onReplaySplash}
+                onPressIn={onPressReplayIn}
+                onPressOut={onPressReplayOut}
+                hitSlop={8}
               >
-                <Text style={styles.replayIcon}>⚡</Text>
-                <Text style={styles.replayText}>Replay Intro</Text>
-              </Animated.View>
-            </Pressable>
-          )}
+                <Animated.View
+                  style={[styles.replayPill, { transform: [{ scale: replayScale }] }]}
+                >
+                  <Text style={styles.replayIcon}>⚡</Text>
+                  <Text style={styles.replayText}>Replay</Text>
+                </Animated.View>
+              </Pressable>
+            )}
+
+            {onLogout && (
+              <Pressable
+                onPress={handleLogoutPress}
+                style={styles.contractorLogoutPill}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Logout"
+              >
+                <Text style={styles.contractorLogoutText}>Logout</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {/* HERO SECTION WITH SX EMBLEM */}
@@ -183,6 +214,11 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     letterSpacing: 0.8,
   },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   replayPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -201,6 +237,22 @@ const styles = StyleSheet.create({
   replayText: {
     fontFamily: fonts.displayBold,
     color: '#EDEAE3',
+    fontSize: 10.5,
+    letterSpacing: 0.5,
+  },
+  contractorLogoutPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  contractorLogoutText: {
+    fontFamily: fonts.displayBold,
+    color: '#EF4444',
     fontSize: 10.5,
     letterSpacing: 0.5,
   },

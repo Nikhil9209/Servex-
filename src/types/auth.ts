@@ -1,0 +1,55 @@
+export type UserRole = 'client' | 'contractor';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  countryCode: string;
+  role: UserRole;
+  avatarUrl?: string;
+  authProvider: 'email' | 'google';
+  createdAt: string;
+  isPhoneVerified: boolean;
+}
+
+export interface StoredUserAccount extends User {
+  passwordHash?: string;
+}
+
+export interface PendingRegistration {
+  name: string;
+  email: string;
+  phone: string;
+  countryCode: string;
+  passwordHash?: string;
+  authProvider: 'email' | 'google';
+  googleSub?: string;
+  avatarUrl?: string;
+  otpCode: string;
+  otpExpiresAt: number;
+  otpLastSentAt: number;
+}
+
+export interface AuthSession {
+  token: string;
+  user: User;
+  expiresAt: number;
+}
+
+export interface CountryCodeItem {
+  name: string;
+  code: string;
+  dialCode: string;
+  flag: string;
+  placeholder: string;
+  minLength: number;
+  maxLength: number;
+}
+
+export type AuthScreenStep =
+  | 'LOGIN'
+  | 'REGISTER'
+  | 'PHONE_COLLECT'
+  | 'OTP_VERIFY'
+  | 'ROLE_SELECT';
