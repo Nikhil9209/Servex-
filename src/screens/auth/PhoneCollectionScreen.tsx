@@ -34,7 +34,7 @@ export const PhoneCollectionScreen: React.FC = () => {
 
   const displayError = localError || authError;
 
-  const handleSendOtp = async () => {
+  const handlePhoneSubmit = async (shouldVerify: boolean) => {
     setLocalError(null);
     clearAuthError();
 
@@ -56,7 +56,7 @@ export const PhoneCollectionScreen: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      await submitPhoneForGoogle(cleanPhone, selectedCountry.dialCode);
+      await submitPhoneForGoogle(cleanPhone, selectedCountry.dialCode, shouldVerify);
     } catch {
       // Handled in context
     } finally {
@@ -136,23 +136,37 @@ export const PhoneCollectionScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* SEND OTP Button */}
+            {/* Action Buttons: Verify Phone Number vs Verify Later */}
             <Pressable
               style={({ pressed }) => [
                 styles.sendButton,
                 pressed && styles.sendButtonPressed,
                 isSubmitting && styles.buttonDisabled,
               ]}
-              onPress={handleSendOtp}
+              onPress={() => handlePhoneSubmit(true)}
               disabled={isSubmitting}
               accessibilityRole="button"
-              accessibilityLabel="SEND OTP"
+              accessibilityLabel="Verify your phone number"
             >
               {isSubmitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.sendButtonText}>SEND OTP</Text>
+                <Text style={styles.sendButtonText}>Verify your phone number →</Text>
               )}
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.verifyLaterBtn,
+                pressed && styles.verifyLaterBtnPressed,
+                isSubmitting && styles.buttonDisabled,
+              ]}
+              onPress={() => handlePhoneSubmit(false)}
+              disabled={isSubmitting}
+              accessibilityRole="button"
+              accessibilityLabel="Verify it later"
+            >
+              <Text style={styles.verifyLaterBtnText}>Verify it later</Text>
             </Pressable>
           </View>
 
@@ -314,6 +328,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14.5,
     letterSpacing: 1.2,
+  },
+  verifyLaterBtn: {
+    marginTop: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#2A303C',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+  },
+  verifyLaterBtnPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#3D4450',
+  },
+  verifyLaterBtnText: {
+    fontFamily: fonts.bodyMedium,
+    color: '#94A3B8',
+    fontSize: 13.5,
+    letterSpacing: 0.3,
   },
   bottomSection: {
     alignItems: 'center',

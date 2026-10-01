@@ -37,7 +37,8 @@ interface AuthContextType {
     phone: string,
     countryCode: string,
     password: string,
-    agreeTerms: boolean
+    agreeTerms: boolean,
+    shouldVerifyPhone?: boolean
   ) => Promise<void>;
   startGoogleSignIn: () => Promise<void>;
   authenticateWithGoogleUser: (profile: {
@@ -46,7 +47,11 @@ interface AuthContextType {
     sub: string;
     picture?: string;
   }) => Promise<void>;
-  submitPhoneForGoogle: (phone: string, countryCode: string) => Promise<void>;
+  submitPhoneForGoogle: (
+    phone: string,
+    countryCode: string,
+    shouldVerifyPhone?: boolean
+  ) => Promise<void>;
   verifyOtpCode: (enteredOtp: string) => Promise<void>;
   skipOtpVerification: () => Promise<void>;
   resendOtpCode: () => Promise<void>;
@@ -134,7 +139,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       phone: string,
       countryCode: string,
       password: string,
-      agreeTerms: boolean
+      agreeTerms: boolean,
+      shouldVerifyPhone: boolean = true
     ) => {
       setAuthError(null);
 
@@ -153,8 +159,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthError(msg);
         throw new Error(msg);
       }
-      if (!phone.trim()) {
+      const cleanPhone = phone.replace(/\D/g, '');
+      if (!cleanPhone) {
         const msg = 'Please enter your phone number.';
+        setAuthError(msg);
+        throw new Error(msg);
+      }
+      if (!AuthService.isValidPhone(cleanPhone)) {
+        const msg = 'Please enter a valid 10-digit phone number.';
         setAuthError(msg);
         throw new Error(msg);
       }
@@ -183,11 +195,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Check duplicate phone
-      const isPhoneTaken = await AuthService.isPhoneRegistered(phone, countryCode);
+      const isPhoneTaken = await AuthService.isPhoneRegistered(cleanPhone, countryCode);
       if (isPhoneTaken) {
         const msg = 'This phone number is already linked to a Servex account.\nPlease log in instead.';
         setAuthError(msg);
         throw new Error(msg);
+      }
+
+      if (!shouldVerifyPhone) {
+        // Direct entry: phone saved to profile, skips SMS OTP entirely
+        const pendingWithoutOtp: PendingRegistration = {
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          phone: cleanPhone,
+          countryCode: countryCode || '+91',
+          passwordHash: password,
+          authProvider: 'email',
+          otpCode: '',
+          otpExpiresAt: 0,
+          otpLastSentAt: 0,
+          isPhoneVerified: false,
+        };
+        setPendingRegistration(pendingWithoutOtp);
+        setInfoBanner(null);
+        setAuthScreenStep('ROLE_SELECT');
+        return;
       }
 
       const initialPending: PendingRegistration = {
@@ -203,7 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       try {
-        const withOtp = await AuthService.requestOtpForPhone(initialPending, phone, countryCode);
+        const withOtp = await AuthService.requestOtpForPhone(initialPending, cleanPhone, countryCode);
         setPendingRegistration(withOtp);
         setLastGeneratedOtp(withOtp.otpCode);
         setInfoBanner(`Verification code sent to ${withOtp.countryCode} ${withOtp.phone}`);
@@ -280,7 +312,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Submit Phone for Google User
   const submitPhoneForGoogle = useCallback(
-    async (phone: string, countryCode: string) => {
+    async (phone: string, countryCode: string, shouldVerifyPhone: boolean = true) => {
       setAuthError(null);
       if (!pendingRegistration) {
         setAuthError('Registration session expired. Please sign in again.');
@@ -288,10 +320,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
+      const cleanPhone = phone.replace(/\D/g, '');
+      if (!cleanPhone) {
+        throw new Error('Please enter your phone number.');
+      }
+      if (!AuthService.isValidPhone(cleanPhone)) {
+        throw new Error('Please enter a valid 10-digit phone number.');
+      }
+      const isDup = await AuthService.isPhoneRegistered(cleanPhone, countryCode);
+      if (isDup) {
+        throw new Error(
+          'This phone number is already linked to a Servex account. Please log in instead.'
+        );
+      }
+
+      if (!shouldVerifyPhone) {
+        // Direct entry: phone saved on Google account, skips SMS OTP entirely
+        setPendingRegistration({
+          ...pendingRegistration,
+          phone: cleanPhone,
+          countryCode: countryCode || '+91',
+          isPhoneVerified: false,
+        });
+        setInfoBanner(null);
+        setAuthScreenStep('ROLE_SELECT');
+        return;
+      }
+
       try {
         const withOtp = await AuthService.requestOtpForPhone(
           pendingRegistration,
-          phone,
+          cleanPhone,
           countryCode
         );
         setPendingRegistration(withOtp);
