@@ -5,7 +5,6 @@ import { View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import DiscordSplashScreen from './src/components/DiscordSplashScreen';
-import { colors } from './src/theme/tokens';
 
 export default function App() {
   const [fontsLoaded] = useFonts({

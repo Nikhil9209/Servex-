@@ -1,40 +1,29 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Animated,
   Easing,
-  Dimensions,
   Image,
   ImageSourcePropType,
   Pressable,
 } from 'react-native';
-import Svg, {
-  Circle,
-  Defs,
-  LinearGradient,
-  Stop,
-} from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
-import { colors, fonts } from '../theme/tokens';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-// Default contractor rotating tool image (artistic purple saw blade + house emblem on solid black)
-const DEFAULT_TOOL_IMAGE = require('../../assets/contractor_saw_tool.png');
+// Servex Official 3D Monogram Logo (Black & Silver-White)
+const DEFAULT_LOGO_IMAGE = require('../../assets/servex_logo.png');
 
 export interface DiscordSplashScreenProps {
   /**
-   * Called when the 5-second intro animation finishes or is skipped.
+   * Called when the splash animation completes or is tapped to enter.
    */
   onFinish?: () => void;
   /**
-   * Optional custom image source if user wants to swap in their own image.
+   * Custom image source for the logo. Defaults to Servex SX emblem.
    */
   imageSource?: ImageSourcePropType;
   /**
-   * Total duration in milliseconds (defaults to 5000ms as requested).
+   * Duration in ms before auto-transitioning (default: 4200ms).
    */
   durationMs?: number;
   /**
@@ -43,163 +32,337 @@ export interface DiscordSplashScreenProps {
   allowSkip?: boolean;
 }
 
-// Discord-style dynamic loading phrases with contractor themes
-const LOADING_STEPS = [
-  'Calibrating blueprint telemetry...',
-  'Spinning diamond saw blades & motors...',
-  'Aligning 5D architectural coordinates...',
-  'Syncing contractor job site metrics...',
-  'Ready! Launching Servex Contractor OS...',
-];
+// Executive UI Proportions: 92×92dp squircle with 22dp radius
+const BOX_SIZE = 92;
+const BOX_RADIUS = 22;
 
 export default function DiscordSplashScreen({
   onFinish,
-  imageSource = DEFAULT_TOOL_IMAGE,
-  durationMs = 5000,
+  imageSource = DEFAULT_LOGO_IMAGE,
+  durationMs = 4200,
   allowSkip = true,
 }: DiscordSplashScreenProps) {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [progressPercent, setProgressPercent] = useState(0);
-
-  // Animation values using useMemo per React 19 guidelines
-  const spinAnim = useMemo(() => new Animated.Value(0), []);
-  const outerRingSpinAnim = useMemo(() => new Animated.Value(0), []);
-  const pulseScaleAnim = useMemo(() => new Animated.Value(1), []);
-  const glowPulseAnim = useMemo(() => new Animated.Value(0.7), []);
-  const progressAnim = useMemo(() => new Animated.Value(0), []);
+  // Animation values
+  const logoRotateAnim = useMemo(() => new Animated.Value(0), []);
+  const logoScaleAnim = useMemo(() => new Animated.Value(1), []);
+  const boxScaleAnim = useMemo(() => new Animated.Value(1), []);
+  const boxRotateAnim = useMemo(() => new Animated.Value(0), []);
+  const floatAnim = useMemo(() => new Animated.Value(0), []);
+  const glowPulseAnim = useMemo(() => new Animated.Value(0.3), []);
   const fadeOutAnim = useMemo(() => new Animated.Value(1), []);
-  const textFadeAnim = useMemo(() => new Animated.Value(1), []);
-  const textTranslateY = useMemo(() => new Animated.Value(0), []);
-  const particlesRotation = useMemo(() => new Animated.Value(0), []);
 
-  // Track if finish has already been called
   const hasFinishedRef = useRef(false);
 
   // Memoized interpolations
-  const toolRotate = useMemo(
+  const logoRotate = useMemo(
     () =>
-      spinAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '360deg'],
+      logoRotateAnim.interpolate({
+        inputRange: [-360, 360],
+        outputRange: ['-360deg', '360deg'],
       }),
-    [spinAnim]
+    [logoRotateAnim]
   );
 
-  const outerRingRotate = useMemo(
+  const boxRotate = useMemo(
     () =>
-      outerRingSpinAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['360deg', '0deg'],
+      boxRotateAnim.interpolate({
+        inputRange: [-360, 360],
+        outputRange: ['-360deg', '360deg'],
       }),
-    [outerRingSpinAnim]
-  );
-
-  const particlesRotate = useMemo(
-    () =>
-      particlesRotation.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '360deg'],
-      }),
-    [particlesRotation]
-  );
-
-  const progressBarWidth = useMemo(
-    () =>
-      progressAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0%', '100%'],
-      }),
-    [progressAnim]
+    [boxRotateAnim]
   );
 
   const completeSplash = useCallback(() => {
     if (hasFinishedRef.current) return;
     hasFinishedRef.current = true;
 
-    // Smooth exit transition: subtle zoom & fade out
     Animated.parallel([
       Animated.timing(fadeOutAnim, {
         toValue: 0,
-        duration: 400,
+        duration: 280,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-      Animated.timing(pulseScaleAnim, {
-        toValue: 1.12,
-        duration: 400,
+      Animated.timing(boxScaleAnim, {
+        toValue: 1.14,
+        duration: 280,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
     ]).start(() => {
       onFinish?.();
     });
-  }, [fadeOutAnim, pulseScaleAnim, onFinish]);
+  }, [fadeOutAnim, boxScaleAnim, onFinish]);
 
+  // Refined, high-end motion design:
+  // Compact, tactile, precision Swiss-watch choreography
   useEffect(() => {
-    // 1. Continuous Saw Blade Rotation (2.2s per 360 revolution)
-    const spinLoop = Animated.loop(
-      Animated.timing(spinAnim, {
-        toValue: 1,
-        duration: 2200,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    );
-    spinLoop.start();
+    let isCancelled = false;
 
-    // 2. Counter-rotating energetic blueprint orbit ring (4.2s per revolution)
-    const outerRingLoop = Animated.loop(
-      Animated.timing(outerRingSpinAnim, {
-        toValue: 1,
-        duration: 4200,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    );
-    outerRingLoop.start();
+    const runAnimationCycle = () => {
+      if (isCancelled) return;
 
-    // 3. Orbital spark particles loop (1.8s)
-    const particleLoop = Animated.loop(
-      Animated.timing(particlesRotation, {
-        toValue: 1,
-        duration: 1800,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    );
-    particleLoop.start();
-
-    // 4. Subtle Discord-style breathing pulse
-    const pulseLoop = Animated.loop(
+      // --- CYCLE 1: Refined Tilt -> Anticipation Dip -> 360 Snap ---
       Animated.sequence([
-        Animated.timing(pulseScaleAnim, {
-          toValue: 1.04,
-          duration: 1200,
+        // 1. Tilt Left (-12deg)
+        Animated.parallel([
+          Animated.timing(logoRotateAnim, {
+            toValue: -13,
+            duration: 300,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(boxRotateAnim, {
+            toValue: -4,
+            duration: 300,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]),
+        // 2. Tilt Right (+13deg)
+        Animated.parallel([
+          Animated.timing(logoRotateAnim, {
+            toValue: 13,
+            duration: 360,
+            easing: Easing.inOut(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(boxRotateAnim, {
+            toValue: 4,
+            duration: 360,
+            easing: Easing.inOut(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]),
+        // 3. Return Center (0deg)
+        Animated.parallel([
+          Animated.timing(logoRotateAnim, {
+            toValue: 0,
+            duration: 220,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(boxRotateAnim, {
+            toValue: 0,
+            duration: 220,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+        // 4. Anticipation Shrink ("make it small in between")
+        Animated.parallel([
+          Animated.timing(logoScaleAnim, {
+            toValue: 0.76,
+            duration: 250,
+            easing: Easing.inOut(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(boxScaleAnim, {
+            toValue: 0.93,
+            duration: 250,
+            easing: Easing.inOut(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.delay(70),
+        // 5. Fast 360° Spin with Spring Pop
+        Animated.parallel([
+          Animated.timing(logoRotateAnim, {
+            toValue: 360,
+            duration: 540,
+            easing: Easing.bezier(0.22, 1, 0.36, 1),
+            useNativeDriver: true,
+          }),
+          Animated.sequence([
+            Animated.timing(logoScaleAnim, {
+              toValue: 1.07,
+              duration: 360,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: true,
+            }),
+            Animated.timing(logoScaleAnim, {
+              toValue: 1.0,
+              duration: 180,
+              easing: Easing.inOut(Easing.quad),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(boxScaleAnim, {
+              toValue: 1.04,
+              duration: 360,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: true,
+            }),
+            Animated.timing(boxScaleAnim, {
+              toValue: 1.0,
+              duration: 180,
+              easing: Easing.inOut(Easing.quad),
+              useNativeDriver: true,
+            }),
+          ]),
+        ]),
+        Animated.delay(420),
+      ]).start(() => {
+        if (isCancelled) return;
+        logoRotateAnim.setValue(0); // 360deg == 0deg visually seamless
+
+        // --- CYCLE 2: Shrink -> Counter 360 Spin -> Reverse Tilt ---
+        Animated.sequence([
+          // 1. Shrink In Between
+          Animated.parallel([
+            Animated.timing(logoScaleAnim, {
+              toValue: 0.76,
+              duration: 240,
+              easing: Easing.inOut(Easing.cubic),
+              useNativeDriver: true,
+            }),
+            Animated.timing(boxScaleAnim, {
+              toValue: 0.93,
+              duration: 240,
+              easing: Easing.inOut(Easing.cubic),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.delay(60),
+          // 2. Counter 360 Spin & Pop Up
+          Animated.parallel([
+            Animated.timing(logoRotateAnim, {
+              toValue: -360,
+              duration: 540,
+              easing: Easing.bezier(0.22, 1, 0.36, 1),
+              useNativeDriver: true,
+            }),
+            Animated.sequence([
+              Animated.timing(logoScaleAnim, {
+                toValue: 1.07,
+                duration: 360,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+              }),
+              Animated.timing(logoScaleAnim, {
+                toValue: 1.0,
+                duration: 180,
+                easing: Easing.inOut(Easing.quad),
+                useNativeDriver: true,
+              }),
+            ]),
+            Animated.sequence([
+              Animated.timing(boxScaleAnim, {
+                toValue: 1.04,
+                duration: 360,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+              }),
+              Animated.timing(boxScaleAnim, {
+                toValue: 1.0,
+                duration: 180,
+                easing: Easing.inOut(Easing.quad),
+                useNativeDriver: true,
+              }),
+            ]),
+          ]),
+          Animated.delay(90),
+        ]).start(() => {
+          if (isCancelled) return;
+          logoRotateAnim.setValue(0);
+
+          // 3. Subtle Sway Right then Left
+          Animated.sequence([
+            Animated.parallel([
+              Animated.timing(logoRotateAnim, {
+                toValue: 13,
+                duration: 290,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+              }),
+              Animated.timing(boxRotateAnim, {
+                toValue: 4,
+                duration: 290,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+              }),
+            ]),
+            Animated.parallel([
+              Animated.timing(logoRotateAnim, {
+                toValue: -13,
+                duration: 340,
+                easing: Easing.inOut(Easing.cubic),
+                useNativeDriver: true,
+              }),
+              Animated.timing(boxRotateAnim, {
+                toValue: -4,
+                duration: 340,
+                easing: Easing.inOut(Easing.cubic),
+                useNativeDriver: true,
+              }),
+            ]),
+            Animated.parallel([
+              Animated.timing(logoRotateAnim, {
+                toValue: 0,
+                duration: 220,
+                easing: Easing.out(Easing.quad),
+                useNativeDriver: true,
+              }),
+              Animated.timing(boxRotateAnim, {
+                toValue: 0,
+                duration: 220,
+                easing: Easing.out(Easing.quad),
+                useNativeDriver: true,
+              }),
+            ]),
+            Animated.delay(550),
+          ]).start(() => {
+            if (!isCancelled) {
+              runAnimationCycle(); // Seamless continuous loop
+            }
+          });
+        });
+      });
+    };
+
+    runAnimationCycle();
+
+    return () => {
+      isCancelled = true;
+      logoRotateAnim.stopAnimation();
+      logoScaleAnim.stopAnimation();
+      boxScaleAnim.stopAnimation();
+      boxRotateAnim.stopAnimation();
+    };
+  }, [logoRotateAnim, logoScaleAnim, boxScaleAnim, boxRotateAnim]);
+
+  // Subtle floating micro-drift & soft ambient aura
+  useEffect(() => {
+    const floatLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -3,
+          duration: 1400,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
-        Animated.timing(pulseScaleAnim, {
-          toValue: 0.98,
-          duration: 1200,
+        Animated.timing(floatAnim, {
+          toValue: 3,
+          duration: 1400,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
       ])
     );
-    pulseLoop.start();
+    floatLoop.start();
 
-    // 5. Ambient neon glow pulse
     const glowLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(glowPulseAnim, {
-          toValue: 1,
-          duration: 900,
+          toValue: 0.5,
+          duration: 1000,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(glowPulseAnim, {
-          toValue: 0.5,
-          duration: 900,
+          toValue: 0.2,
+          duration: 1000,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
@@ -207,77 +370,16 @@ export default function DiscordSplashScreen({
     );
     glowLoop.start();
 
-    // 6. Overall 5-second Progress Bar Driver
-    const progressListenerId = progressAnim.addListener(({ value }) => {
-      setProgressPercent(Math.min(100, Math.floor(value * 100)));
-    });
-
-    Animated.timing(progressAnim, {
-      toValue: 1,
-      duration: durationMs,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (finished) {
-        completeSplash();
-      }
-    });
-
-    // 7. Dynamic status message cycler (every ~1.05s)
-    const stepInterval = setInterval(() => {
-      // Smooth fade-switch text
-      Animated.sequence([
-        Animated.timing(textFadeAnim, {
-          toValue: 0,
-          duration: 140,
-          useNativeDriver: true,
-        }),
-        Animated.timing(textTranslateY, {
-          toValue: 4,
-          duration: 0,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setCurrentStepIndex((prev) => (prev + 1) % LOADING_STEPS.length);
-        Animated.parallel([
-          Animated.timing(textFadeAnim, {
-            toValue: 1,
-            duration: 180,
-            useNativeDriver: true,
-          }),
-          Animated.timing(textTranslateY, {
-            toValue: 0,
-            duration: 180,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ]).start();
-      });
-    }, durationMs / (LOADING_STEPS.length - 0.2));
+    const timer = setTimeout(() => {
+      completeSplash();
+    }, durationMs);
 
     return () => {
-      spinLoop.stop();
-      outerRingLoop.stop();
-      particleLoop.stop();
-      pulseLoop.stop();
+      floatLoop.stop();
       glowLoop.stop();
-      progressAnim.removeListener(progressListenerId);
-      clearInterval(stepInterval);
+      clearTimeout(timer);
     };
-  }, [
-    durationMs,
-    spinAnim,
-    outerRingSpinAnim,
-    particlesRotation,
-    pulseScaleAnim,
-    glowPulseAnim,
-    progressAnim,
-    textFadeAnim,
-    textTranslateY,
-    completeSplash,
-  ]);
-
-  const toolSize = Math.min(SCREEN_WIDTH * 0.62, 260);
+  }, [durationMs, floatAnim, glowPulseAnim, completeSplash]);
 
   return (
     <Animated.View
@@ -290,182 +392,56 @@ export default function DiscordSplashScreen({
     >
       <StatusBar style="light" />
 
-      {/* Full screen touch-to-skip wrapper */}
+      {/* Touch anywhere to enter app */}
       <Pressable
         style={StyleSheet.absoluteFill}
         onPress={allowSkip ? completeSplash : undefined}
         accessible={true}
-        accessibilityLabel="Contractor Launch Intro"
+        accessibilityLabel="Servex Logo Screen"
       >
-        <View style={styles.contentWrap}>
-          {/* Top minimal status indicator */}
-          <View style={styles.topStatusContainer}>
-            <View style={styles.topBadge}>
-              <View style={styles.statusDot} />
-              <Text style={styles.statusText}>SERVEX CORE • INITIALIZING</Text>
-            </View>
-          </View>
+        <View style={styles.centerContainer}>
+          {/* Delicate Ambient Halo */}
+          <Animated.View
+            style={[
+              styles.ambientGlow,
+              {
+                opacity: glowPulseAnim,
+              },
+            ]}
+          />
 
-          {/* Central Rotating Stage */}
-          <View style={styles.centerStage}>
-            {/* Background Neon Aura Glow */}
+          {/* Precision 92×92dp Luxury Squircle Box */}
+          <Animated.View
+            style={[
+              styles.squareBox,
+              {
+                transform: [
+                  { translateY: floatAnim },
+                  { scale: boxScaleAnim },
+                  { rotate: boxRotate },
+                ],
+              },
+            ]}
+          >
+            {/* The SX Monogram inside the Square Box with Rotation & Squash-Stretch */}
             <Animated.View
               style={[
-                styles.glowAura,
+                styles.logoWrap,
                 {
-                  width: toolSize * 1.55,
-                  height: toolSize * 1.55,
-                  borderRadius: (toolSize * 1.55) / 2,
-                  opacity: glowPulseAnim,
-                },
-              ]}
-            />
-
-            {/* Blueprint Orbit Ring (SVG) */}
-            <Animated.View
-              style={[
-                styles.outerRingWrap,
-                {
-                  width: toolSize * 1.36,
-                  height: toolSize * 1.36,
-                  transform: [{ rotate: outerRingRotate }],
-                },
-              ]}
-            >
-              <Svg
-                width={toolSize * 1.36}
-                height={toolSize * 1.36}
-                viewBox="0 0 340 340"
-              >
-                <Defs>
-                  <LinearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <Stop offset="0%" stopColor={colors.neonPurple} stopOpacity="0.8" />
-                    <Stop offset="50%" stopColor={colors.neonCyan} stopOpacity="0.6" />
-                    <Stop offset="100%" stopColor={colors.neonPurpleBright} stopOpacity="0.1" />
-                  </LinearGradient>
-                  <LinearGradient id="dashedGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-                    <Stop offset="0%" stopColor={colors.neonCyan} stopOpacity="0.7" />
-                    <Stop offset="100%" stopColor={colors.blueprint} stopOpacity="0.2" />
-                  </LinearGradient>
-                </Defs>
-
-                {/* Concentric subtle guideline rings */}
-                <Circle
-                  cx="170"
-                  cy="170"
-                  r="160"
-                  stroke="url(#ringGrad)"
-                  strokeWidth="1.5"
-                  strokeDasharray="10 14"
-                  fill="none"
-                />
-                <Circle
-                  cx="170"
-                  cy="170"
-                  r="145"
-                  stroke={colors.neonPurpleGlow}
-                  strokeWidth="1"
-                  strokeDasharray="4 8"
-                  fill="none"
-                />
-                <Circle
-                  cx="170"
-                  cy="170"
-                  r="130"
-                  stroke="url(#dashedGrad)"
-                  strokeWidth="2"
-                  strokeDasharray="30 20 10 20"
-                  fill="none"
-                />
-
-                {/* Orbital Node Markers */}
-                <Circle cx="170" cy="10" r="3.5" fill={colors.neonCyan} />
-                <Circle cx="330" cy="170" r="3.5" fill={colors.neonPurpleBright} />
-                <Circle cx="170" cy="330" r="3" fill={colors.blueprint} />
-                <Circle cx="10" cy="170" r="3" fill={colors.neonPurple} />
-              </Svg>
-            </Animated.View>
-
-            {/* Orbiting Spark Particles */}
-            <Animated.View
-              style={[
-                styles.particlesWrap,
-                {
-                  width: toolSize * 1.25,
-                  height: toolSize * 1.25,
-                  transform: [{ rotate: particlesRotate }],
-                },
-              ]}
-              pointerEvents="none"
-            >
-              <View style={[styles.particleDot, styles.p1]} />
-              <View style={[styles.particleDot, styles.p2]} />
-              <View style={[styles.particleDot, styles.p3]} />
-              <View style={[styles.particleDot, styles.p4]} />
-            </Animated.View>
-
-            {/* Rotating Saw Blade & Contractor Tool */}
-            <Animated.View
-              style={[
-                styles.toolContainer,
-                {
-                  width: toolSize,
-                  height: toolSize,
                   transform: [
-                    { rotate: toolRotate },
-                    { scale: pulseScaleAnim },
+                    { rotate: logoRotate },
+                    { scale: logoScaleAnim },
                   ],
                 },
               ]}
             >
               <Image
                 source={imageSource}
-                style={styles.toolImage}
+                style={styles.logoImage}
                 resizeMode="contain"
               />
             </Animated.View>
-          </View>
-
-          {/* Bottom Discord-style Loading Dock */}
-          <View style={styles.bottomDock}>
-            {/* Dynamic Loading Message */}
-            <Animated.View
-              style={[
-                styles.statusMessageRow,
-                {
-                  opacity: textFadeAnim,
-                  transform: [{ translateY: textTranslateY }],
-                },
-              ]}
-            >
-              <Text style={styles.loadingTipText}>
-                {LOADING_STEPS[currentStepIndex]}
-              </Text>
-            </Animated.View>
-
-            {/* Discord-style Sleek Progress Bar */}
-            <View style={styles.progressBarTrack}>
-              <Animated.View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    width: progressBarWidth,
-                  },
-                ]}
-              />
-            </View>
-
-            {/* Percentage & Telemetry Label */}
-            <View style={styles.telemetryRow}>
-              <Text style={styles.telemetryBrand}>SERVEX OS v1.0</Text>
-              <Text style={styles.telemetryPercent}>{progressPercent}%</Text>
-            </View>
-
-            {/* Skip hint */}
-            {allowSkip && (
-              <Text style={styles.skipHintText}>TAP ANYWHERE TO SKIP</Text>
-            )}
-          </View>
+          </Animated.View>
         </View>
       </Pressable>
     </Animated.View>
@@ -479,183 +455,50 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#000000', // Pitch black as requested for eye safety
+    backgroundColor: '#000000', // Pitch black OLED canvas
     zIndex: 9999,
   },
-  contentWrap: {
+  centerContainer: {
     flex: 1,
     backgroundColor: '#000000',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 56,
-    paddingBottom: 40,
-    paddingHorizontal: 24,
+    justifyContent: 'center',
   },
-  topStatusContainer: {
-    width: '100%',
-    alignItems: 'center',
+  ambientGlow: {
+    position: 'absolute',
+    width: BOX_SIZE * 1.6,
+    height: BOX_SIZE * 1.6,
+    borderRadius: (BOX_SIZE * 1.6) / 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 28,
   },
-  topBadge: {
-    flexDirection: 'row',
+  squareBox: {
+    width: BOX_SIZE,
+    height: BOX_SIZE,
+    borderRadius: BOX_RADIUS,
+    backgroundColor: '#0A0B0E',
     alignItems: 'center',
-    backgroundColor: '#0C0D11',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#1D212A',
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.neonCyan,
-    marginRight: 8,
-    shadowColor: colors.neonCyan,
-    shadowOffset: { width: 0, height: 0 },
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.9,
-    shadowRadius: 5,
-  },
-  statusText: {
-    color: '#8A92A6',
-    fontFamily: fonts.bodyMedium,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  centerStage: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    height: SCREEN_HEIGHT * 0.45,
-  },
-  glowAura: {
-    position: 'absolute',
-    backgroundColor: 'rgba(157, 78, 221, 0.14)',
-    shadowColor: colors.neonPurple,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 40,
-  },
-  outerRingWrap: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  particlesWrap: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  particleDot: {
-    position: 'absolute',
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  p1: {
-    top: 4,
-    left: '50%',
-    backgroundColor: colors.neonCyan,
-    shadowColor: colors.neonCyan,
-    shadowOpacity: 1,
-    shadowRadius: 6,
-  },
-  p2: {
-    bottom: 8,
-    right: 28,
-    backgroundColor: colors.neonPurpleBright,
-    shadowColor: colors.neonPurpleBright,
-    shadowOpacity: 1,
-    shadowRadius: 6,
-  },
-  p3: {
-    top: 40,
-    right: 12,
-    backgroundColor: '#FFF',
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-  },
-  p4: {
-    bottom: 30,
-    left: 16,
-    backgroundColor: colors.blueprint,
-    width: 4,
-    height: 4,
-  },
-  toolContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.neonPurple,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 25,
-  },
-  toolImage: {
-    width: '100%',
-    height: '100%',
-  },
-  bottomDock: {
-    width: '100%',
-    maxWidth: 320,
-    alignItems: 'center',
-  },
-  statusMessageRow: {
-    minHeight: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  loadingTipText: {
-    color: '#EDEAE3',
-    fontFamily: fonts.display,
-    fontSize: 13,
-    letterSpacing: 0.4,
-    textAlign: 'center',
-  },
-  progressBarTrack: {
-    width: '100%',
-    height: 4,
-    backgroundColor: '#161922',
-    borderRadius: 2,
+    shadowRadius: 18,
+    elevation: 12,
     overflow: 'hidden',
-    borderWidth: 0.5,
-    borderColor: '#262B38',
   },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: colors.neonCyan,
-    borderRadius: 2,
-    shadowColor: colors.neonCyan,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-  },
-  telemetryRow: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  logoWrap: {
+    width: '76%',
+    height: '76%',
     alignItems: 'center',
-    marginTop: 10,
+    justifyContent: 'center',
   },
-  telemetryBrand: {
-    color: '#4B5263',
-    fontFamily: fonts.body,
-    fontSize: 10,
-    letterSpacing: 1,
-  },
-  telemetryPercent: {
-    color: colors.neonPurpleBright,
-    fontFamily: fonts.displayBold,
-    fontSize: 11,
-    letterSpacing: 0.8,
-  },
-  skipHintText: {
-    color: '#3F4452',
-    fontFamily: fonts.bodyMedium,
-    fontSize: 10,
-    letterSpacing: 1.5,
-    marginTop: 22,
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
 });
