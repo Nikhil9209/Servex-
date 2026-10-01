@@ -39,7 +39,7 @@ interface AuthContextType {
     password: string,
     agreeTerms: boolean
   ) => Promise<void>;
-  startGoogleSignIn: () => Promise<boolean>;
+  startGoogleSignIn: () => Promise<void>;
   authenticateWithGoogleUser: (profile: {
     name: string;
     email: string;
@@ -216,43 +216,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   // Google Sign-In
-  const startGoogleSignIn = useCallback(async (): Promise<boolean> => {
+  const startGoogleSignIn = useCallback(async (): Promise<void> => {
     setAuthError(null);
     try {
       const res = await AuthService.signInWithGoogle();
 
       if (res.status === 'CANCELLED') {
-        return false;
+        return;
       }
 
       if (res.status === 'ERROR') {
         setAuthError(res.errorMessage || 'Google Sign-In failed.');
-        return false;
+        return;
       }
 
       // Flow C: Existing Google User
       if (res.status === 'AUTHENTICATED' && res.user) {
         setUser(res.user);
         setPendingRegistration(null);
-        return false;
+        return;
       }
 
       // Flow B: New Google User -> Mandatory Phone Collection
       if (res.status === 'NEEDS_PHONE' && res.pendingUser) {
         setPendingRegistration(res.pendingUser);
         setAuthScreenStep('PHONE_COLLECT');
-        return false;
+        return;
       }
-
-      // Triggers interactive account chooser modal
-      if (res.status === 'PROMPT_ACCOUNT_CHOOSER') {
-        return true;
-      }
-
-      return false;
     } catch (err: any) {
       setAuthError(err?.message || 'Google Sign-In failed.');
-      return false;
     }
   }, []);
 

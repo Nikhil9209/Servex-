@@ -20,12 +20,7 @@ const GOOGLE_DISCOVERY = {
 };
 
 export interface GoogleAuthResult {
-  status:
-    | 'AUTHENTICATED'
-    | 'NEEDS_PHONE'
-    | 'CANCELLED'
-    | 'ERROR'
-    | 'PROMPT_ACCOUNT_CHOOSER';
+  status: 'AUTHENTICATED' | 'NEEDS_PHONE' | 'CANCELLED' | 'ERROR';
   user?: User;
   session?: AppAuthSession;
   pendingUser?: PendingRegistration;
@@ -194,55 +189,75 @@ export const AuthService = {
   },
 
   /**
-   * Google OAuth Sign-In flow
-   * Supports live Google Cloud OAuth credentials and Google Account Chooser
+   * Official Google OAuth Sign-In flow
+   * Launches Google's official accounts login via browser / In-App Browser tab
    */
   async signInWithGoogle(): Promise<GoogleAuthResult> {
     const customClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 
-    // If developer provided real Google OAuth client ID, attempt browser OAuth
-    if (customClientId && !customClientId.includes('placeholder')) {
-      try {
-        const redirectUri = AuthSession.makeRedirectUri({
-          scheme: 'servex-contractor',
-        });
-
-        const request = new AuthSession.AuthRequest({
-          clientId: customClientId,
-          scopes: ['openid', 'profile', 'email'],
-          redirectUri,
-          responseType: AuthSession.ResponseType.Token,
-          prompt: AuthSession.Prompt.SelectAccount,
-        });
-
-        const result = await request.promptAsync(GOOGLE_DISCOVERY);
-
-        if (result.type === 'cancel' || result.type === 'dismiss') {
-          return { status: 'CANCELLED' };
-        }
-
-        if (result.type === 'success' && result.params?.access_token) {
-          const userInfoResponse = await fetch(GOOGLE_DISCOVERY.userInfoEndpoint, {
-            headers: { Authorization: `Bearer ${result.params.access_token}` },
-          });
-
-          if (userInfoResponse.ok) {
-            const profile = await userInfoResponse.json();
-            return this.processGoogleIdentity({
-              name: profile.name || 'Google User',
-              email: profile.email,
-              sub: profile.sub,
-              picture: profile.picture,
-            });
-          }
-        }
-      } catch {
-        // Fall through to Account Chooser
-      }
+    // Check if client ID is configured
+    if (!customClientId || customClientId.trim() === '' || customClientId.includes('placeholder')) {
+      return {
+        status: 'ERROR',
+        errorMessage:
+          'Google Cloud OAuth Client ID is required to open official Google Login.\nPlease paste your Google Client ID into .env as EXPO_PUBLIC_GOOGLE_CLIENT_ID.',
+      };
     }
 
-    // Interactive Google Account Authentication
-    return { status: 'PROMPT_ACCOUNT_CHOOSER' };
+    try {
+      const redirectUri = AuthSession.makeRedirectUri({
+        scheme: 'servex-contractor',
+      });
+
+      const request = new AuthSession.AuthRequest({
+        clientId: customClientId.trim(),
+        scopes: ['openid', 'profile', 'email'],
+        redirectUri,
+        responseType: AuthSession.ResponseType.Token,
+        prompt: AuthSession.Prompt.SelectAccount,
+      });
+
+      const result = await request.promptAsync(GOOGLE_DISCOVERY);
+
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        return { status: 'CANCELLED' };
+      }
+
+      if (result.type === 'success' && result.params?.access_token) {
+        const userInfoResponse = await fetch(GOOGLE_DISCOVERY.userInfoEndpoint, {
+          headers: { Authorization: `Bearer ${result.params.access_token}` },
+        });
+
+        if (userInfoResponse.ok) {
+          const profile = await userInfoResponse.json();
+          return this.processGoogleIdentity({
+            name: profile.name || 'Google User',
+            email: profile.email,
+            sub: profile.sub,
+            picture: profile.picture,
+          });
+        } else {
+          return {
+            status: 'ERROR',
+            errorMessage: 'Failed to retrieve profile from Google. Please try again.',
+          };
+        }
+      }
+
+      if (result.type === 'error') {
+        return {
+          status: 'ERROR',
+          errorMessage: result.error?.message || 'Google authentication error occurred.',
+        };
+      }
+
+      return { status: 'CANCELLED' };
+    } catch (err: any) {
+      return {
+        status: 'ERROR',
+        errorMessage: err?.message || 'Failed to open official Google Sign-In.',
+      };
+    }
   },
 
   /**
