@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   useFonts,
   SpaceGrotesk_600SemiBold,
@@ -27,6 +27,14 @@ export default function App() {
 
   const [showSplash, setShowSplash] = useState(true);
 
+  const handleFinishSplash = useCallback(() => {
+    setShowSplash(false);
+  }, []);
+
+  const handleReplaySplash = useCallback(() => {
+    setShowSplash(true);
+  }, []);
+
   // While fonts are loading, keep solid pitch-black screen to protect eyes
   if (!fontsLoaded) {
     return (
@@ -36,20 +44,26 @@ export default function App() {
     );
   }
 
+  // 1. Initial Splash Screen: Exclusively renders Servex Monogram animation without background stacking
+  if (showSplash) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <DiscordSplashScreen
+          durationMs={4500}
+          allowSkip={true}
+          onFinish={handleFinishSplash}
+        />
+      </View>
+    );
+  }
+
+  // 2. Main App: Rendered only once splash finishes
   return (
     <AuthProvider>
       <View style={styles.container}>
         <StatusBar style="light" />
-        <RootNavigator onReplaySplash={() => setShowSplash(true)} />
-
-        {/* Servex Emblem Splash Screen Animation with Rotating Monogram Logo */}
-        {showSplash && (
-          <DiscordSplashScreen
-            durationMs={5000}
-            allowSkip={true}
-            onFinish={() => setShowSplash(false)}
-          />
-        )}
+        <RootNavigator onReplaySplash={handleReplaySplash} />
       </View>
     </AuthProvider>
   );

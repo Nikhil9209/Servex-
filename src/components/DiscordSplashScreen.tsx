@@ -52,6 +52,10 @@ export default function DiscordSplashScreen({
   const fadeOutAnim = useMemo(() => new Animated.Value(1), []);
 
   const hasFinishedRef = useRef(false);
+  const onFinishRef = useRef(onFinish);
+  useEffect(() => {
+    onFinishRef.current = onFinish;
+  }, [onFinish]);
 
   // Memoized interpolations
   const logoRotate = useMemo(
@@ -90,9 +94,9 @@ export default function DiscordSplashScreen({
         useNativeDriver: true,
       }),
     ]).start(() => {
-      onFinish?.();
+      onFinishRef.current?.();
     });
-  }, [fadeOutAnim, boxScaleAnim, onFinish]);
+  }, [fadeOutAnim, boxScaleAnim]);
 
   // Refined, high-end motion design:
   // Compact, tactile, precision Swiss-watch choreography
@@ -102,221 +106,112 @@ export default function DiscordSplashScreen({
     const runAnimationCycle = () => {
       if (isCancelled) return;
 
-      // --- CYCLE 1: Refined Tilt -> Anticipation Dip -> 360 Snap ---
+      // Smooth, Continuous, Prestigious 3D Monogram Choreography
       Animated.sequence([
-        // 1. Tilt Left (-12deg)
+        // 1. Gentle Anticipation Tilt
         Animated.parallel([
           Animated.timing(logoRotateAnim, {
-            toValue: -13,
-            duration: 300,
+            toValue: -12,
+            duration: 280,
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
           Animated.timing(boxRotateAnim, {
-            toValue: -4,
-            duration: 300,
+            toValue: -3,
+            duration: 280,
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
         ]),
-        // 2. Tilt Right (+13deg)
+        // 2. Right Tilt
         Animated.parallel([
           Animated.timing(logoRotateAnim, {
-            toValue: 13,
-            duration: 360,
+            toValue: 12,
+            duration: 320,
             easing: Easing.inOut(Easing.cubic),
             useNativeDriver: true,
           }),
           Animated.timing(boxRotateAnim, {
-            toValue: 4,
-            duration: 360,
+            toValue: 3,
+            duration: 320,
             easing: Easing.inOut(Easing.cubic),
             useNativeDriver: true,
           }),
         ]),
-        // 3. Return Center (0deg)
+        // 3. Center Return
         Animated.parallel([
           Animated.timing(logoRotateAnim, {
             toValue: 0,
-            duration: 220,
+            duration: 200,
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
           Animated.timing(boxRotateAnim, {
             toValue: 0,
-            duration: 220,
+            duration: 200,
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
         ]),
-        // 4. Anticipation Shrink ("make it small in between")
-        Animated.parallel([
-          Animated.timing(logoScaleAnim, {
-            toValue: 0.76,
-            duration: 250,
-            easing: Easing.inOut(Easing.cubic),
-            useNativeDriver: true,
-          }),
-          Animated.timing(boxScaleAnim, {
-            toValue: 0.93,
-            duration: 250,
-            easing: Easing.inOut(Easing.cubic),
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.delay(70),
-        // 5. Fast 360° Spin with Spring Pop
+        Animated.delay(100),
+        // 4. Smooth 360° Monogram Rotation
         Animated.parallel([
           Animated.timing(logoRotateAnim, {
             toValue: 360,
-            duration: 540,
-            easing: Easing.bezier(0.22, 1, 0.36, 1),
+            duration: 900,
+            easing: Easing.bezier(0.25, 0.1, 0.25, 1),
             useNativeDriver: true,
           }),
           Animated.sequence([
-            Animated.timing(logoScaleAnim, {
-              toValue: 1.07,
-              duration: 360,
-              easing: Easing.out(Easing.cubic),
-              useNativeDriver: true,
-            }),
-            Animated.timing(logoScaleAnim, {
-              toValue: 1.0,
-              duration: 180,
-              easing: Easing.inOut(Easing.quad),
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.sequence([
             Animated.timing(boxScaleAnim, {
-              toValue: 1.04,
-              duration: 360,
+              toValue: 1.05,
+              duration: 450,
               easing: Easing.out(Easing.cubic),
               useNativeDriver: true,
             }),
             Animated.timing(boxScaleAnim, {
               toValue: 1.0,
-              duration: 180,
+              duration: 450,
               easing: Easing.inOut(Easing.quad),
               useNativeDriver: true,
             }),
           ]),
         ]),
-        Animated.delay(420),
+        Animated.delay(400),
       ]).start(() => {
         if (isCancelled) return;
-        logoRotateAnim.setValue(0); // 360deg == 0deg visually seamless
+        logoRotateAnim.setValue(0);
 
-        // --- CYCLE 2: Shrink -> Counter 360 Spin -> Reverse Tilt ---
+        // Counter-rotation sweep
         Animated.sequence([
-          // 1. Shrink In Between
-          Animated.parallel([
-            Animated.timing(logoScaleAnim, {
-              toValue: 0.76,
-              duration: 240,
-              easing: Easing.inOut(Easing.cubic),
-              useNativeDriver: true,
-            }),
-            Animated.timing(boxScaleAnim, {
-              toValue: 0.93,
-              duration: 240,
-              easing: Easing.inOut(Easing.cubic),
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.delay(60),
-          // 2. Counter 360 Spin & Pop Up
           Animated.parallel([
             Animated.timing(logoRotateAnim, {
               toValue: -360,
-              duration: 540,
-              easing: Easing.bezier(0.22, 1, 0.36, 1),
+              duration: 900,
+              easing: Easing.bezier(0.25, 0.1, 0.25, 1),
               useNativeDriver: true,
             }),
             Animated.sequence([
-              Animated.timing(logoScaleAnim, {
-                toValue: 1.07,
-                duration: 360,
-                easing: Easing.out(Easing.cubic),
-                useNativeDriver: true,
-              }),
-              Animated.timing(logoScaleAnim, {
-                toValue: 1.0,
-                duration: 180,
-                easing: Easing.inOut(Easing.quad),
-                useNativeDriver: true,
-              }),
-            ]),
-            Animated.sequence([
               Animated.timing(boxScaleAnim, {
-                toValue: 1.04,
-                duration: 360,
+                toValue: 1.05,
+                duration: 450,
                 easing: Easing.out(Easing.cubic),
                 useNativeDriver: true,
               }),
               Animated.timing(boxScaleAnim, {
                 toValue: 1.0,
-                duration: 180,
+                duration: 450,
                 easing: Easing.inOut(Easing.quad),
                 useNativeDriver: true,
               }),
             ]),
           ]),
-          Animated.delay(90),
+          Animated.delay(500),
         ]).start(() => {
-          if (isCancelled) return;
-          logoRotateAnim.setValue(0);
-
-          // 3. Subtle Sway Right then Left
-          Animated.sequence([
-            Animated.parallel([
-              Animated.timing(logoRotateAnim, {
-                toValue: 13,
-                duration: 290,
-                easing: Easing.out(Easing.cubic),
-                useNativeDriver: true,
-              }),
-              Animated.timing(boxRotateAnim, {
-                toValue: 4,
-                duration: 290,
-                easing: Easing.out(Easing.cubic),
-                useNativeDriver: true,
-              }),
-            ]),
-            Animated.parallel([
-              Animated.timing(logoRotateAnim, {
-                toValue: -13,
-                duration: 340,
-                easing: Easing.inOut(Easing.cubic),
-                useNativeDriver: true,
-              }),
-              Animated.timing(boxRotateAnim, {
-                toValue: -4,
-                duration: 340,
-                easing: Easing.inOut(Easing.cubic),
-                useNativeDriver: true,
-              }),
-            ]),
-            Animated.parallel([
-              Animated.timing(logoRotateAnim, {
-                toValue: 0,
-                duration: 220,
-                easing: Easing.out(Easing.quad),
-                useNativeDriver: true,
-              }),
-              Animated.timing(boxRotateAnim, {
-                toValue: 0,
-                duration: 220,
-                easing: Easing.out(Easing.quad),
-                useNativeDriver: true,
-              }),
-            ]),
-            Animated.delay(550),
-          ]).start(() => {
-            if (!isCancelled) {
-              runAnimationCycle(); // Seamless continuous loop
-            }
-          });
+          if (!isCancelled) {
+            logoRotateAnim.setValue(0);
+            runAnimationCycle();
+          }
         });
       });
     };
