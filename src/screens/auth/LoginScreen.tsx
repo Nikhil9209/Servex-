@@ -16,11 +16,13 @@ import { fonts } from '../../theme/tokens';
 import { useAuth } from '../../context/AuthContext';
 import { ServexLogo } from '../../components/ServexLogo';
 import { GoogleIcon } from '../../components/GoogleIcon';
+import { GoogleSignInModal, GoogleUserProfile } from '../../components/GoogleSignInModal';
 
 export const LoginScreen: React.FC = () => {
   const {
     loginWithEmail,
     startGoogleSignIn,
+    authenticateWithGoogleUser,
     setAuthScreenStep,
     authError,
     clearAuthError,
@@ -31,6 +33,7 @@ export const LoginScreen: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
 
@@ -52,10 +55,19 @@ export const LoginScreen: React.FC = () => {
     clearAuthError();
     setIsSubmitting(true);
     try {
-      await startGoogleSignIn();
+      const shouldPrompt = await startGoogleSignIn();
+      if (shouldPrompt) {
+        setShowGoogleModal(true);
+      }
+    } catch {
+      setShowGoogleModal(true);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleGoogleUserSelect = (profile: GoogleUserProfile) => {
+    authenticateWithGoogleUser(profile);
   };
 
   const fillTestCredentials = (type: 'client' | 'contractor' | 'google') => {
@@ -301,6 +313,13 @@ export const LoginScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Google Account Chooser Modal */}
+      <GoogleSignInModal
+        visible={showGoogleModal}
+        onClose={() => setShowGoogleModal(false)}
+        onSelectGoogleUser={handleGoogleUserSelect}
+      />
     </KeyboardAvoidingView>
   );
 };

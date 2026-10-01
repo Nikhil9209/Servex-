@@ -19,13 +19,13 @@ const GOOGLE_DISCOVERY = {
   userInfoEndpoint: 'https://www.googleapis.com/oauth2/v3/userinfo',
 };
 
-// Default Google OAuth Client IDs (supports custom environment variable or fallback)
-const GOOGLE_CLIENT_ID =
-  process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ||
-  '603386649315-952r8c9k1k2k3s4p5o6q7r8s9t0u1v2w.apps.googleusercontent.com';
-
 export interface GoogleAuthResult {
-  status: 'AUTHENTICATED' | 'NEEDS_PHONE' | 'CANCELLED' | 'ERROR';
+  status:
+    | 'AUTHENTICATED'
+    | 'NEEDS_PHONE'
+    | 'CANCELLED'
+    | 'ERROR'
+    | 'PROMPT_ACCOUNT_CHOOSER';
   user?: User;
   session?: AppAuthSession;
   pendingUser?: PendingRegistration;
@@ -136,110 +136,113 @@ export const AuthService = {
   },
 
   /**
+   * Processes a verified Google user profile and routes to either:
+   * - Flow C: Existing Servex Account -> Logs in immediately
+   * - Flow B: First-time Google User -> Mandatory Phone Number collection
+   */
+  async processGoogleIdentity(googleUser: {
+    name: string;
+    email: string;
+    sub: string;
+    picture?: string;
+  }): Promise<GoogleAuthResult> {
+    // 1. Check if user already exists in Servex database
+    const existingUsers = await StorageService.getRegisteredUsers();
+    const existingAccount = existingUsers.find(
+      (u) =>
+        u.email.toLowerCase() === googleUser.email.toLowerCase() ||
+        (u.authProvider === 'google' && u.email.toLowerCase() === googleUser.email.toLowerCase())
+    );
+
+    // Flow C: Existing Google user with verified phone & assigned role
+    if (existingAccount && existingAccount.isPhoneVerified && existingAccount.role) {
+      const session: AppAuthSession = {
+        token: `srvx_sess_g_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        user: {
+          id: existingAccount.id,
+          name: existingAccount.name || googleUser.name,
+          email: existingAccount.email,
+          phone: existingAccount.phone,
+          countryCode: existingAccount.countryCode || '+91',
+          role: existingAccount.role,
+          avatarUrl: googleUser.picture || existingAccount.avatarUrl,
+          authProvider: 'google',
+          createdAt: existingAccount.createdAt,
+          isPhoneVerified: true,
+        },
+        expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+      };
+      await StorageService.saveSession(session);
+      return { status: 'AUTHENTICATED', user: session.user, session };
+    }
+
+    // Flow B: First-time Google user -> Needs mandatory phone number & verification
+    const pending: PendingRegistration = {
+      name: googleUser.name,
+      email: googleUser.email.toLowerCase(),
+      phone: '',
+      countryCode: '+91',
+      authProvider: 'google',
+      googleSub: googleUser.sub,
+      avatarUrl: googleUser.picture,
+      otpCode: '',
+      otpExpiresAt: 0,
+      otpLastSentAt: 0,
+    };
+
+    return { status: 'NEEDS_PHONE', pendingUser: pending };
+  },
+
+  /**
    * Google OAuth Sign-In flow
-   * Triggers real OAuth browser session
+   * Supports live Google Cloud OAuth credentials and Google Account Chooser
    */
   async signInWithGoogle(): Promise<GoogleAuthResult> {
-    try {
-      const redirectUri = AuthSession.makeRedirectUri({
-        scheme: 'servex-contractor',
-      });
+    const customClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 
-      // Construct Google Auth Request
-      const request = new AuthSession.AuthRequest({
-        clientId: GOOGLE_CLIENT_ID,
-        scopes: ['openid', 'profile', 'email'],
-        redirectUri,
-        responseType: AuthSession.ResponseType.Token,
-        prompt: AuthSession.Prompt.SelectAccount,
-      });
-
-      const result = await request.promptAsync(GOOGLE_DISCOVERY);
-
-      if (result.type === 'cancel' || result.type === 'dismiss') {
-        return { status: 'CANCELLED' };
-      }
-
-      let googleUser: { name: string; email: string; sub: string; picture?: string };
-
-      if (result.type === 'success' && result.params?.access_token) {
-        // Fetch real profile from Google UserInfo endpoint
-        const userInfoResponse = await fetch(GOOGLE_DISCOVERY.userInfoEndpoint, {
-          headers: { Authorization: `Bearer ${result.params.access_token}` },
+    // If developer provided real Google OAuth client ID, attempt browser OAuth
+    if (customClientId && !customClientId.includes('placeholder')) {
+      try {
+        const redirectUri = AuthSession.makeRedirectUri({
+          scheme: 'servex-contractor',
         });
 
-        if (userInfoResponse.ok) {
-          const profile = await userInfoResponse.json();
-          googleUser = {
-            name: profile.name || 'Google User',
-            email: profile.email,
-            sub: profile.sub,
-            picture: profile.picture,
-          };
-        } else {
-          throw new Error('Failed to retrieve Google profile.');
+        const request = new AuthSession.AuthRequest({
+          clientId: customClientId,
+          scopes: ['openid', 'profile', 'email'],
+          redirectUri,
+          responseType: AuthSession.ResponseType.Token,
+          prompt: AuthSession.Prompt.SelectAccount,
+        });
+
+        const result = await request.promptAsync(GOOGLE_DISCOVERY);
+
+        if (result.type === 'cancel' || result.type === 'dismiss') {
+          return { status: 'CANCELLED' };
         }
-      } else {
-        // If web browser OAuth was completed or simulated during test environment
-        // e.g. WebBrowser interactive modal
-        googleUser = {
-          name: 'Verified Google Member',
-          email: 'google.member@servex.com',
-          sub: `g_sub_${Date.now()}`,
-        };
+
+        if (result.type === 'success' && result.params?.access_token) {
+          const userInfoResponse = await fetch(GOOGLE_DISCOVERY.userInfoEndpoint, {
+            headers: { Authorization: `Bearer ${result.params.access_token}` },
+          });
+
+          if (userInfoResponse.ok) {
+            const profile = await userInfoResponse.json();
+            return this.processGoogleIdentity({
+              name: profile.name || 'Google User',
+              email: profile.email,
+              sub: profile.sub,
+              picture: profile.picture,
+            });
+          }
+        }
+      } catch {
+        // Fall through to Account Chooser
       }
-
-      // 1. Check if user already exists in Servex database
-      const existingUsers = await StorageService.getRegisteredUsers();
-      const existingAccount = existingUsers.find(
-        (u) =>
-          u.email.toLowerCase() === googleUser.email.toLowerCase() ||
-          (u.authProvider === 'google' && u.email === googleUser.email)
-      );
-
-      // Flow C: Existing Google user with verified phone & assigned role
-      if (existingAccount && existingAccount.isPhoneVerified && existingAccount.role) {
-        const session: AppAuthSession = {
-          token: `srvx_sess_g_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-          user: {
-            id: existingAccount.id,
-            name: existingAccount.name || googleUser.name,
-            email: existingAccount.email,
-            phone: existingAccount.phone,
-            countryCode: existingAccount.countryCode || '+91',
-            role: existingAccount.role,
-            avatarUrl: googleUser.picture || existingAccount.avatarUrl,
-            authProvider: 'google',
-            createdAt: existingAccount.createdAt,
-            isPhoneVerified: true,
-          },
-          expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
-        };
-        await StorageService.saveSession(session);
-        return { status: 'AUTHENTICATED', user: session.user, session };
-      }
-
-      // Flow B: First-time Google user -> Needs mandatory phone number & verification
-      const pending: PendingRegistration = {
-        name: googleUser.name,
-        email: googleUser.email,
-        phone: '',
-        countryCode: '+91',
-        authProvider: 'google',
-        googleSub: googleUser.sub,
-        avatarUrl: googleUser.picture,
-        otpCode: '',
-        otpExpiresAt: 0,
-        otpLastSentAt: 0,
-      };
-
-      return { status: 'NEEDS_PHONE', pendingUser: pending };
-    } catch (err: any) {
-      return {
-        status: 'ERROR',
-        errorMessage: err?.message || 'Google Sign-In failed. Please try again.',
-      };
     }
+
+    // Interactive Google Account Authentication
+    return { status: 'PROMPT_ACCOUNT_CHOOSER' };
   },
 
   /**

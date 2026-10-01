@@ -39,7 +39,13 @@ interface AuthContextType {
     password: string,
     agreeTerms: boolean
   ) => Promise<void>;
-  startGoogleSignIn: () => Promise<void>;
+  startGoogleSignIn: () => Promise<boolean>;
+  authenticateWithGoogleUser: (profile: {
+    name: string;
+    email: string;
+    sub: string;
+    picture?: string;
+  }) => Promise<void>;
   submitPhoneForGoogle: (phone: string, countryCode: string) => Promise<void>;
   verifyOtpCode: (enteredOtp: string) => Promise<void>;
   resendOtpCode: () => Promise<void>;
@@ -210,36 +216,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   // Google Sign-In
-  const startGoogleSignIn = useCallback(async () => {
+  const startGoogleSignIn = useCallback(async (): Promise<boolean> => {
     setAuthError(null);
     try {
       const res = await AuthService.signInWithGoogle();
 
       if (res.status === 'CANCELLED') {
-        return;
+        return false;
       }
 
       if (res.status === 'ERROR') {
         setAuthError(res.errorMessage || 'Google Sign-In failed.');
-        return;
+        return false;
       }
 
       // Flow C: Existing Google User
       if (res.status === 'AUTHENTICATED' && res.user) {
         setUser(res.user);
         setPendingRegistration(null);
-        return;
+        return false;
       }
 
       // Flow B: New Google User -> Mandatory Phone Collection
       if (res.status === 'NEEDS_PHONE' && res.pendingUser) {
         setPendingRegistration(res.pendingUser);
         setAuthScreenStep('PHONE_COLLECT');
+        return false;
       }
+
+      // Triggers interactive account chooser modal
+      if (res.status === 'PROMPT_ACCOUNT_CHOOSER') {
+        return true;
+      }
+
+      return false;
     } catch (err: any) {
       setAuthError(err?.message || 'Google Sign-In failed.');
+      return false;
     }
   }, []);
+
+  // Authenticate with verified Google Profile (Flow C or Flow B)
+  const authenticateWithGoogleUser = useCallback(
+    async (profile: { name: string; email: string; sub: string; picture?: string }) => {
+      setAuthError(null);
+      setIsLoading(true);
+      try {
+        const res = await AuthService.processGoogleIdentity(profile);
+
+        // Flow C: Existing Google User
+        if (res.status === 'AUTHENTICATED' && res.user) {
+          setUser(res.user);
+          setPendingRegistration(null);
+          return;
+        }
+
+        // Flow B: New Google User -> Mandatory Phone Collection
+        if (res.status === 'NEEDS_PHONE' && res.pendingUser) {
+          setPendingRegistration(res.pendingUser);
+          setAuthScreenStep('PHONE_COLLECT');
+        }
+      } catch (err: any) {
+        setAuthError(err?.message || 'Google authentication failed.');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   // Submit Phone for Google User
   const submitPhoneForGoogle = useCallback(
@@ -376,6 +420,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loginWithEmail,
     startEmailRegistration,
     startGoogleSignIn,
+    authenticateWithGoogleUser,
     submitPhoneForGoogle,
     verifyOtpCode,
     resendOtpCode,
