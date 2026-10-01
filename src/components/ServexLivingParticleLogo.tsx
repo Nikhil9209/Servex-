@@ -14,7 +14,7 @@ import { fonts } from '../theme/tokens';
 
 export interface ServexLivingParticleLogoProps {
   /**
-   * Width of the particle field in dp (defaults to ~22% of screen width)
+   * Width of the particle field in dp (defaults to ~70% of screen width, ~260-280dp)
    */
   width?: number;
   /**
@@ -31,6 +31,13 @@ export interface ServexLivingParticleLogoProps {
   containerStyle?: ViewStyle;
 }
 
+interface FramePaths {
+  logoWhite: string;
+  logoAccent: string;
+  fieldWhite: string;
+  fieldDepth: string;
+}
+
 export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> = ({
   width: customWidth,
   showWordmark = true,
@@ -40,19 +47,20 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
   const windowDims = Dimensions.get('window');
   const screenWidth = windowDims.width;
 
-  // Proportions: ~22% of screen width (e.g. ~88 to 102dp on mobile), capped between 80 and 110
-  const width = customWidth || Math.min(Math.max(Math.round(screenWidth * 0.23), 82), 108);
-  // SX aspect ratio is ~1.428 (width / height)
-  const height = Math.round(width / 1.428);
+  // Proportions matching reference image: ~68-72% of screen width (e.g. ~260-280dp)
+  const width = customWidth || Math.min(Math.max(Math.round(screenWidth * 0.70), 250), 285);
+  // Aspect ratio is 270 / 230 ≈ 1.174
+  const height = Math.round(width * (230 / 270));
 
   // SVG Native Path Refs for ultra-high performance 60 FPS zero-overhead updates
-  const whitePathRef = useRef<any>(null);
-  const accentPathRef = useRef<any>(null);
-  const depthPathRef = useRef<any>(null);
+  const logoWhitePathRef = useRef<any>(null);
+  const logoAccentPathRef = useRef<any>(null);
+  const fieldWhitePathRef = useRef<any>(null);
+  const fieldDepthPathRef = useRef<any>(null);
 
   // Fallback state for platforms where setNativeProps is bypassed
   const [initialPaths] = useState(() => generateFramePaths(0, 1.0));
-  const [currentPaths, setCurrentPaths] = useState(initialPaths);
+  const [currentPaths, setCurrentPaths] = useState<FramePaths>(initialPaths);
 
   // Internal time reference
   const startTimeRef = useRef(0);
@@ -86,7 +94,7 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
     () =>
       progress.interpolate({
         inputRange: [0, 0.58, 0.72, 1.0],
-        outputRange: [8, 8, 0, 0],
+        outputRange: [6, 6, 0, 0],
         extrapolate: 'clamp',
       }),
     [progress]
@@ -126,17 +134,18 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
 
       const elapsed = (Date.now() - startTimeRef.current) * 0.0016; // Time scale
 
-      // Flow strength ramps from 0.2 to 1.0 during the first 0.8s
-      const flowStrength = Math.min(1.0, 0.2 + (Date.now() - startTimeRef.current) * 0.001);
+      // Flow strength ramps smoothly from 0.3 to 1.0 during the first 0.8s
+      const flowStrength = Math.min(1.0, 0.3 + (Date.now() - startTimeRef.current) * 0.001);
 
       const paths = generateFramePaths(elapsed, flowStrength);
 
-      const updatedWhite = updatePathD(whitePathRef, paths.white);
-      const updatedAccent = updatePathD(accentPathRef, paths.accent);
-      const updatedDepth = updatePathD(depthPathRef, paths.depth);
+      const updatedLogoWhite = updatePathD(logoWhitePathRef, paths.logoWhite);
+      const updatedLogoAccent = updatePathD(logoAccentPathRef, paths.logoAccent);
+      const updatedFieldWhite = updatePathD(fieldWhitePathRef, paths.fieldWhite);
+      const updatedFieldDepth = updatePathD(fieldDepthPathRef, paths.fieldDepth);
 
       // If direct native props / DOM mutation wasn't available, throttle React state update to 30fps fallback
-      if (!updatedWhite || !updatedAccent || !updatedDepth) {
+      if (!updatedLogoWhite || !updatedLogoAccent || !updatedFieldWhite || !updatedFieldDepth) {
         const now = Date.now();
         if (now - lastStateUpdateTime > 32) {
           lastStateUpdateTime = now;
@@ -159,20 +168,7 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {/* Subtle Ambient Back-Glow */}
-      <View
-        pointerEvents="none"
-        style={[
-          styles.ambientGlow,
-          {
-            width: width * 1.5,
-            height: height * 1.5,
-            borderRadius: (width * 1.5) / 2,
-          },
-        ]}
-      />
-
-      {/* The SX Living Particle Field */}
+      {/* The SX Living Particle Field in Vortex Wave Motion */}
       <Animated.View
         style={[
           styles.fieldWrapper,
@@ -187,37 +183,47 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
         <Svg
           width={width}
           height={height}
-          viewBox="0 0 200 140"
+          viewBox="0 0 270 230"
           style={styles.svg}
         >
-          {/* Depth layer dashes (soft platinum) */}
+          {/* Layer 1: Ambient field deep dashes (faint slate/silver) */}
           <Path
-            ref={depthPathRef}
-            d={currentPaths.depth}
-            stroke="#94A3B8"
-            strokeWidth={1.2}
+            ref={fieldDepthPathRef}
+            d={currentPaths.fieldDepth}
+            stroke="#64748B"
+            strokeWidth={1.15}
             strokeLinecap="round"
-            strokeOpacity={0.65}
+            strokeOpacity={0.22}
           />
 
-          {/* Main front layer dashes (crisp white / off-white) */}
+          {/* Layer 2: Ambient field bright dashes (soft platinum) */}
           <Path
-            ref={whitePathRef}
-            d={currentPaths.white}
+            ref={fieldWhitePathRef}
+            d={currentPaths.fieldWhite}
+            stroke="#CBD5E1"
+            strokeWidth={1.35}
+            strokeLinecap="round"
+            strokeOpacity={0.38}
+          />
+
+          {/* Layer 3: Servex SX Logo Main (crisp pure white) */}
+          <Path
+            ref={logoWhitePathRef}
+            d={currentPaths.logoWhite}
             stroke="#FFFFFF"
-            strokeWidth={1.45}
+            strokeWidth={1.85}
             strokeLinecap="round"
-            strokeOpacity={0.92}
+            strokeOpacity={0.96}
           />
 
-          {/* Accent layer dashes (restrained ocean/deep blue) */}
+          {/* Layer 4: Servex SX Logo Accents (electric ocean blue) */}
           <Path
-            ref={accentPathRef}
-            d={currentPaths.accent}
+            ref={logoAccentPathRef}
+            d={currentPaths.logoAccent}
             stroke="#60A5FA"
-            strokeWidth={1.5}
+            strokeWidth={1.9}
             strokeLinecap="round"
-            strokeOpacity={0.95}
+            strokeOpacity={1.0}
           />
         </Svg>
       </Animated.View>
@@ -242,35 +248,57 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
 };
 
 /**
- * Calculates continuous procedural fluid wave paths for all 379 SX particles
+ * Calculates continuous procedural vortex fluid wave paths for all 361 SX particles
  */
-function generateFramePaths(time: number, flowStrength: number) {
-  let whitePath = '';
-  let accentPath = '';
-  let depthPath = '';
+function generateFramePaths(time: number, flowStrength: number): FramePaths {
+  let logoWhite = '';
+  let logoAccent = '';
+  let fieldWhite = '';
+  let fieldDepth = '';
 
   const count = SX_DASH_PARTICLES.length;
+  const CX = 135;
+  const CY = 115;
+  const SPAN_X = 240;
+  const SPAN_Y = 200;
+
   for (let i = 0; i < count; i++) {
     const p: DashParticle = SX_DASH_PARTICLES[i];
 
-    // Procedural fluid harmonic waves (sine, cosine, radial wave interference)
-    const wave1 = Math.sin(time * 2.1 + p.normY * 5.2 + p.normX * 3.4 + p.phase);
-    const wave2 = Math.cos(time * 2.5 + p.normX * 5.8 - p.normY * 3.8);
-    const wave3 = Math.sin(time * 1.4 + (p.normX * p.normX + p.normY * p.normY) * 6.5);
+    // Base coordinates in 270x230 viewBox
+    const X0 = CX + p.normX * SPAN_X;
+    const Y0 = CY + p.normY * SPAN_Y;
 
-    // Subtle fluid wave displacement (controlled amplitude ~ 1.8 to 2.8 units in 200x140 space)
-    const dx = (wave1 * 2.4 + wave3 * 1.1) * flowStrength;
-    const dy = (wave2 * 1.9 + wave1 * 0.9) * flowStrength;
+    // Polar coordinates relative to vortex center
+    const dx = X0 - CX;
+    const dy = Y0 - CY;
+    const r = Math.sqrt(dx * dx + dy * dy);
+    const alpha = Math.atan2(dy, dx);
 
-    // Center point in viewBox 0 0 200 140
-    const cx = 100 + p.normX * 136 + dx;
-    const cy = 70 + p.normY * 96 + dy;
+    // Procedural fluid harmonic waves (concentric swirl + radial ripple)
+    const radialWave = Math.sin(time * 1.9 - r * 0.042 + p.phase);
+    const harmonicWave = Math.cos(time * 2.3 + p.normX * 4.2 - p.normY * 3.6);
+    const breathWave = Math.sin(time * 1.2 + r * 0.025);
 
-    // Dynamic dash orientation responding to local wave gradient/flow
-    const angle = p.baseAngle + (wave1 * 0.24 + wave2 * 0.16) * flowStrength;
+    // Fluid displacement along tangential vortex flow + radial undulation
+    const flowVel = (1.9 + harmonicWave * 1.2) * flowStrength;
+    const radialVel = (radialWave * 1.5) * flowStrength;
+
+    // Clockwise swirl tangent: dx_tangent = -sin(alpha), dy_tangent = cos(alpha)
+    const dispX = -Math.sin(alpha) * flowVel + Math.cos(alpha) * radialVel;
+    const dispY = Math.cos(alpha) * flowVel + Math.sin(alpha) * radialVel;
+
+    const cx = X0 + dispX;
+    const cy = Y0 + dispY;
+
+    // Dynamic dash orientation:
+    // Flow field tangent is alpha + PI / 2, tilted smoothly by the local wave gradient
+    const waveTilt = (radialWave * 0.22 + harmonicWave * 0.16) * flowStrength;
+    const angle = alpha + Math.PI / 2 + waveTilt;
 
     // Dynamic dash length with subtle breathing
-    const halfL = (p.length * (1 + wave3 * 0.15)) * 0.5;
+    const len = p.baseLength * (1 + breathWave * 0.12);
+    const halfL = len * 0.5;
 
     const cosA = Math.cos(angle);
     const sinA = Math.sin(angle);
@@ -282,19 +310,26 @@ function generateFramePaths(time: number, flowStrength: number) {
 
     const seg = `M${x1} ${y1}L${x2} ${y2}`;
 
-    if (p.isAccent) {
-      accentPath += seg;
-    } else if (p.opacity < 0.65) {
-      depthPath += seg;
+    if (p.isLogo) {
+      if (p.isAccent) {
+        logoAccent += seg;
+      } else {
+        logoWhite += seg;
+      }
     } else {
-      whitePath += seg;
+      if (p.opacity > 0.28) {
+        fieldWhite += seg;
+      } else {
+        fieldDepth += seg;
+      }
     }
   }
 
   return {
-    white: whitePath,
-    accent: accentPath,
-    depth: depthPath,
+    logoWhite,
+    logoAccent,
+    fieldWhite,
+    fieldDepth,
   };
 }
 
@@ -302,17 +337,9 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-  },
-  ambientGlow: {
-    position: 'absolute',
-    backgroundColor: '#1E40AF',
-    shadowColor: '#3B82F6',
-    shadowOpacity: 0.35,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 4,
-    opacity: 0.25,
+    paddingTop: 8,
+    paddingBottom: 4,
+    backgroundColor: 'transparent',
   },
   fieldWrapper: {
     alignItems: 'center',
@@ -322,16 +349,16 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   wordmarkWrapper: {
-    marginTop: 12,
+    marginTop: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   wordmarkText: {
     fontFamily: fonts.displayBold,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 6,
+    letterSpacing: 8,
     textTransform: 'uppercase',
   },
 });

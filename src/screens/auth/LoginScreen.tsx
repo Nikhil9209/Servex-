@@ -364,7 +364,7 @@ export const LoginScreen: React.FC = () => {
 const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
-    backgroundColor: '#050505',
+    backgroundColor: '#000000',
   },
   scrollContent: {
     flexGrow: 1,
