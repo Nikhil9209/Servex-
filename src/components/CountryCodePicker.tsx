@@ -7,7 +7,6 @@ import {
   Modal,
   FlatList,
   TextInput,
-  SafeAreaView,
 } from 'react-native';
 import { colors, fonts } from '../theme/tokens';
 import { CountryCodeItem } from '../types/auth';
@@ -130,7 +129,7 @@ export const CountryCodePicker: React.FC<CountryCodePickerProps> = ({
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
-        <SafeAreaView style={styles.modalOverlay}>
+        <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             {/* Modal Header */}
             <View style={styles.modalHeader}>
@@ -195,7 +194,7 @@ export const CountryCodePicker: React.FC<CountryCodePickerProps> = ({
               ItemSeparatorComponent={() => <View style={styles.separator} />}
             />
           </View>
-        </SafeAreaView>
+        </View>
       </Modal>
     </>
   );
