@@ -179,55 +179,49 @@ export const LoginScreen: React.FC = () => {
           {/* Email / Password Form */}
           <View style={styles.form}>
             {/* Email Field */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Email</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#5F636A"
-                  value={email}
-                  onChangeText={(val) => {
-                    setEmail(val);
-                    if (authError) clearAuthError();
-                  }}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="email"
-                  editable={!isSubmitting}
-                />
-              </View>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Email address"
+                placeholderTextColor="#64748B"
+                value={email}
+                onChangeText={(val) => {
+                  setEmail(val);
+                  if (authError) clearAuthError();
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                editable={!isSubmitting}
+              />
             </View>
 
             {/* Password Field */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Password</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={[styles.input, styles.passwordInput]}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#5F636A"
-                  value={password}
-                  onChangeText={(val) => {
-                    setPassword(val);
-                    if (authError) clearAuthError();
-                  }}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="password"
-                  editable={!isSubmitting}
-                />
-                <Pressable
-                  style={styles.eyeToggle}
-                  onPress={() => setShowPassword(!showPassword)}
-                  hitSlop={8}
-                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  <Text style={styles.eyeText}>{showPassword ? '👁️' : '👁'}</Text>
-                </Pressable>
-              </View>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.input, styles.passwordInput]}
+                placeholder="Password"
+                placeholderTextColor="#64748B"
+                value={password}
+                onChangeText={(val) => {
+                  setPassword(val);
+                  if (authError) clearAuthError();
+                }}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="password"
+                editable={!isSubmitting}
+              />
+              <Pressable
+                style={styles.eyeToggle}
+                onPress={() => setShowPassword(!showPassword)}
+                hitSlop={8}
+                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <Text style={styles.eyeText}>{showPassword ? '👁️' : '👁'}</Text>
+              </Pressable>
             </View>
 
             {/* Forgot Password */}
@@ -282,23 +276,16 @@ export const LoginScreen: React.FC = () => {
             </Pressable>
           </View>
 
-          {/* Quick Demo Pre-fill helper for reviewer */}
-          <View style={styles.demoHelper}>
-            <Text style={styles.demoHelperTitle}>Demo Accounts:</Text>
-            <View style={styles.demoPillsRow}>
-              <Pressable
-                style={styles.demoPill}
-                onPress={() => fillTestCredentials('client')}
-              >
-                <Text style={styles.demoPillText}>Client Account</Text>
-              </Pressable>
-              <Pressable
-                style={styles.demoPill}
-                onPress={() => fillTestCredentials('contractor')}
-              >
-                <Text style={styles.demoPillText}>Contractor Account</Text>
-              </Pressable>
-            </View>
+          {/* Discreet Quick Demo link */}
+          <View style={styles.demoHelperRow}>
+            <Text style={styles.demoHelperLabel}>Demo:</Text>
+            <Pressable onPress={() => fillTestCredentials('client')} hitSlop={6}>
+              <Text style={styles.demoLinkText}>Client</Text>
+            </Pressable>
+            <Text style={styles.demoHelperDot}>•</Text>
+            <Pressable onPress={() => fillTestCredentials('contractor')} hitSlop={6}>
+              <Text style={styles.demoLinkText}>Contractor</Text>
+            </Pressable>
           </View>
         </Animated.View>
       </View>
@@ -370,32 +357,32 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
   },
   cardContainer: {
     width: '100%',
-    maxWidth: 390,
+    maxWidth: 360,
   },
   header: {
     alignItems: 'center',
     marginTop: 6,
-    marginBottom: 20,
+    marginBottom: 14,
   },
   logoMargin: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   title: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 22,
     letterSpacing: 0.3,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   subtitle: {
     fontFamily: fonts.body,
     color: '#8B8F95',
-    fontSize: 14,
+    fontSize: 13.5,
   },
   errorBox: {
     flexDirection: 'row',
@@ -405,29 +392,29 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(239, 68, 68, 0.35)',
     borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 18,
-    gap: 10,
+    paddingVertical: 9,
+    marginBottom: 14,
+    gap: 8,
   },
   errorIcon: {
-    fontSize: 16,
+    fontSize: 15,
   },
   errorText: {
     fontFamily: fonts.body,
     color: '#EF4444',
-    fontSize: 13,
+    fontSize: 12.5,
     flex: 1,
-    lineHeight: 18,
+    lineHeight: 17,
   },
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#121419',
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#242833',
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     shadowColor: '#000000',
     shadowOpacity: 0.3,
@@ -436,13 +423,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   googleIconWrapper: {
-    marginRight: 12,
+    marginRight: 10,
   },
   googleButtonText: {
     fontFamily: fonts.bodyMedium,
     color: '#FFFFFF',
-    fontSize: 15,
-    letterSpacing: 0.3,
+    fontSize: 14.5,
+    letterSpacing: 0.2,
   },
   buttonPressed: {
     opacity: 0.8,
@@ -454,7 +441,7 @@ const styles = StyleSheet.create({
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 22,
+    marginVertical: 14,
   },
   dividerLine: {
     flex: 1,
@@ -464,21 +451,15 @@ const styles = StyleSheet.create({
   dividerText: {
     fontFamily: fonts.bodyMedium,
     color: '#656B77',
-    fontSize: 12,
-    paddingHorizontal: 14,
+    fontSize: 11.5,
+    paddingHorizontal: 12,
     letterSpacing: 1.5,
   },
   form: {
-    gap: 16,
+    gap: 11,
   },
   fieldGroup: {
     gap: 6,
-  },
-  fieldLabel: {
-    fontFamily: fonts.bodyMedium,
-    color: '#EDEAE3',
-    fontSize: 13,
-    letterSpacing: 0.2,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -493,12 +474,12 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#FFFFFF',
     fontFamily: fonts.body,
-    fontSize: 14.5,
+    fontSize: 14,
     paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingVertical: 12,
   },
   passwordInput: {
-    paddingRight: 42,
+    paddingRight: 40,
   },
   eyeToggle: {
     position: 'absolute',
@@ -506,24 +487,24 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   eyeText: {
-    fontSize: 15,
+    fontSize: 14,
   },
   forgotRow: {
     alignItems: 'flex-end',
-    marginTop: -4,
+    marginTop: -2,
   },
   forgotText: {
     fontFamily: fonts.bodyMedium,
     color: '#1A73E8',
-    fontSize: 13,
+    fontSize: 12.5,
   },
   loginButton: {
     backgroundColor: '#1A73E8',
     borderRadius: 10,
-    paddingVertical: 14,
+    paddingVertical: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginTop: 4,
     shadowColor: '#1A73E8',
     shadowOpacity: 0.35,
     shadowRadius: 10,
@@ -536,60 +517,50 @@ const styles = StyleSheet.create({
   loginButtonText: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 14.5,
+    fontSize: 14,
     letterSpacing: 1.2,
   },
   bottomSection: {
     alignItems: 'center',
-    marginTop: 28,
-    gap: 6,
+    marginTop: 18,
+    gap: 4,
   },
   newText: {
     fontFamily: fonts.body,
     color: '#8B8F95',
-    fontSize: 13.5,
+    fontSize: 13,
   },
   createAccountPressable: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
   },
   createAccountText: {
     fontFamily: fonts.displayBold,
     color: '#1A73E8',
-    fontSize: 13.5,
-    letterSpacing: 1,
-  },
-  demoHelper: {
-    marginTop: 32,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#1A1D24',
-    alignItems: 'center',
-  },
-  demoHelperTitle: {
-    fontFamily: fonts.bodyMedium,
-    color: '#5F636A',
-    fontSize: 11,
-    marginBottom: 8,
-    textTransform: 'uppercase',
+    fontSize: 13,
     letterSpacing: 0.8,
   },
-  demoPillsRow: {
+  demoHelperRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 18,
     gap: 8,
   },
-  demoPill: {
-    backgroundColor: '#13161C',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#20242D',
+  demoHelperLabel: {
+    fontFamily: fonts.bodyMedium,
+    color: '#475569',
+    fontSize: 11,
   },
-  demoPillText: {
-    fontFamily: fonts.body,
-    color: '#8B8F95',
+  demoLinkText: {
+    fontFamily: fonts.bodyMedium,
+    color: '#64748B',
     fontSize: 11.5,
+    textDecorationLine: 'underline',
+  },
+  demoHelperDot: {
+    color: '#334155',
+    fontSize: 10,
   },
   modalBackdrop: {
     flex: 1,

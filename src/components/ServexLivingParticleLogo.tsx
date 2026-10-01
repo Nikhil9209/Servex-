@@ -14,7 +14,7 @@ import { fonts } from '../theme/tokens';
 
 export interface ServexLivingParticleLogoProps {
   /**
-   * Width of the SX particle logo in dp (defaults to balanced ~30-32% of screen width, ~115-125dp)
+   * Width of the SX particle logo in dp (defaults to sleek ~96-108dp)
    */
   width?: number;
   /**
@@ -40,8 +40,8 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
   const windowDims = Dimensions.get('window');
   const screenWidth = windowDims.width;
 
-  // Compact, balanced size (~30-32% screen width, ~115 to 128dp)
-  const width = customWidth || Math.min(Math.max(Math.round(screenWidth * 0.31), 110), 128);
+  // Sleek, compact executive size (~96 to 108dp on mobile)
+  const width = customWidth || Math.min(Math.max(Math.round(screenWidth * 0.26), 92), 108);
   // SX logo aspect ratio is ~1.428 (width / height)
   const height = Math.round(width / 1.428);
 
@@ -84,7 +84,7 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
     () =>
       progress.interpolate({
         inputRange: [0, 0.58, 0.72, 1.0],
-        outputRange: [6, 6, 0, 0],
+        outputRange: [5, 5, 0, 0],
         extrapolate: 'clamp',
       }),
     [progress]
@@ -170,15 +170,15 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
         <Svg
           width={width}
           height={height}
-          viewBox="0 0 160 112"
+          viewBox="0 0 140 98"
           style={styles.svg}
         >
-          {/* All dots in pure white, forming ONLY the Servex SX logo */}
+          {/* All dots in 100% pure white, forming ONLY the Servex SX logo */}
           <Path
             ref={pathRef}
             d={currentPath}
             stroke="#FFFFFF"
-            strokeWidth={2.8}
+            strokeWidth={2.6}
             strokeLinecap="round"
             strokeOpacity={0.96}
           />
@@ -205,28 +205,28 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
 };
 
 /**
- * Calculates continuous procedural fluid wave paths for all 182 white SX dots
+ * Calculates continuous procedural fluid wave paths for all 223 organic white SX dots
  */
 function generateFramePath(time: number, flowStrength: number): string {
   let pathStr = '';
 
   const count = SX_DOT_PARTICLES.length;
-  const CX = 80;
-  const CY = 56;
-  const SPAN_X = 140;
-  const SPAN_Y = 98;
+  const CX = 70;
+  const CY = 49;
+  const SPAN_X = 124;
+  const SPAN_Y = 86;
 
   for (let i = 0; i < count; i++) {
     const p: SxDotParticle = SX_DOT_PARTICLES[i];
 
     // Procedural fluid harmonic waves (concentric swirl + radial ripple)
-    const wave1 = Math.sin(time * 2.2 + p.normY * 4.8 + p.normX * 3.2 + p.phase);
-    const wave2 = Math.cos(time * 2.5 + p.normX * 5.2 - p.normY * 3.6);
-    const wave3 = Math.sin(time * 1.5 + (p.normX * p.normX + p.normY * p.normY) * 6.0);
+    const wave1 = Math.sin(time * 2.0 + p.normY * 4.5 + p.normX * 3.0 + p.phase);
+    const wave2 = Math.cos(time * 2.4 + p.normX * 5.0 - p.normY * 3.5);
+    const wave3 = Math.sin(time * 1.4 + (p.normX * p.normX + p.normY * p.normY) * 5.5);
 
-    // Controlled fluid displacement (amplitude ~ 1.2 to 2.2 units in 160x112 space)
-    const dx = (wave1 * 1.6 + wave3 * 0.8) * flowStrength;
-    const dy = (wave2 * 1.4 + wave1 * 0.7) * flowStrength;
+    // Subtle fluid wave displacement (amplitude ~ 1.0 to 1.6 units in 140x98 space)
+    const dx = (wave1 * 1.4 + wave3 * 0.7) * flowStrength;
+    const dy = (wave2 * 1.2 + wave1 * 0.6) * flowStrength;
 
     const cx = CX + p.normX * SPAN_X + dx;
     const cy = CY + p.normY * SPAN_Y + dy;
@@ -242,8 +242,8 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingTop: 4,
+    paddingBottom: 2,
     backgroundColor: 'transparent',
   },
   fieldWrapper: {
@@ -254,13 +254,13 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   wordmarkWrapper: {
-    marginTop: 10,
+    marginTop: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   wordmarkText: {
     fontFamily: fonts.displayBold,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 6,
