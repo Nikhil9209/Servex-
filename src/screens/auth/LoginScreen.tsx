@@ -11,14 +11,15 @@ import {
   ActivityIndicator,
   Modal,
   Animated,
+  Easing,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { fonts } from '../../theme/tokens';
 import { useAuth } from '../../context/AuthContext';
-import { ParticleLogoAssembly } from '../../components/ParticleLogoAssembly';
+import { ServexLivingParticleLogo } from '../../components/ServexLivingParticleLogo';
 import { GoogleIcon } from '../../components/GoogleIcon';
 
-// Track whether the particle assembly has already completed once in this session
+// Track whether the particle intro has completed once in this session
 let hasViewedParticleIntro = false;
 
 export const LoginScreen: React.FC = () => {
@@ -38,20 +39,26 @@ export const LoginScreen: React.FC = () => {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
 
-  // Animation values: if user already saw the intro, start at 1; otherwise run 2.0s choreography
+  // Animation values: if user already saw the intro, start at 1; otherwise run 2.0s first-load reveal
   const initialProgress = hasViewedParticleIntro ? 1 : 0;
   const [progressAnim] = useState(() => new Animated.Value(initialProgress));
 
   useEffect(() => {
     if (!hasViewedParticleIntro) {
       hasViewedParticleIntro = true;
+      Animated.timing(progressAnim, {
+        toValue: 1,
+        duration: 2000,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
+        useNativeDriver: true,
+      }).start();
     }
-  }, []);
+  }, [progressAnim]);
 
   const formOpacity = useMemo(
     () =>
       progressAnim.interpolate({
-        inputRange: [0, 0.82, 1.0],
+        inputRange: [0, 0.70, 1.0],
         outputRange: [0, 0, 1],
         extrapolate: 'clamp',
       }),
@@ -61,8 +68,8 @@ export const LoginScreen: React.FC = () => {
   const formTranslateY = useMemo(
     () =>
       progressAnim.interpolate({
-        inputRange: [0, 0.82, 1.0],
-        outputRange: [24, 24, 0],
+        inputRange: [0, 0.70, 1.0],
+        outputRange: [20, 20, 0],
         extrapolate: 'clamp',
       }),
     [progressAnim]
@@ -117,10 +124,10 @@ export const LoginScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.cardContainer}>
-          {/* Hero Servex Logo Particle Assembly Animation */}
-          <ParticleLogoAssembly
-            progressAnim={progressAnim}
-            allowSkip={true}
+          {/* Living SX Dash Particle Logo (Continuous Fluid Wave Motion) */}
+          <ServexLivingParticleLogo
+            introProgress={progressAnim}
+            showWordmark={true}
           />
 
           {/* Animated Authentication Interface (Smoothly appears underneath logo at 1.7s) */}
