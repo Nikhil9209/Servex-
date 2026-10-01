@@ -165,19 +165,12 @@ export const OtpVerificationScreen: React.FC = () => {
             <View style={styles.devCodeBox}>
               <View style={styles.simHeaderRow}>
                 <View style={styles.simIndicatorDot} />
-                <Text style={styles.devCodeTitle}>TEST / SIMULATION MODE</Text>
-                <Text style={styles.simSubtleHint}>
-                  {pendingRegistration?.smsDeliveryMessage && !pendingRegistration.smsDeliveryMessage.includes('Simulation mode active')
-                    ? '(Gateway Notice)'
-                    : '(Local Fallback)'}
-                </Text>
+                <Text style={styles.devCodeTitle}>TEST MODE ACTIVE</Text>
               </View>
-              {pendingRegistration?.smsDeliveryMessage && !pendingRegistration.smsDeliveryMessage.includes('Simulation mode active') ? (
-                <Text style={styles.simWarningText}>
-                  ⚠️ {pendingRegistration.smsDeliveryMessage}
-                </Text>
-              ) : null}
-              <Text style={styles.devCodeValue}>Your verification code: {lastGeneratedOtp}</Text>
+
+              <Text style={styles.devCodeHeading}>Your 6-Digit Verification Code</Text>
+              <Text style={styles.devCodeValue}>{lastGeneratedOtp}</Text>
+
               <Pressable
                 style={styles.devCodeFillBtn}
                 onPress={() => {
@@ -185,8 +178,12 @@ export const OtpVerificationScreen: React.FC = () => {
                   handleVerify(lastGeneratedOtp);
                 }}
               >
-                <Text style={styles.devCodeFillText}>Auto-fill Code</Text>
+                <Text style={styles.devCodeFillText}>Auto-fill Code & Continue →</Text>
               </Pressable>
+
+              <Text style={styles.simSubtleNote}>
+                💡 Real cellular SMS requires ₹100 Fast2SMS recharge. Servex test mode lets you proceed for free!
+              </Text>
             </View>
           ) : null}
 
@@ -395,47 +392,43 @@ const styles = StyleSheet.create({
   devCodeTitle: {
     fontFamily: fonts.bodyMedium,
     color: '#F59E0B',
-    fontSize: 10.5,
+    fontSize: 11,
     letterSpacing: 0.8,
   },
-  simSubtleHint: {
+  devCodeHeading: {
     fontFamily: fonts.body,
-    color: '#656B77',
-    fontSize: 10,
+    color: '#8B8F95',
+    fontSize: 12,
+    marginTop: 6,
+    marginBottom: 2,
   },
   devCodeValue: {
     fontFamily: fonts.displayBold,
     color: '#60A5FA',
-    fontSize: 14,
+    fontSize: 22,
+    letterSpacing: 4,
     marginVertical: 4,
-  },
-  simWarningText: {
-    fontFamily: fonts.body,
-    color: '#FCD34D',
-    fontSize: 11,
-    textAlign: 'center',
-    marginVertical: 4,
-    paddingHorizontal: 8,
-    lineHeight: 15,
-  },
-  simExplainText: {
-    fontFamily: fonts.body,
-    color: '#8B8F95',
-    fontSize: 11,
-    textAlign: 'center',
-    marginBottom: 4,
   },
   devCodeFillBtn: {
-    backgroundColor: '#1D4ED8',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginTop: 4,
+    backgroundColor: '#1A73E8',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 6,
   },
   devCodeFillText: {
-    fontFamily: fonts.bodyMedium,
+    fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 11.5,
+    fontSize: 13,
+    letterSpacing: 0.3,
+  },
+  simSubtleNote: {
+    fontFamily: fonts.body,
+    color: '#656B77',
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 15,
   },
   infoBox: {
     backgroundColor: 'rgba(26, 115, 232, 0.1)',
