@@ -373,7 +373,7 @@ export const AuthService = {
       otpCode: code,
       otpExpiresAt: expiresAt,
       otpLastSentAt: Date.now(),
-      smsDeliveryProvider: smsResult.provider,
+      smsDeliveryProvider: smsResult.success ? smsResult.provider : 'simulation',
       smsDeliveryMessage: smsResult.success
         ? smsResult.provider === 'simulation'
           ? 'Simulation mode active (Add FAST2SMS or TWILIO key to .env for real SMS)'

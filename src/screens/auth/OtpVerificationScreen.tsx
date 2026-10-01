@@ -166,12 +166,18 @@ export const OtpVerificationScreen: React.FC = () => {
               <View style={styles.simHeaderRow}>
                 <View style={styles.simIndicatorDot} />
                 <Text style={styles.devCodeTitle}>TEST / SIMULATION MODE</Text>
-                <Text style={styles.simSubtleHint}>(No SMS gateway key in .env)</Text>
+                <Text style={styles.simSubtleHint}>
+                  {pendingRegistration?.smsDeliveryMessage && !pendingRegistration.smsDeliveryMessage.includes('Simulation mode active')
+                    ? '(Gateway Notice)'
+                    : '(Local Fallback)'}
+                </Text>
               </View>
+              {pendingRegistration?.smsDeliveryMessage && !pendingRegistration.smsDeliveryMessage.includes('Simulation mode active') ? (
+                <Text style={styles.simWarningText}>
+                  ⚠️ {pendingRegistration.smsDeliveryMessage}
+                </Text>
+              ) : null}
               <Text style={styles.devCodeValue}>Your verification code: {lastGeneratedOtp}</Text>
-              <Text style={styles.simExplainText}>
-                To receive live SMS on your mobile phone, add EXPO_PUBLIC_FAST2SMS_API_KEY in .env
-              </Text>
               <Pressable
                 style={styles.devCodeFillBtn}
                 onPress={() => {
@@ -402,6 +408,15 @@ const styles = StyleSheet.create({
     color: '#60A5FA',
     fontSize: 14,
     marginVertical: 4,
+  },
+  simWarningText: {
+    fontFamily: fonts.body,
+    color: '#FCD34D',
+    fontSize: 11,
+    textAlign: 'center',
+    marginVertical: 4,
+    paddingHorizontal: 8,
+    lineHeight: 15,
   },
   simExplainText: {
     fontFamily: fonts.body,
