@@ -14,6 +14,10 @@ import { User } from '../../types/auth';
 import { ServexLogo } from '../../components/ServexLogo';
 import { AuthService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
+import { useContractor } from '../../context/ContractorContext';
+import { PdfBillModal } from '../contractor/pages/PdfBillModal';
+import { ContractorProjectDetail } from '../../types/contractor';
+import { FileTextIcon } from '../../components/ContractorIcons';
 
 interface ClientHomeScreenProps {
   user: User;
@@ -22,7 +26,9 @@ interface ClientHomeScreenProps {
 
 export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogout }) => {
   const { switchUserRole } = useAuth();
+  const { projects } = useContractor();
   const [searchQuery, setSearchQuery] = useState('');
+  const [billModalProject, setBillModalProject] = useState<ContractorProjectDetail | null>(null);
 
   const handleLogoutPress = () => {
     Alert.alert('Confirm Logout', 'Are you sure you want to log out of your Servex account?', [
@@ -156,6 +162,74 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogo
           />
         </View>
 
+        {/* My Contracted Construction Sites (Connected from Backend Store) */}
+        {projects.length > 0 && (
+          <View style={styles.clientSitesSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>My Construction Sites</Text>
+              <Text style={styles.sectionSubtitle}>{projects.length} sites</Text>
+            </View>
+
+            {projects.slice(0, 2).map((p) => {
+              const totalScope = p.scopeItems.reduce((acc, s) => acc + s.totalAmount, 0);
+              const doneValue = p.scopeItems.reduce((acc, s) => acc + s.completedQuantity * s.ratePerUnit, 0);
+              const pct = totalScope > 0 ? Math.round((doneValue / totalScope) * 100) : 0;
+              const workersToday = p.todayAttendance.filter((a) => a.status === 'present').length;
+
+              return (
+                <View key={p.id} style={styles.siteProjectCard}>
+                  <View style={styles.siteCardHeader}>
+                    <View style={styles.clientCodeBadge}>
+                      <Text style={styles.clientCodeText}>{p.clientCode}</Text>
+                    </View>
+                    <View style={styles.statusPill}>
+                      <View style={[styles.statusDot, { backgroundColor: '#10B981' }]} />
+                      <Text style={styles.statusText}>{p.status.toUpperCase()}</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.siteProjectTitle}>{p.projectName}</Text>
+                  <Text style={styles.siteAddressText} numberOfLines={1}>📍 {p.siteAddress}</Text>
+
+                  {/* Progress & Stats */}
+                  <View style={styles.siteStatsRow}>
+                    <View style={styles.siteStatCol}>
+                      <Text style={styles.siteStatLabel}>Execution</Text>
+                      <Text style={styles.siteStatVal}>{pct}%</Text>
+                    </View>
+                    <View style={styles.siteStatDivider} />
+                    <View style={styles.siteStatCol}>
+                      <Text style={styles.siteStatLabel}>Work Done</Text>
+                      <Text style={[styles.siteStatVal, { color: '#38BDF8' }]}>₹{doneValue.toLocaleString('en-IN')}</Text>
+                    </View>
+                    <View style={styles.siteStatDivider} />
+                    <View style={styles.siteStatCol}>
+                      <Text style={styles.siteStatLabel}>Crew On-Site</Text>
+                      <Text style={styles.siteStatVal}>{workersToday} workers</Text>
+                    </View>
+                  </View>
+
+                  {/* Progress track */}
+                  <View style={styles.siteTrack}>
+                    <View style={[styles.siteTrackFill, { width: `${pct}%` }]} />
+                  </View>
+
+                  {/* Client Actions */}
+                  <View style={styles.siteActionsRow}>
+                    <Pressable
+                      style={styles.viewBillBtn}
+                      onPress={() => setBillModalProject(p)}
+                    >
+                      <FileTextIcon size={14} color="#000000" />
+                      <Text style={styles.viewBillBtnText}>View Running Account RA Bill</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
         {/* Active Booking Banner */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Active Bookings</Text>
@@ -216,6 +290,14 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogo
           </Text>
         </View>
       </ScrollView>
+
+      {billModalProject && (
+        <PdfBillModal
+          visible={true}
+          project={billModalProject}
+          onClose={() => setBillModalProject(null)}
+        />
+      )}
     </View>
   );
 };
@@ -588,5 +670,109 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     color: '#5F636A',
     fontSize: 11,
+  },
+
+  // My Construction Sites Section
+  clientSitesSection: {
+    marginBottom: 26,
+  },
+  siteProjectCard: {
+    backgroundColor: '#121620',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#202634',
+    marginBottom: 14,
+  },
+  siteCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  clientCodeBadge: {
+    backgroundColor: '#1D2536',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#2B384F',
+  },
+  clientCodeText: {
+    fontFamily: fonts.displayBold,
+    color: '#38BDF8',
+    fontSize: 10.5,
+    letterSpacing: 0.5,
+  },
+  siteProjectTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 15,
+    marginBottom: 4,
+  },
+  siteAddressText: {
+    fontFamily: fonts.body,
+    color: '#8E8E93',
+    fontSize: 11.5,
+    marginBottom: 14,
+  },
+  siteStatsRow: {
+    flexDirection: 'row',
+    backgroundColor: '#0C0E14',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#181C26',
+    marginBottom: 12,
+  },
+  siteStatCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  siteStatDivider: {
+    width: 1,
+    backgroundColor: '#1C212E',
+  },
+  siteStatLabel: {
+    fontFamily: fonts.displayBold,
+    color: '#636366',
+    fontSize: 9.5,
+    letterSpacing: 0.4,
+    marginBottom: 3,
+  },
+  siteStatVal: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 12.5,
+  },
+  siteTrack: {
+    height: 5,
+    backgroundColor: '#1C212E',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 14,
+  },
+  siteTrackFill: {
+    height: '100%',
+    backgroundColor: '#10B981',
+    borderRadius: 3,
+  },
+  siteActionsRow: {
+    flexDirection: 'row',
+  },
+  viewBillBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 6,
+  },
+  viewBillBtnText: {
+    fontFamily: fonts.displayBold,
+    color: '#000000',
+    fontSize: 12,
   },
 });

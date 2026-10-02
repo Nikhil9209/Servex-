@@ -17,6 +17,10 @@ import {
   DashboardTabIcon,
 } from '../../../components/ContractorIcons';
 
+import { useContractor } from '../../../context/ContractorContext';
+import { ContractorStorageService } from '../../../services/contractorStorageService';
+import { PulsingDot, SpringPressable } from '../../../components/AnimatedComponents';
+
 interface ProfileSettingsViewProps {
   user: User;
   onLogout: () => void;
@@ -30,11 +34,40 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   onSwitchRole,
   onReplaySplash,
 }) => {
+  const { projects, isCloudConnected, refreshProjects } = useContractor();
+
+  const totalWorkers = projects.reduce((sum, p) => sum + (p.workers?.length || 0), 0);
+  const totalTransactions = projects.reduce((sum, p) => sum + (p.transactions?.length || 0), 0);
+
   const handleLogoutPress = () => {
     Alert.alert('Confirm Logout', 'Are you sure you want to log out of Servex Contractor?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Log Out', style: 'destructive', onPress: onLogout },
     ]);
+  };
+
+  const handleForceRefresh = async () => {
+    await refreshProjects();
+    Alert.alert('Backend Synced', 'Successfully refreshed workspace data from storage engine.');
+  };
+
+  const handleResetData = () => {
+    Alert.alert(
+      'Reset All Project Data',
+      'This will reset your local database back to default initial seed projects. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset to Seed',
+          style: 'destructive',
+          onPress: async () => {
+            await ContractorStorageService.resetToSeedData();
+            await refreshProjects();
+            Alert.alert('Database Reset', 'Workspace has been reset to initial seed projects.');
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -66,6 +99,39 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
             </View>
             <Text style={styles.licenseSubtitle}>Class-1 Prime General Contractor</Text>
             <Text style={styles.contactSubtitle}>{user.email}</Text>
+          </View>
+        </View>
+
+        {/* BACKEND & DATA ENGINE DIAGNOSTICS */}
+        <Text style={styles.sectionHeader}>Backend & Storage Engine</Text>
+
+        <View style={styles.credentialsCard}>
+          <View style={styles.credRow}>
+            <Text style={styles.credLabel}>Storage Mode</Text>
+            <View style={styles.backendStatusRow}>
+              <PulsingDot color={isCloudConnected ? '#10B981' : '#38BDF8'} size={6} />
+              <Text style={[styles.credVal, { color: isCloudConnected ? '#10B981' : '#38BDF8' }]}>
+                {isCloudConnected ? 'Supabase Cloud Synced' : 'Offline-First Engine'}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.credDivider} />
+
+          <View style={styles.credRow}>
+            <Text style={styles.credLabel}>Stored Projects</Text>
+            <Text style={styles.credVal}>{projects.length} Active Sites</Text>
+          </View>
+          <View style={styles.credDivider} />
+
+          <View style={styles.credRow}>
+            <Text style={styles.credLabel}>Workforce Roster</Text>
+            <Text style={styles.credVal}>{totalWorkers} Registered Workers</Text>
+          </View>
+          <View style={styles.credDivider} />
+
+          <View style={styles.credRow}>
+            <Text style={styles.credLabel}>Ledger History</Text>
+            <Text style={styles.credVal}>{totalTransactions} Transactions Logged</Text>
           </View>
         </View>
 
@@ -101,6 +167,38 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
         <Text style={styles.sectionHeader}>Account & settings</Text>
 
         <View style={styles.actionsMenu}>
+          {/* Force Sync */}
+          <SpringPressable
+            style={styles.actionMenuItem}
+            onPress={handleForceRefresh}
+            scaleTo={0.98}
+          >
+            <View style={styles.itemIconBox}>
+              <SparklesIcon size={16} color="#38BDF8" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.itemTitle}>Synchronize Storage</Text>
+              <Text style={styles.itemSub}>Re-read and sync all local/cloud records</Text>
+            </View>
+            <ChevronRightIcon size={14} color="#71717A" />
+          </SpringPressable>
+
+          {/* Reset database */}
+          <SpringPressable
+            style={styles.actionMenuItem}
+            onPress={handleResetData}
+            scaleTo={0.98}
+          >
+            <View style={styles.itemIconBox}>
+              <SparklesIcon size={16} color="#F59E0B" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.itemTitle}>Reset Demo Data</Text>
+              <Text style={styles.itemSub}>Restore default project test records</Text>
+            </View>
+            <ChevronRightIcon size={14} color="#71717A" />
+          </SpringPressable>
+
           {onSwitchRole && (
             <Pressable
               style={({ pressed }) => [
@@ -260,6 +358,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 8,
+  },
+  backendStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   credLabel: {
     fontFamily: fonts.body,
