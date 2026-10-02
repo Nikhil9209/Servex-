@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { AuthLoadingScreen } from '../components/AuthLoadingScreen';
 import { AuthNavigator } from './AuthNavigator';
 import { ClientHomeScreen } from '../screens/client/ClientHomeScreen';
-import WelcomeScreen from '../screens/WelcomeScreen';
+import { ContractorHomeScreen } from '../screens/contractor/ContractorHomeScreen';
 
 interface RootNavigatorProps {
   onReplaySplash?: () => void;
@@ -29,7 +29,7 @@ export const RootNavigator: React.FC<RootNavigatorProps> = ({ onReplaySplash }) 
       {user.role === 'client' ? (
         <ClientHomeScreen user={user} onLogout={logout} />
       ) : (
-        <WelcomeScreen
+        <ContractorHomeScreen
           user={user}
           onLogout={logout}
           onReplaySplash={onReplaySplash}
