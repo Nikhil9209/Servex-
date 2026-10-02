@@ -169,7 +169,9 @@ export const ContractorBackendService = {
     const supabase = getSupabaseClient();
     if (supabase) {
       try {
-        await supabase.from('projects').update({
+        await supabase.from('projects').upsert({
+          id: project.id,
+          client_code: project.clientCode,
           project_name: project.projectName,
           client_name: project.clientName,
           client_phone: project.clientPhone,
@@ -177,7 +179,98 @@ export const ContractorBackendService = {
           start_date: project.startDate,
           status: project.status,
           worker_messaging_allowed: project.chatState?.workerMessagingAllowed || false,
-        }).eq('id', project.id);
+        });
+
+        // Sync scope items
+        if (project.scopeItems && project.scopeItems.length > 0) {
+          const scopeRows = project.scopeItems.map((s) => ({
+            id: s.id,
+            project_id: project.id,
+            name: s.name,
+            unit: s.unit,
+            quantity: s.quantity,
+            rate_per_unit: s.ratePerUnit,
+            total_amount: s.totalAmount,
+            completed_quantity: s.completedQuantity || 0,
+          }));
+          await supabase.from('scope_items').upsert(scopeRows, { onConflict: 'id' });
+        }
+
+        // Sync workers
+        if (project.workers && project.workers.length > 0) {
+          const workerRows = project.workers.map((w) => ({
+            id: w.id,
+            project_id: project.id,
+            name: w.name,
+            role: w.role,
+            daily_wage: w.dailyWage,
+            phone: w.phone || '',
+          }));
+          await supabase.from('workers').upsert(workerRows, { onConflict: 'id' });
+        }
+
+        // Sync attendance
+        if (project.todayAttendance && project.todayAttendance.length > 0) {
+          const attRows = project.todayAttendance.map((a) => ({
+            project_id: project.id,
+            worker_id: a.workerId,
+            worker_name: a.workerName,
+            role: a.role,
+            daily_wage: a.dailyWage,
+            date: a.date,
+            status: a.status,
+            check_in_time: a.checkInTime || '09:00 AM',
+            proof_verified: Boolean(a.proofVerified),
+            proof_note: a.proofNote || '',
+            wage_calculated: a.wageCalculated,
+          }));
+          await supabase.from('attendance_records').upsert(attRows, { onConflict: 'project_id,worker_id,date' });
+        }
+
+        // Sync daily work reports
+        if (project.dailyReports && project.dailyReports.length > 0) {
+          const reportRows = project.dailyReports.map((r) => ({
+            id: r.id,
+            project_id: project.id,
+            date: r.date,
+            verified_by: r.verifiedBy,
+            items_json: JSON.stringify(r.items),
+            total_work_value_today: r.totalWorkValueToday,
+            total_worker_wage_today: r.totalWorkerWageToday,
+            contractor_margin_today: r.contractorMarginToday,
+            is_verified: r.isVerified,
+          }));
+          await supabase.from('daily_work_reports').upsert(reportRows, { onConflict: 'id' });
+        }
+
+        // Sync transactions
+        if (project.transactions && project.transactions.length > 0) {
+          const txRows = project.transactions.map((t) => ({
+            id: t.id,
+            project_id: project.id,
+            date: t.date,
+            amount: t.amount,
+            type: t.type,
+            note: t.note,
+            recipient_or_payer: t.recipientOrPayer,
+            reference_no: t.referenceNo,
+          }));
+          await supabase.from('ledger_transactions').upsert(txRows, { onConflict: 'id' });
+        }
+
+        // Sync chat messages
+        if (project.chatState?.messages && project.chatState.messages.length > 0) {
+          const msgRows = project.chatState.messages.map((m) => ({
+            id: m.id,
+            project_id: project.id,
+            sender_role: m.senderRole,
+            sender_name: m.senderName,
+            content: m.content,
+            timestamp: m.timestamp,
+            is_authority_action: Boolean(m.isAuthorityAction),
+          }));
+          await supabase.from('chat_messages').upsert(msgRows, { onConflict: 'id' });
+        }
       } catch {
         // Safe offline queue
       }
