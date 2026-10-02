@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { AuthSession, StoredUserAccount } from '../types/auth';
 
 const SESSION_KEY = 'servex_auth_session_v1';
-const USERS_DB_KEY = 'servex_registered_users_v1';
+const USERS_DB_KEY = 'servex_registered_users_v2';
 
 // In-memory fallback if SecureStore is unavailable
 const memoryFallback = new Map<string, string>();
@@ -67,10 +67,10 @@ async function deleteItem(key: string): Promise<void> {
   memoryFallback.delete(key);
 }
 
-// Initial registered user pool so Flow C (Existing Google user) and Flow D (Existing email user) are verifiable immediately
+// Initial registered user pool with valid Supabase Auth UUID format for demo seed compatibility
 const INITIAL_REGISTERED_USERS: StoredUserAccount[] = [
   {
-    id: 'user_alex_client',
+    id: 'c11e0000-0000-4000-8000-000000000001',
     name: 'Alex Rivera',
     email: 'client@servex.com',
     phone: '9876543210',
@@ -79,11 +79,11 @@ const INITIAL_REGISTERED_USERS: StoredUserAccount[] = [
     authProvider: 'email',
     createdAt: new Date().toISOString(),
     isPhoneVerified: true,
-    // SHA256 / hashed representation of "Servex@2026"
-    passwordHash: 'Servex@2026',
+    // Salted bcrypt hash (cost 10, unique salt 1) for demo/test seed compatibility - zero plaintext
+    passwordHash: '$2b$10$mnTJlqVp5OpjuZUmCey9rOVxZQjXionJKmHG3lcDPWrNr2AtG/onm',
   },
   {
-    id: 'user_marcus_contractor',
+    id: 'c0a80000-0000-4000-8000-000000000002',
     name: 'Marcus Vance',
     email: 'contractor@servex.com',
     phone: '9876543211',
@@ -92,10 +92,11 @@ const INITIAL_REGISTERED_USERS: StoredUserAccount[] = [
     authProvider: 'email',
     createdAt: new Date().toISOString(),
     isPhoneVerified: true,
-    passwordHash: 'Servex@2026',
+    // Salted bcrypt hash (cost 10, unique salt 2) for demo/test seed compatibility - zero plaintext
+    passwordHash: '$2b$10$/iaFVBo4ZIN.OniEjMrKdujIS2BJgaCL8O2xcchcDMUVJB4iaiab.',
   },
   {
-    id: 'user_google_existing',
+    id: '98120000-0000-4000-8000-000000000003',
     name: 'Priya Sharma',
     email: 'priya.sharma@gmail.com',
     phone: '9812345678',
@@ -108,6 +109,18 @@ const INITIAL_REGISTERED_USERS: StoredUserAccount[] = [
 ];
 
 export const StorageService = {
+  getItem(key: string): Promise<string | null> {
+    return getItem(key);
+  },
+
+  setItem(key: string, value: string): Promise<void> {
+    return setItem(key, value);
+  },
+
+  deleteItem(key: string): Promise<void> {
+    return deleteItem(key);
+  },
+
   async saveSession(session: AuthSession): Promise<void> {
     await setItem(SESSION_KEY, JSON.stringify(session));
   },

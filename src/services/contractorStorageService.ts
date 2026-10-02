@@ -105,6 +105,8 @@ export const ContractorStorageService = {
     const newProject: ContractorProjectDetail = {
       ...data,
       id: `proj-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      contractorId: data.contractorId ?? null,
+      clientId: data.clientId ?? null,
       scopeItems: [],
       workers: [],
       todayAttendance: [],
@@ -140,14 +142,29 @@ export const ContractorStorageService = {
   async updateProject(project: ContractorProjectDetail): Promise<ContractorProjectDetail> {
     const list = await this.getProjects();
     const index = list.findIndex((p) => p.id === project.id);
+    const existing = index >= 0 ? list[index] : null;
+
+    const mergedProject: ContractorProjectDetail = {
+      ...project,
+      // Preserve existing ownership if established
+      contractorId:
+        project.contractorId !== undefined
+          ? project.contractorId
+          : (existing?.contractorId ?? null),
+      clientId:
+        project.clientId !== undefined
+          ? project.clientId
+          : (existing?.clientId ?? null),
+    };
+
     let updatedList: ContractorProjectDetail[];
     if (index >= 0) {
-      updatedList = list.map((p) => (p.id === project.id ? project : p));
+      updatedList = list.map((p) => (p.id === project.id ? mergedProject : p));
     } else {
-      updatedList = [project, ...list];
+      updatedList = [mergedProject, ...list];
     }
     await this.saveProjects(updatedList);
-    return project;
+    return mergedProject;
   },
 
   /**

@@ -10,6 +10,8 @@ export const INITIAL_CONTRACTOR_PROJECTS: ContractorProjectDetail[] = [
     siteAddress: 'Flat 4201, Tower B, Worli Sea Face, Mumbai',
     startDate: '15 Sep 2026',
     status: 'active',
+    contractorId: null,
+    clientId: null,
     scopeItems: [
       {
         id: 'sc-1',
@@ -260,6 +262,8 @@ export const INITIAL_CONTRACTOR_PROJECTS: ContractorProjectDetail[] = [
     siteAddress: 'Unit 802, Godrej One, Vikhroli, Mumbai',
     startDate: '22 Sep 2026',
     status: 'active',
+    contractorId: null,
+    clientId: null,
     scopeItems: [
       {
         id: 'sc-21',
@@ -371,6 +375,8 @@ export const INITIAL_CONTRACTOR_PROJECTS: ContractorProjectDetail[] = [
     siteAddress: 'Ground Floor, Linking Road, Bandra West, Mumbai',
     startDate: '10 Oct 2026',
     status: 'upcoming',
+    contractorId: null,
+    clientId: null,
     scopeItems: [
       {
         id: 'sc-31',

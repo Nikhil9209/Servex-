@@ -14,7 +14,7 @@ export interface User {
 }
 
 export interface StoredUserAccount extends User {
-  passwordHash?: string;
+  passwordHash?: string; // Legacy demo seed accounts only (salted bcrypt). Supabase Auth users store zero credentials locally.
 }
 
 export interface PendingRegistration {
@@ -22,9 +22,10 @@ export interface PendingRegistration {
   email: string;
   phone: string;
   countryCode: string;
-  passwordHash?: string;
+  passwordRaw?: string; // In-memory during registration only, never persisted
   authProvider: 'email' | 'google';
   googleSub?: string;
+  googleIdToken?: string; // In-memory for Supabase Auth OAuth linking
   avatarUrl?: string;
   otpCode: string;
   otpExpiresAt: number;

@@ -6,6 +6,7 @@
     "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
     "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@supabase/supabase-js": "^2.117.2",
+    "bcryptjs": "^3.0.3",
     "expo": "~57.0.26",
     "expo-auth-session": "~57.0.13",
     "expo-blur": "~57.0.3",
@@ -22,6 +23,7 @@
     "react-native-web": "^0.21.2"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/react": "~19.2.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
@@ -34,8 +36,11 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "npx tsx scripts/test-runner.js",
+    "test:stage1": "npx tsx scripts/test-stage1-runner.js",
+    "test:stage2": "npx tsx scripts/test-stage2-runner.js",
+    "test:stage3": "npx tsx scripts/test-stage3-runner.js",
     "test:backend": "npx tsx scripts/test-contractor-runner.js",
-    "test:all": "npm test && npm run test:backend"
+    "test:all": "npm test && npm run test:stage1 && npm run test:stage2 && npm run test:stage3 && npm run test:backend"
   },
   "private": true
 }

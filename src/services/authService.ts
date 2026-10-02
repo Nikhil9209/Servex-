@@ -10,8 +10,35 @@ import {
 } from '../types/auth';
 import { StorageService } from './storage';
 import { SmsService } from './smsService';
+import { getSupabaseClient } from './supabaseClient';
+import bcrypt from 'bcryptjs';
 
 WebBrowser.maybeCompleteAuthSession();
+
+/**
+ * Bcrypt password verification helper for legacy seed accounts and offline mode.
+ * Supabase Auth is the authority for password authentication.
+ * Plaintext passwords and fast general-purpose hashes (SHA-256/MD5/SHA-1) are strictly prohibited.
+ */
+function verifyLocalBcryptPassword(passwordRaw: string, storedHash?: string): boolean {
+  if (!storedHash) return false;
+  try {
+    if (storedHash.startsWith('$2a$') || storedHash.startsWith('$2b$')) {
+      return bcrypt.compareSync(passwordRaw, storedHash);
+    }
+  } catch {
+    // Ignore error
+  }
+  return false;
+}
+
+function generateUuid(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 // Google OAuth Discovery Endpoints
 const GOOGLE_DISCOVERY = {
@@ -100,14 +127,93 @@ export const AuthService = {
     }
 
     const users = await StorageService.getRegisteredUsers();
-    const foundUser = users.find((u) => u.email.toLowerCase() === email);
+    let foundUser = users.find((u) => u.email.toLowerCase() === email);
+
+    // Supabase Auth is the primary authentication authority
+    const supabase = getSupabaseClient();
+    let supabaseUid: string | null = null;
+
+    if (supabase) {
+      try {
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (!signInError && authData?.user) {
+          supabaseUid = authData.user.id;
+        } else if (signInError) {
+          // Check if this is a legacy seed account awaiting migration to Supabase Auth
+          if (foundUser?.passwordHash) {
+            const isBcryptValid = verifyLocalBcryptPassword(password, foundUser.passwordHash);
+            if (!isBcryptValid) {
+              throw new Error('Incorrect password. Please verify your credentials and try again.');
+            }
+
+            // Valid legacy credentials: migrate user into Supabase Auth
+            try {
+              const { data: signUpData } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                  data: {
+                    name: foundUser.name,
+                    phone: foundUser.phone,
+                    role: foundUser.role,
+                  },
+                },
+              });
+              if (signUpData?.user) {
+                supabaseUid = signUpData.user.id;
+              }
+            } catch {
+              // Ignore migration network/rate-limit error
+            }
+          } else if (!foundUser) {
+            throw new Error('An account with this email was not found. Please create an account.');
+          } else {
+            // Password invalid in Supabase Auth
+            throw new Error('Incorrect password. Please verify your credentials and try again.');
+          }
+        }
+      } catch (err: any) {
+        if (err.message && (err.message.includes('Incorrect password') || err.message.includes('not found'))) {
+          throw err;
+        }
+        // Network failure / offline fallback for legacy accounts
+        if (foundUser?.passwordHash) {
+          const isBcryptValid = verifyLocalBcryptPassword(password, foundUser.passwordHash);
+          if (!isBcryptValid) {
+            throw new Error('Incorrect password. Please verify your credentials and try again.');
+          }
+        } else if (!foundUser) {
+          throw new Error('An account with this email was not found. Please create an account.');
+        }
+      }
+    } else {
+      // Local/offline test mode without Supabase client
+      if (!foundUser) {
+        throw new Error('An account with this email was not found. Please create an account.');
+      }
+      if (foundUser.passwordHash) {
+        const isBcryptValid = verifyLocalBcryptPassword(password, foundUser.passwordHash);
+        if (!isBcryptValid) {
+          throw new Error('Incorrect password. Please verify your credentials and try again.');
+        }
+      }
+    }
 
     if (!foundUser) {
       throw new Error('An account with this email was not found. Please create an account.');
     }
 
-    if (foundUser.passwordHash && foundUser.passwordHash !== password) {
-      throw new Error('Incorrect password. Please verify your credentials and try again.');
+    if (supabaseUid && foundUser.id !== supabaseUid) {
+      foundUser.id = supabaseUid;
+      const userIndex = users.findIndex((u) => u.email.toLowerCase() === email);
+      if (userIndex >= 0) {
+        users[userIndex].id = supabaseUid;
+        await StorageService.saveRegisteredUsers(users);
+      }
     }
 
     // Prepare session
@@ -137,12 +243,31 @@ export const AuthService = {
    * - Flow C: Existing Servex Account -> Logs in immediately
    * - Flow B: First-time Google User -> Mandatory Phone Number collection
    */
-  async processGoogleIdentity(googleUser: {
-    name: string;
-    email: string;
-    sub: string;
-    picture?: string;
-  }): Promise<GoogleAuthResult> {
+  async processGoogleIdentity(
+    googleUser: {
+      name: string;
+      email: string;
+      sub: string;
+      picture?: string;
+    },
+    googleIdToken?: string
+  ): Promise<GoogleAuthResult> {
+    const supabase = getSupabaseClient();
+    let supabaseUid: string | null = null;
+    if (supabase && googleIdToken) {
+      try {
+        const { data: oauthData } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: googleIdToken,
+        });
+        if (oauthData?.user) {
+          supabaseUid = oauthData.user.id;
+        }
+      } catch {
+        // Safe offline / dashboard config fallback
+      }
+    }
+
     // 1. Check if user already exists in Servex database
     const existingUsers = await StorageService.getRegisteredUsers();
     const existingAccount = existingUsers.find(
@@ -153,6 +278,17 @@ export const AuthService = {
 
     // Flow C: Existing Google user with assigned role (whether phone was verified or skipped for later)
     if (existingAccount && existingAccount.role) {
+      if (supabaseUid && existingAccount.id !== supabaseUid) {
+        existingAccount.id = supabaseUid;
+        const userIdx = existingUsers.findIndex(
+          (u) => u.email.toLowerCase() === googleUser.email.toLowerCase()
+        );
+        if (userIdx >= 0) {
+          existingUsers[userIdx].id = supabaseUid;
+          await StorageService.saveRegisteredUsers(existingUsers);
+        }
+      }
+
       const session: AppAuthSession = {
         token: `srvx_sess_g_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         user: {
@@ -181,6 +317,7 @@ export const AuthService = {
       countryCode: '+91',
       authProvider: 'google',
       googleSub: googleUser.sub,
+      googleIdToken,
       avatarUrl: googleUser.picture,
       otpCode: '',
       otpExpiresAt: 0,
@@ -214,21 +351,48 @@ export const AuthService = {
   },
 
   /**
+   * Helper to parse id_token from return URL hash or query params
+   */
+  extractIdTokenFromUrl(url: string): string | null {
+    const hashIndex = url.indexOf('#');
+    if (hashIndex !== -1) {
+      const hash = url.substring(hashIndex + 1);
+      const params = new URLSearchParams(hash);
+      const token = params.get('id_token');
+      if (token) return token;
+    }
+    const queryIndex = url.indexOf('?');
+    if (queryIndex !== -1) {
+      const query = url.substring(queryIndex + 1);
+      const params = new URLSearchParams(query);
+      const token = params.get('id_token');
+      if (token) return token;
+    }
+    return null;
+  },
+
+  /**
    * Fetches user profile from Google and routes to Servex identity processor
    */
-  async fetchAndProcessGoogleUser(accessToken: string): Promise<GoogleAuthResult> {
+  async fetchAndProcessGoogleUser(
+    accessToken: string,
+    idToken?: string
+  ): Promise<GoogleAuthResult> {
     const userInfoResponse = await fetch(GOOGLE_DISCOVERY.userInfoEndpoint, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     if (userInfoResponse.ok) {
       const profile = await userInfoResponse.json();
-      return this.processGoogleIdentity({
-        name: profile.name || 'Google User',
-        email: profile.email,
-        sub: profile.sub,
-        picture: profile.picture,
-      });
+      return this.processGoogleIdentity(
+        {
+          name: profile.name || 'Google User',
+          email: profile.email,
+          sub: profile.sub,
+          picture: profile.picture,
+        },
+        idToken
+      );
     } else {
       return {
         status: 'ERROR',
@@ -273,7 +437,10 @@ export const AuthService = {
           return { status: 'CANCELLED' };
         }
         if (result.type === 'success' && result.params?.access_token) {
-          return await this.fetchAndProcessGoogleUser(result.params.access_token);
+          return await this.fetchAndProcessGoogleUser(
+            result.params.access_token,
+            result.params.id_token
+          );
         }
       } else {
         // Native / Expo Go: Google strictly forbids exp:// custom schemes in Web OAuth clients.
@@ -304,8 +471,9 @@ export const AuthService = {
 
         if (result.type === 'success' && result.url) {
           const token = this.extractTokenFromUrl(result.url);
+          const idToken = this.extractIdTokenFromUrl(result.url);
           if (token) {
-            return await this.fetchAndProcessGoogleUser(token);
+            return await this.fetchAndProcessGoogleUser(token, idToken || undefined);
           }
         }
       }
@@ -410,8 +578,61 @@ export const AuthService = {
     pending: PendingRegistration,
     role: UserRole
   ): Promise<{ user: User; session: AppAuthSession }> {
+    // Supabase Auth is the sole password authority and handles salted bcrypt hashing in PostgreSQL.
+    // The application does NOT maintain a secondary password database.
+    // For local offline test runners without Supabase, hash with standard bcrypt if needed.
+    const supabase = getSupabaseClient();
+    let supabaseUid: string | null = null;
+    const passwordForAuth = pending.passwordRaw;
+
+    let offlineBcryptHash: string | undefined = undefined;
+    if (!supabase && passwordForAuth) {
+      offlineBcryptHash = bcrypt.hashSync(passwordForAuth, 10);
+    }
+
+    if (supabase) {
+      try {
+        if (pending.authProvider === 'email' && passwordForAuth) {
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: pending.email.trim().toLowerCase(),
+            password: passwordForAuth,
+            options: {
+              data: {
+                name: pending.name.trim(),
+                phone: pending.phone.replace(/\D/g, ''),
+                role,
+              },
+            },
+          });
+
+          if (!signUpError && signUpData?.user) {
+            supabaseUid = signUpData.user.id;
+          } else if (signUpError) {
+            // If already signed up in Supabase Auth, sign in to link session and get user ID
+            const { data: signInData } = await supabase.auth.signInWithPassword({
+              email: pending.email.trim().toLowerCase(),
+              password: passwordForAuth,
+            });
+            if (signInData?.user) {
+              supabaseUid = signInData.user.id;
+            }
+          }
+        } else if (pending.authProvider === 'google' && pending.googleIdToken) {
+          const { data: oauthData } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: pending.googleIdToken,
+          });
+          if (oauthData?.user) {
+            supabaseUid = oauthData.user.id;
+          }
+        }
+      } catch {
+        // Safe offline fallback
+      }
+    }
+
     const newUser: StoredUserAccount = {
-      id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: supabaseUid || generateUuid(),
       name: pending.name.trim(),
       email: pending.email.trim().toLowerCase(),
       phone: pending.phone.replace(/\D/g, ''),
@@ -421,7 +642,7 @@ export const AuthService = {
       authProvider: pending.authProvider,
       createdAt: new Date().toISOString(),
       isPhoneVerified: pending.isPhoneVerified ?? true,
-      passwordHash: pending.passwordHash,
+      passwordHash: offlineBcryptHash,
     };
 
     await StorageService.addRegisteredUser(newUser);
@@ -451,6 +672,14 @@ export const AuthService = {
    * Logout user
    */
   async logout(): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        // Safe offline fallback
+      }
+    }
     await StorageService.clearSession();
   },
 };

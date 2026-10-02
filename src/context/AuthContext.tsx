@@ -13,6 +13,7 @@ import {
 } from '../types/auth';
 import { AuthService } from '../services/authService';
 import { StorageService } from '../services/storage';
+import { getSupabaseSession } from '../services/supabaseClient';
 
 interface AuthContextType {
   user: User | null;
@@ -75,32 +76,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
   }, []);
 
-  // 1. Initial Session Check on App Launch
+  // 1. Initial Session Check on App Launch (Local + Supabase Auth synchronization)
   useEffect(() => {
     let isMounted = true;
-    StorageService.getSession()
-      .then((session) => {
+    async function restoreSession() {
+      try {
+        const [localSession, supabaseSession] = await Promise.all([
+          StorageService.getSession(),
+          getSupabaseSession().catch(() => null),
+        ]);
+
         if (!isMounted) return;
-        if (session && session.user && session.user.id) {
-          setUser(session.user);
+
+        if (localSession && localSession.user && localSession.user.id) {
+          // Align user.id with authenticated Supabase auth.uid() when available
+          if (supabaseSession?.user?.id) {
+            localSession.user.id = supabaseSession.user.id;
+          }
+          setUser(localSession.user);
+        } else if (supabaseSession?.user?.id) {
+          // Session found in Supabase Auth
+          const registeredUsers = await StorageService.getRegisteredUsers();
+          const matched = registeredUsers.find(
+            (u) =>
+              u.id === supabaseSession.user.id ||
+              u.email.toLowerCase() === (supabaseSession.user.email || '').toLowerCase()
+          );
+          if (matched) {
+            matched.id = supabaseSession.user.id;
+            setUser(matched);
+          } else {
+            setUser(null);
+            setAuthScreenStep('LOGIN');
+          }
         } else {
           setUser(null);
           setAuthScreenStep('LOGIN');
         }
-      })
-      .catch(() => {
+      } catch {
         if (!isMounted) return;
         setUser(null);
         setAuthScreenStep('LOGIN');
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setTimeout(() => {
-          if (isMounted) {
-            setIsLoading(false);
-          }
-        }, 300);
-      });
+      } finally {
+        if (isMounted) {
+          setTimeout(() => {
+            if (isMounted) {
+              setIsLoading(false);
+            }
+          }, 300);
+        }
+      }
+    }
+
+    restoreSession();
 
     return () => {
       isMounted = false;
@@ -210,7 +238,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: email.trim().toLowerCase(),
           phone: cleanPhone,
           countryCode: countryCode || '+91',
-          passwordHash: password,
+          passwordRaw: password,
           authProvider: 'email',
           otpCode: '',
           otpExpiresAt: 0,
@@ -228,7 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: email.trim().toLowerCase(),
         phone: '',
         countryCode: countryCode || '+91',
-        passwordHash: password,
+        passwordRaw: password,
         authProvider: 'email',
         otpCode: '',
         otpExpiresAt: 0,
