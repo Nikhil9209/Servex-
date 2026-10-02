@@ -18,6 +18,7 @@ import { fonts } from '../../theme/tokens';
 import { useAuth } from '../../context/AuthContext';
 import { ServexLivingParticleLogo } from '../../components/ServexLivingParticleLogo';
 import { GoogleIcon } from '../../components/GoogleIcon';
+import { EyeIcon } from '../../components/EyeIcon';
 
 // Track whether the particle intro has completed once in this session
 let hasViewedParticleIntro = false;
@@ -183,7 +184,9 @@ export const LoginScreen: React.FC = () => {
               <TextInput
                 style={styles.input}
                 placeholder="Email address"
-                placeholderTextColor="#64748B"
+                placeholderTextColor="#71717A"
+                selectionColor="#FFFFFF"
+                cursorColor="#FFFFFF"
                 value={email}
                 onChangeText={(val) => {
                   setEmail(val);
@@ -202,7 +205,9 @@ export const LoginScreen: React.FC = () => {
               <TextInput
                 style={[styles.input, styles.passwordInput]}
                 placeholder="Password"
-                placeholderTextColor="#64748B"
+                placeholderTextColor="#71717A"
+                selectionColor="#FFFFFF"
+                cursorColor="#FFFFFF"
                 value={password}
                 onChangeText={(val) => {
                   setPassword(val);
@@ -220,7 +225,7 @@ export const LoginScreen: React.FC = () => {
                 hitSlop={8}
                 accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
               >
-                <Text style={styles.eyeText}>{showPassword ? '👁️' : '👁'}</Text>
+                <EyeIcon visible={showPassword} size={18} color="#A1A1AA" />
               </Pressable>
             </View>
 
@@ -314,7 +319,9 @@ export const LoginScreen: React.FC = () => {
                   <TextInput
                     style={styles.input}
                     placeholder="Enter registered email"
-                    placeholderTextColor="#5F636A"
+                    placeholderTextColor="#71717A"
+                    selectionColor="#FFFFFF"
+                    cursorColor="#FFFFFF"
                     value={forgotEmail}
                     onChangeText={setForgotEmail}
                     keyboardType="email-address"
@@ -381,7 +388,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontFamily: fonts.body,
-    color: '#8B8F95',
+    color: '#A1A1AA',
     fontSize: 13.5,
   },
   errorBox: {
@@ -450,7 +457,7 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontFamily: fonts.bodyMedium,
-    color: '#656B77',
+    color: '#71717A',
     fontSize: 11.5,
     paddingHorizontal: 12,
     letterSpacing: 1.5,
@@ -479,15 +486,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   passwordInput: {
-    paddingRight: 40,
+    paddingRight: 44,
   },
   eyeToggle: {
     position: 'absolute',
     right: 12,
     padding: 6,
-  },
-  eyeText: {
-    fontSize: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   forgotRow: {
     alignItems: 'flex-end',
@@ -495,8 +501,9 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontFamily: fonts.bodyMedium,
-    color: '#94A3B8',
+    color: '#D4D4D8',
     fontSize: 12.5,
+    letterSpacing: 0.1,
   },
   loginButton: {
     backgroundColor: '#FFFFFF',
@@ -527,7 +534,7 @@ const styles = StyleSheet.create({
   },
   newText: {
     fontFamily: fonts.body,
-    color: '#8B8F95',
+    color: '#A1A1AA',
     fontSize: 13,
   },
   createAccountPressable: {
@@ -549,17 +556,16 @@ const styles = StyleSheet.create({
   },
   demoHelperLabel: {
     fontFamily: fonts.bodyMedium,
-    color: '#475569',
+    color: '#52525B',
     fontSize: 11,
   },
   demoLinkText: {
     fontFamily: fonts.bodyMedium,
-    color: '#64748B',
+    color: '#A1A1AA',
     fontSize: 11.5,
-    textDecorationLine: 'underline',
   },
   demoHelperDot: {
-    color: '#334155',
+    color: '#3F3F46',
     fontSize: 10,
   },
   modalBackdrop: {
@@ -586,7 +592,7 @@ const styles = StyleSheet.create({
   },
   modalDesc: {
     fontFamily: fonts.body,
-    color: '#8B8F95',
+    color: '#A1A1AA',
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 16,
@@ -616,7 +622,7 @@ const styles = StyleSheet.create({
   },
   modalSecondaryText: {
     fontFamily: fonts.bodyMedium,
-    color: '#8B8F95',
+    color: '#A1A1AA',
     fontSize: 13,
   },
   modalPrimaryBtn: {

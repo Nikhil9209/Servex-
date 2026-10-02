@@ -17,6 +17,7 @@ import { useAuth } from '../../context/AuthContext';
 import { CountryCodePicker, SUPPORTED_COUNTRIES } from '../../components/CountryCodePicker';
 import { CountryCodeItem } from '../../types/auth';
 import { GoogleIcon } from '../../components/GoogleIcon';
+import { EyeIcon } from '../../components/EyeIcon';
 
 export const RegisterScreen: React.FC = () => {
   const {
@@ -298,14 +299,17 @@ export const RegisterScreen: React.FC = () => {
                   }}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
+                  selectionColor="#FFFFFF"
+                  cursorColor="#FFFFFF"
                   editable={!isSubmitting}
                 />
                 <Pressable
                   style={styles.eyeToggle}
                   onPress={() => setShowPassword(!showPassword)}
                   hitSlop={8}
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  <Text style={styles.eyeText}>{showPassword ? '👁️' : '👁'}</Text>
+                  <EyeIcon visible={showPassword} size={18} color="#A1A1AA" />
                 </Pressable>
               </View>
               {password.length > 0 && (
@@ -342,7 +346,9 @@ export const RegisterScreen: React.FC = () => {
                 <TextInput
                   style={[styles.input, styles.passwordInput]}
                   placeholder="Confirm your password"
-                  placeholderTextColor="#5F636A"
+                  placeholderTextColor="#71717A"
+                  selectionColor="#FFFFFF"
+                  cursorColor="#FFFFFF"
                   value={confirmPassword}
                   onChangeText={(val) => {
                     setConfirmPassword(val);
@@ -359,8 +365,9 @@ export const RegisterScreen: React.FC = () => {
                   style={styles.eyeToggle}
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   hitSlop={8}
+                  accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
                 >
-                  <Text style={styles.eyeText}>{showConfirmPassword ? '👁️' : '👁'}</Text>
+                  <EyeIcon visible={showConfirmPassword} size={18} color="#A1A1AA" />
                 </Pressable>
               </View>
               {confirmPassword.length > 0 && password !== confirmPassword && (
@@ -739,7 +746,7 @@ const styles = StyleSheet.create({
   },
   signInText: {
     fontFamily: fonts.displayBold,
-    color: '#1A73E8',
+    color: '#FFFFFF',
     fontSize: 13.5,
     letterSpacing: 1,
   },
