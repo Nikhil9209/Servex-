@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, SafeAreaView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  TextInput,
+  Modal,
+  SafeAreaView,
+  Platform,
+  Alert,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { fonts } from '../../theme/tokens';
 import { User } from '../../types/auth';
-import {
-  DashboardTabIcon,
-  JobsTabIcon,
-  EarningsTabIcon,
-  ProfileTabIcon,
-} from '../../components/ContractorIcons';
-import { ContractorDashboardTab, ContractorProject } from './tabs/ContractorDashboardTab';
-import { ContractorJobsTab } from './tabs/ContractorJobsTab';
-import { ContractorEarningsTab } from './tabs/ContractorEarningsTab';
-import { ContractorProfileTab } from './tabs/ContractorProfileTab';
+import { ContractorProjectDetail } from '../../types/contractor';
+import { INITIAL_CONTRACTOR_PROJECTS } from '../../services/contractorStorage';
+import { MapPinIcon, CrewIcon } from '../../components/ContractorIcons';
+import { ProjectWorkspaceScreen } from './pages/ProjectWorkspaceScreen';
 
 export interface ContractorHomeScreenProps {
   user: User;
@@ -20,306 +25,412 @@ export interface ContractorHomeScreenProps {
   onReplaySplash?: () => void;
 }
 
-type TabType = 'dashboard' | 'jobs' | 'earnings' | 'profile';
-
-const INITIAL_PROJECTS: ContractorProject[] = [
-  {
-    id: 'proj-bkc',
-    clientDeveloper: 'Sunil Rao Commercial Towers',
-    projectTitle: 'BKC Commercial Tower 3-Phase HT Busbar & Substation',
-    contractValue: 2400000,
-    progressiveBilled: 1800000,
-    siteLocation: 'Bandra Kurla Complex, Tower B, Level 4',
-    crewLead: 'Suresh Nair (Foreman)',
-    crewAssignedCount: 12,
-    status: 'active',
-    progressPct: 75,
-    safetyScore: 100,
-    milestones: [
-      { id: 'm1', title: 'Site Hazard & Arc Flash Assessment', stage: 'Engineering', completed: true, certifiedByArchitect: true },
-      { id: 'm2', title: 'Main 3-Phase Busbar Isolation & Gland Fitting', stage: 'Civil & HT', completed: true, certifiedByArchitect: true },
-      { id: 'm3', title: '415V HT Panel Termination & Breakers', stage: 'Electrical', completed: true, certifiedByArchitect: true },
-      { id: 'm4', title: 'Insulation Resistance & Megger Testing', stage: 'Commissioning', completed: false, certifiedByArchitect: false },
-    ],
-  },
-  {
-    id: 'proj-lodha',
-    clientDeveloper: 'Lodha Developers Ltd.',
-    projectTitle: 'Lodha Bellissimo Central HVAC Telemetry & Chillers',
-    contractValue: 1850000,
-    progressiveBilled: 1250000,
-    siteLocation: 'Lower Parel Commercial Zone, Mumbai',
-    crewLead: 'Vikram Seth (Foreman)',
-    crewAssignedCount: 8,
-    status: 'active',
-    progressPct: 67,
-    safetyScore: 100,
-    milestones: [
-      { id: 'l1', title: 'Chiller Plant Stator Pull & Rigging', stage: 'Mechanical', completed: true, certifiedByArchitect: true },
-      { id: 'l2', title: 'Copper Coil Rewind & Varnish Dip', stage: 'Electrical', completed: true, certifiedByArchitect: true },
-      { id: 'l3', title: 'BMS Telemetry & Variable Air Damper Sensor Calibration', stage: 'Automation', completed: false, certifiedByArchitect: false },
-    ],
-  },
-  {
-    id: 'proj-andheri',
-    clientDeveloper: 'Karan Johar Logistics Hub',
-    projectTitle: 'Industrial Armored Conduit & Heavy Cable Tray Network',
-    contractValue: 920000,
-    progressiveBilled: 790000,
-    siteLocation: 'Andheri East Industrial Zone, Sector 4',
-    crewLead: 'Pravin Jadhav (Foreman)',
-    crewAssignedCount: 8,
-    status: 'active',
-    progressPct: 85,
-    safetyScore: 100,
-    milestones: [
-      { id: 'a1', title: 'Hilti Pull Testing on Overhead Trusses', stage: 'Structural', completed: true, certifiedByArchitect: true },
-      { id: 'a2', title: 'Perforated Heavy Tray Alignment', stage: 'Installation', completed: true, certifiedByArchitect: true },
-      { id: 'a3', title: 'Earthing Continuity & Final PMC Handover', stage: 'Testing', completed: false, certifiedByArchitect: false },
-    ],
-  },
-  {
-    id: 'proj-godrej-tender',
-    clientDeveloper: 'Godrej Properties Ltd.',
-    projectTitle: 'Godrej Horizon Phase-2: HT Substation & Distribution Tender',
-    contractValue: 1850000,
-    progressiveBilled: 0,
-    siteLocation: 'Vikhroli West Commercial Site 4, Mumbai',
-    crewLead: 'Unassigned (Bidding Stage)',
-    crewAssignedCount: 0,
-    status: 'tender',
-    progressPct: 0,
-    safetyScore: 100,
-    milestones: [
-      { id: 'g1', title: 'BOQ Estimation & Substation Drawings', stage: 'Tender Prep', completed: false, certifiedByArchitect: false },
-      { id: 'g2', title: 'PMC Tender Bid Submission', stage: 'Bidding', completed: false, certifiedByArchitect: false },
-    ],
-  },
-  {
-    id: 'proj-colaba-done',
-    clientDeveloper: 'Dr. Alok Nath Healthcare Campus',
-    projectTitle: 'Main Incomer Surge Protector & Harmonic Filter Retrofit',
-    contractValue: 450000,
-    progressiveBilled: 450000,
-    siteLocation: 'Colaba Causeway, Mumbai',
-    crewLead: 'Suresh Nair',
-    crewAssignedCount: 4,
-    status: 'completed',
-    progressPct: 100,
-    safetyScore: 100,
-    milestones: [
-      { id: 'c1', title: 'SPD Enclosure Mount', stage: 'Installation', completed: true, certifiedByArchitect: true },
-      { id: 'c2', title: 'Transient Surge Calibration & Handover', stage: 'Commissioning', completed: true, certifiedByArchitect: true },
-    ],
-  },
-];
-
 export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
   user,
   onLogout,
   onReplaySplash,
 }) => {
-  const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
-  const [isOperating, setIsOperating] = useState(true);
-  const [projects, setProjects] = useState<ContractorProject[]>(INITIAL_PROJECTS);
+  const [projects, setProjects] = useState<ContractorProjectDetail[]>(INITIAL_CONTRACTOR_PROJECTS);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
-  const activeProjects = projects.filter((p) => p.status === 'active');
+  // Join Project Modal state
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [clientCodeInput, setClientCodeInput] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientPhone, setNewClientPhone] = useState('');
+  const [newSiteAddress, setNewSiteAddress] = useState('');
 
-  const handleToggleOperating = () => {
-    setIsOperating((prev) => !prev);
-  };
+  const [isMobilized, setIsMobilized] = useState(true);
 
-  const handleTenderTapped = (_tenderId: string) => {
-    setCurrentTab('jobs');
-  };
-
-  const handleToggleMilestone = (projectId: string, milestoneId: string) => {
-    setProjects((prev) =>
-      prev.map((proj) => {
-        if (proj.id !== projectId) return proj;
-
-        const updatedMilestones = proj.milestones.map((m) =>
-          m.id === milestoneId ? { ...m, completed: !m.completed } : m
-        );
-
-        const doneCount = updatedMilestones.filter((m) => m.completed).length;
-        const newProgress = Math.round((doneCount / updatedMilestones.length) * 100);
-
-        return {
-          ...proj,
-          milestones: updatedMilestones,
-          progressPct: newProgress,
-        };
-      })
+  // If a project is selected, render the dedicated ProjectWorkspaceScreen!
+  const selectedProject = projects.find((p) => p.id === selectedProjectId);
+  if (selectedProject) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style="light" />
+        <ProjectWorkspaceScreen
+          project={selectedProject}
+          onBack={() => setSelectedProjectId(null)}
+          onUpdateProject={(updatedProject) => {
+            setProjects((prev) =>
+              prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
+            );
+          }}
+        />
+      </SafeAreaView>
     );
+  }
+
+  const handleJoinByCode = () => {
+    const code = clientCodeInput.trim().toUpperCase();
+    if (!code) {
+      Alert.alert('Missing Code', 'Please enter the project code given by your client.');
+      return;
+    }
+
+    // Check if code already joined
+    const exists = projects.find((p) => p.clientCode === code);
+    if (exists) {
+      Alert.alert('Project Linked', `Opening workspace for ${exists.projectName}.`);
+      setShowJoinModal(false);
+      setClientCodeInput('');
+      setSelectedProjectId(exists.id);
+      return;
+    }
+
+    // Create linked project with this client code
+    const newLinkedProject: ContractorProjectDetail = {
+      id: `proj-${Date.now()}`,
+      clientCode: code,
+      projectName: `Site Project (${code})`,
+      clientName: 'Client Partner',
+      clientPhone: '+91 98000 00000',
+      siteAddress: 'Client Assigned Site Location',
+      startDate: 'Today',
+      status: 'active',
+      scopeItems: [
+        {
+          id: `sc-${Date.now()}`,
+          name: 'Site Mobilization & Layout',
+          unit: 'sqft',
+          quantity: 1000,
+          ratePerUnit: 60,
+          totalAmount: 60000,
+          completedQuantity: 0,
+        },
+      ],
+      workers: [],
+      todayAttendance: [],
+      dailyReports: [],
+      transactions: [],
+    };
+
+    setProjects((prev) => [newLinkedProject, ...prev]);
+    setShowJoinModal(false);
+    setClientCodeInput('');
+    setSelectedProjectId(newLinkedProject.id);
+    Alert.alert('Connected ✓', `Successfully joined project with Client Code ${code}.`);
   };
 
-  const handleIssueBill = (projectId: string) => {
-    setProjects((prev) =>
-      prev.map((proj) => {
-        if (proj.id !== projectId) return proj;
-        return {
-          ...proj,
-          progressiveBilled: Math.min(proj.contractValue, proj.progressiveBilled + 300000),
-        };
-      })
-    );
-    setCurrentTab('earnings');
+  const handleCreateNewProject = () => {
+    if (!newProjectName.trim() || !newClientName.trim()) {
+      Alert.alert('Missing Info', 'Please enter project name and client name.');
+      return;
+    }
+
+    const generatedCode = `CLT-${Math.floor(1000 + Math.random() * 9000)}`;
+    const createdProject: ContractorProjectDetail = {
+      id: `proj-${Date.now()}`,
+      clientCode: generatedCode,
+      projectName: newProjectName.trim(),
+      clientName: newClientName.trim(),
+      clientPhone: newClientPhone.trim() || '+91 98200 00000',
+      siteAddress: newSiteAddress.trim() || 'Mumbai Metro Zone',
+      startDate: 'Today',
+      status: 'active',
+      scopeItems: [],
+      workers: [],
+      todayAttendance: [],
+      dailyReports: [],
+      transactions: [],
+    };
+
+    setProjects((prev) => [createdProject, ...prev]);
+    setShowCreateModal(false);
+    setNewProjectName('');
+    setNewClientName('');
+    setNewClientPhone('');
+    setNewSiteAddress('');
+    setSelectedProjectId(createdProject.id);
+    Alert.alert('Project Created', `Project created with Client Code: ${generatedCode}. Share this code with your client.`);
   };
+
+  const totalWorkersAllSites = projects.reduce((sum, p) => sum + p.workers.length, 0);
+  const totalCompletedValAll = projects.reduce(
+    (sum, p) =>
+      sum +
+      p.scopeItems.reduce((scSum, item) => scSum + item.completedQuantity * item.ratePerUnit, 0),
+    0
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
 
-      {/* TOP BRAND STATUS BAR */}
-      <View style={styles.appHeader}>
-        <View style={styles.brandTitleRow}>
-          <Text style={styles.brandServex}>SERVEX</Text>
-          <View style={styles.suiteTag}>
-            <Text style={styles.suiteTagText}>PRIME CONTRACTOR SUITE</Text>
+      {/* TOP HEADER */}
+      <View style={styles.topHeader}>
+        <View style={styles.brandGroup}>
+          <Text style={styles.brandTitle}>SERVEX</Text>
+          <View style={styles.brandPill}>
+            <Text style={styles.brandPillText}>PRIME CONTRACTOR</Text>
           </View>
         </View>
-        <Text style={styles.activeTabTitle}>
-          {currentTab === 'dashboard'
-            ? 'Command Center'
-            : currentTab === 'jobs'
-            ? 'Commercial Contracts'
-            : currentTab === 'earnings'
-            ? 'RA Billing & Financials'
-            : 'Company & Workforce'}
-        </Text>
-      </View>
 
-      {/* ACTIVE TAB CONTENT */}
-      <View style={styles.tabContentArea}>
-        {currentTab === 'dashboard' && (
-          <ContractorDashboardTab
-            user={user}
-            isOperating={isOperating}
-            onToggleOperating={handleToggleOperating}
-            tenderTapped={handleTenderTapped}
-            activeProjects={activeProjects}
-            onToggleMilestone={handleToggleMilestone}
-            onSelectTab={setCurrentTab}
-          />
-        )}
-
-        {currentTab === 'jobs' && (
-          <ContractorJobsTab
-            projects={projects}
-            onToggleMilestone={handleToggleMilestone}
-            onIssueBill={handleIssueBill}
-          />
-        )}
-
-        {currentTab === 'earnings' && <ContractorEarningsTab />}
-
-        {currentTab === 'profile' && (
-          <ContractorProfileTab
-            user={user}
-            onLogout={onLogout}
-            onReplaySplash={onReplaySplash}
-          />
-        )}
-      </View>
-
-      {/* BOTTOM TAB NAVIGATION BAR */}
-      <View style={styles.bottomTabBar}>
-        {/* Dashboard Tab */}
-        <Pressable
-          style={styles.tabItem}
-          onPress={() => setCurrentTab('dashboard')}
-          accessibilityRole="button"
-          accessibilityLabel="Dashboard"
-        >
-          <DashboardTabIcon
-            size={20}
-            color={currentTab === 'dashboard' ? '#FFFFFF' : '#71717A'}
-            focused={currentTab === 'dashboard'}
-          />
-          <Text
-            style={[
-              styles.tabLabel,
-              currentTab === 'dashboard' && styles.tabLabelActive,
-            ]}
+        <View style={styles.headerRightRow}>
+          <Pressable
+            style={[styles.statusToggle, isMobilized ? styles.toggleOn : styles.toggleOff]}
+            onPress={() => setIsMobilized(!isMobilized)}
           >
-            Dashboard
-          </Text>
-        </Pressable>
+            <View style={[styles.statusDot, isMobilized ? styles.dotOn : styles.dotOff]} />
+            <Text style={[styles.statusToggleText, isMobilized ? styles.textOn : styles.textOff]}>
+              {isMobilized ? 'MOBILIZED' : 'STANDBY'}
+            </Text>
+          </Pressable>
 
-        {/* Commercial Contracts Tab */}
-        <Pressable
-          style={styles.tabItem}
-          onPress={() => setCurrentTab('jobs')}
-          accessibilityRole="button"
-          accessibilityLabel="Contracts"
-        >
-          <View>
-            <JobsTabIcon
-              size={20}
-              color={currentTab === 'jobs' ? '#FFFFFF' : '#71717A'}
-              focused={currentTab === 'jobs'}
-            />
-            {activeProjects.length > 0 && (
-              <View style={styles.tabBadge}>
-                <Text style={styles.tabBadgeText}>{activeProjects.length}</Text>
-              </View>
-            )}
+          <Pressable
+            style={styles.logoutIconBtn}
+            onPress={() => {
+              Alert.alert('Logout', 'Log out of Servex Contractor Suite?', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Logout', style: 'destructive', onPress: onLogout },
+              ]);
+            }}
+            hitSlop={8}
+          >
+            <Text style={styles.logoutIconText}>⏻</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* CONTRACTOR EXECUTIVE PROFILE */}
+        <View style={styles.firmCard}>
+          <View style={styles.firmAvatar}>
+            <Text style={styles.firmAvatarText}>
+              {user.name ? user.name.charAt(0).toUpperCase() : 'C'}
+            </Text>
           </View>
-          <Text
-            style={[
-              styles.tabLabel,
-              currentTab === 'jobs' && styles.tabLabelActive,
-            ]}
-          >
-            Contracts
-          </Text>
-        </Pressable>
+          <View style={styles.firmInfo}>
+            <Text style={styles.firmName} numberOfLines={1}>
+              {user.name ? `${user.name} Contracting & Infra` : 'Prime Contracting Group'}
+            </Text>
+            <Text style={styles.firmDetails}>
+              Class-1 Prime License • {user.email}
+            </Text>
+          </View>
+        </View>
 
-        {/* Financials Tab */}
-        <Pressable
-          style={styles.tabItem}
-          onPress={() => setCurrentTab('earnings')}
-          accessibilityRole="button"
-          accessibilityLabel="Financials"
-        >
-          <EarningsTabIcon
-            size={20}
-            color={currentTab === 'earnings' ? '#FFFFFF' : '#71717A'}
-            focused={currentTab === 'earnings'}
-          />
-          <Text
-            style={[
-              styles.tabLabel,
-              currentTab === 'earnings' && styles.tabLabelActive,
-            ]}
+        {/* PRIMARY ACTIONS: JOIN BY CLIENT CODE & CREATE PROJECT */}
+        <View style={styles.actionsRow}>
+          <Pressable
+            style={styles.joinCodeBtn}
+            onPress={() => setShowJoinModal(true)}
           >
-            Financials
-          </Text>
-        </Pressable>
+            <View style={styles.btnIconBox}>
+              <Text style={styles.btnIcon}>🔗</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.joinBtnTitle}>Join via Client Code</Text>
+              <Text style={styles.joinBtnSub}>Connect project using code given by client</Text>
+            </View>
+            <Text style={styles.actionArrow}>➔</Text>
+          </Pressable>
 
-        {/* Company & Workforce Tab */}
-        <Pressable
-          style={styles.tabItem}
-          onPress={() => setCurrentTab('profile')}
-          accessibilityRole="button"
-          accessibilityLabel="Company"
-        >
-          <ProfileTabIcon
-            size={20}
-            color={currentTab === 'profile' ? '#FFFFFF' : '#71717A'}
-            focused={currentTab === 'profile'}
-          />
-          <Text
-            style={[
-              styles.tabLabel,
-              currentTab === 'profile' && styles.tabLabelActive,
-            ]}
+          <Pressable
+            style={styles.newProjectBtn}
+            onPress={() => setShowCreateModal(true)}
           >
-            Company
-          </Text>
-        </Pressable>
-      </View>
+            <Text style={styles.newProjectBtnText}>+ New Project</Text>
+          </Pressable>
+        </View>
+
+        {/* PORTFOLIO SNAPSHOT (HIGH-LEVEL & DE-CONGESTED) */}
+        <View style={styles.kpiGrid}>
+          <View style={styles.kpiCard}>
+            <Text style={styles.kpiLabel}>Active Projects</Text>
+            <Text style={styles.kpiValue}>{projects.length}</Text>
+            <Text style={styles.kpiSub}>Sites in Execution</Text>
+          </View>
+
+          <View style={styles.kpiCard}>
+            <Text style={styles.kpiLabel}>Workforce</Text>
+            <Text style={styles.kpiValue}>{totalWorkersAllSites} Workers</Text>
+            <Text style={styles.kpiSub}>On Active Roster</Text>
+          </View>
+
+          <View style={styles.kpiCard}>
+            <Text style={styles.kpiLabel}>Cumulative Output</Text>
+            <Text style={styles.kpiValue}>
+              ₹{(totalCompletedValAll / 100000).toFixed(1)}L
+            </Text>
+            <Text style={styles.kpiSub}>Work Done to Date</Text>
+          </View>
+        </View>
+
+        {/* LINKED PROJECTS LIST */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeaderTitle}>Linked Projects ({projects.length})</Text>
+          <Text style={styles.sectionHeaderSub}>Select project to manage</Text>
+        </View>
+
+        <View style={styles.projectList}>
+          {projects.map((proj) => {
+            const completedVal = proj.scopeItems.reduce(
+              (sum, item) => sum + item.completedQuantity * item.ratePerUnit,
+              0
+            );
+            const totalVal = proj.scopeItems.reduce((sum, item) => sum + item.totalAmount, 0);
+            const progressPct = totalVal > 0 ? Math.round((completedVal / totalVal) * 100) : 0;
+
+            return (
+              <Pressable
+                key={proj.id}
+                style={styles.projectCard}
+                onPress={() => setSelectedProjectId(proj.id)}
+              >
+                <View style={styles.cardTopRow}>
+                  <View style={styles.codeTag}>
+                    <Text style={styles.codeTagText}>{proj.clientCode}</Text>
+                  </View>
+                  <Text style={styles.clientPhoneText}>Client: {proj.clientName}</Text>
+                </View>
+
+                <Text style={styles.projectTitleText}>{proj.projectName}</Text>
+
+                <View style={styles.addressRow}>
+                  <MapPinIcon size={12} color="#71717A" />
+                  <Text style={styles.addressText} numberOfLines={1}>
+                    {proj.siteAddress}
+                  </Text>
+                </View>
+
+                {/* WORKFORCE & PROGRESS BAR */}
+                <View style={styles.cardFooter}>
+                  <View style={styles.workersPill}>
+                    <CrewIcon size={13} color="#FFFFFF" />
+                    <Text style={styles.workersPillText}>
+                      {proj.workers.length} Workers Enrolled
+                    </Text>
+                  </View>
+
+                  <View style={styles.progressCol}>
+                    <Text style={styles.progressLabel}>
+                      {progressPct}% Executed • ₹{(completedVal / 1000).toFixed(0)}k Done
+                    </Text>
+                    <View style={styles.track}>
+                      <View
+                        style={[styles.trackFill, { width: `${Math.min(progressPct, 100)}%` }]}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.cardActionRow}>
+                  <Text style={styles.actionPrompt}>Open Project Workspace ➔</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* SYSTEM ANIMATION REPLAY */}
+        {onReplaySplash && (
+          <Pressable style={styles.replayPill} onPress={onReplaySplash}>
+            <Text style={styles.replayPillText}>⚡ Replay Servex Logo Animation</Text>
+          </Pressable>
+        )}
+      </ScrollView>
+
+      {/* MODAL 1: JOIN BY CLIENT CODE */}
+      <Modal
+        visible={showJoinModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowJoinModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Join via Client Project Code</Text>
+            <Text style={styles.modalDesc}>
+              Enter the unique project code shared by your client to connect to their site workspace.
+            </Text>
+
+            <Text style={styles.inputLabel}>Client Project Code</Text>
+            <TextInput
+              style={styles.codeInput}
+              placeholder="e.g. CLT-8842"
+              placeholderTextColor="#71717A"
+              autoCapitalize="characters"
+              value={clientCodeInput}
+              onChangeText={setClientCodeInput}
+            />
+
+            <View style={styles.modalActions}>
+              <Pressable style={styles.cancelBtn} onPress={() => setShowJoinModal(false)}>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.confirmBtn} onPress={handleJoinByCode}>
+                <Text style={styles.confirmBtnText}>Connect & Open</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL 2: CREATE NEW PROJECT */}
+      <Modal
+        visible={showCreateModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCreateModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Start New Project</Text>
+            <Text style={styles.modalDesc}>
+              Create a new contracting project. A client code will be generated to share with your client.
+            </Text>
+
+            <Text style={styles.inputLabel}>Project Name / Title</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. Skyline Villa Full Interior & Electrical"
+              placeholderTextColor="#71717A"
+              value={newProjectName}
+              onChangeText={setNewProjectName}
+            />
+
+            <Text style={styles.inputLabel}>Client Name</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. Rajesh Khurana"
+              placeholderTextColor="#71717A"
+              value={newClientName}
+              onChangeText={setNewClientName}
+            />
+
+            <Text style={styles.inputLabel}>Client Phone Number</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. +91 98201 12345"
+              placeholderTextColor="#71717A"
+              keyboardType="phone-pad"
+              value={newClientPhone}
+              onChangeText={setNewClientPhone}
+            />
+
+            <Text style={styles.inputLabel}>Site Address</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. 14th Floor, Oberoi Splendor, Andheri East"
+              placeholderTextColor="#71717A"
+              value={newSiteAddress}
+              onChangeText={setNewSiteAddress}
+            />
+
+            <View style={styles.modalActions}>
+              <Pressable style={styles.cancelBtn} onPress={() => setShowCreateModal(false)}>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.confirmBtn} onPress={handleCreateNewProject}>
+                <Text style={styles.confirmBtnText}>Create Project</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -330,90 +441,438 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     paddingTop: Platform.OS === 'android' ? 24 : 0,
   },
-  appHeader: {
+  topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#161920',
-    backgroundColor: '#000000',
   },
-  brandTitleRow: {
+  brandGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  brandServex: {
+  brandTitle: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
     fontSize: 16,
     letterSpacing: 1.5,
   },
-  suiteTag: {
+  brandPill: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
-  suiteTagText: {
+  brandPillText: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
     fontSize: 8.5,
+    letterSpacing: 0.6,
+  },
+  headerRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  statusToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 6,
+  },
+  toggleOn: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
+  },
+  toggleOff: {
+    backgroundColor: 'rgba(113, 113, 122, 0.12)',
+    borderColor: 'rgba(113, 113, 122, 0.3)',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  dotOn: {
+    backgroundColor: '#10B981',
+  },
+  dotOff: {
+    backgroundColor: '#71717A',
+  },
+  statusToggleText: {
+    fontFamily: fonts.displayBold,
+    fontSize: 9.5,
+    letterSpacing: 0.6,
+  },
+  textOn: {
+    color: '#10B981',
+  },
+  textOff: {
+    color: '#71717A',
+  },
+  logoutIconBtn: {
+    padding: 6,
+  },
+  logoutIconText: {
+    color: '#EF4444',
+    fontSize: 15,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 36,
+  },
+  firmCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#111317',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#20242D',
+    marginBottom: 14,
+  },
+  firmAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: '#1C2028',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#2A303C',
+    marginRight: 12,
+  },
+  firmAvatarText: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 18,
+  },
+  firmInfo: {
+    flex: 1,
+  },
+  firmName: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 15,
+    marginBottom: 2,
+  },
+  firmDetails: {
+    fontFamily: fonts.body,
+    color: '#71717A',
+    fontSize: 11.5,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  joinCodeBtn: {
+    flex: 1.8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 10,
+  },
+  btnIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 7,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnIcon: {
+    fontSize: 15,
+  },
+  joinBtnTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#000000',
+    fontSize: 12.5,
+  },
+  joinBtnSub: {
+    fontFamily: fonts.body,
+    color: '#475569',
+    fontSize: 10,
+  },
+  actionArrow: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  newProjectBtn: {
+    flex: 1,
+    backgroundColor: '#161920',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#2A303C',
+    paddingVertical: 12,
+  },
+  newProjectBtnText: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 12.5,
+  },
+  kpiGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 18,
+  },
+  kpiCard: {
+    flex: 1,
+    backgroundColor: '#111317',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#20242D',
+  },
+  kpiLabel: {
+    fontFamily: fonts.body,
+    color: '#71717A',
+    fontSize: 10.5,
+    marginBottom: 3,
+  },
+  kpiValue: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  kpiSub: {
+    fontFamily: fonts.body,
+    color: '#A1A1AA',
+    fontSize: 9.5,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  sectionHeaderTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 14.5,
+  },
+  sectionHeaderSub: {
+    fontFamily: fonts.body,
+    color: '#71717A',
+    fontSize: 11,
+  },
+  projectList: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  projectCard: {
+    backgroundColor: '#111317',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#20242D',
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  codeTag: {
+    backgroundColor: '#1E232E',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  codeTagText: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 10,
     letterSpacing: 0.8,
   },
-  activeTabTitle: {
+  clientPhoneText: {
+    fontFamily: fonts.body,
+    color: '#A1A1AA',
+    fontSize: 11.5,
+  },
+  projectTitleText: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 15.5,
+    marginBottom: 4,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  addressText: {
+    fontFamily: fonts.body,
+    color: '#71717A',
+    fontSize: 11,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#1A1E26',
+    marginBottom: 10,
+  },
+  workersPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#171B24',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 6,
+  },
+  workersPillText: {
+    fontFamily: fonts.bodyMedium,
+    color: '#FFFFFF',
+    fontSize: 11,
+  },
+  progressCol: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  progressLabel: {
+    fontFamily: fonts.body,
+    color: '#71717A',
+    fontSize: 10,
+    textAlign: 'right',
+    marginBottom: 3,
+  },
+  track: {
+    height: 4,
+    backgroundColor: '#1C2028',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  trackFill: {
+    height: '100%',
+    backgroundColor: '#10B981',
+    borderRadius: 2,
+  },
+  cardActionRow: {
+    alignItems: 'flex-end',
+  },
+  actionPrompt: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 11.5,
+    letterSpacing: 0.3,
+  },
+  replayPill: {
+    backgroundColor: '#12141A',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#20242D',
+  },
+  replayPillText: {
     fontFamily: fonts.bodyMedium,
     color: '#71717A',
     fontSize: 12,
   },
-  tabContentArea: {
+  modalBackdrop: {
     flex: 1,
-    backgroundColor: '#000000',
-  },
-  bottomTabBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    backgroundColor: '#0B0C0F',
-    borderTopWidth: 1,
-    borderTopColor: '#1B1F27',
-    paddingVertical: 10,
-    paddingBottom: Platform.OS === 'ios' ? 22 : 12,
-  },
-  tabItem: {
-    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    minWidth: 64,
+    alignItems: 'center',
+    padding: 20,
   },
-  tabLabel: {
+  modalContent: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#0F1116',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#242833',
+  },
+  modalTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 17,
+    marginBottom: 4,
+  },
+  modalDesc: {
+    fontFamily: fonts.body,
+    color: '#8B8F95',
+    fontSize: 12.5,
+    lineHeight: 17,
+    marginBottom: 16,
+  },
+  inputLabel: {
     fontFamily: fonts.bodyMedium,
-    color: '#71717A',
-    fontSize: 10.5,
-    marginTop: 4,
+    color: '#A1A1AA',
+    fontSize: 11.5,
+    marginBottom: 6,
+    marginTop: 8,
   },
-  tabLabelActive: {
+  codeInput: {
+    backgroundColor: '#161920',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#232730',
     color: '#FFFFFF',
     fontFamily: fonts.displayBold,
+    fontSize: 16,
+    letterSpacing: 2,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    textAlign: 'center',
   },
-  tabBadge: {
-    position: 'absolute',
-    top: -3,
-    right: -7,
-    backgroundColor: '#10B981',
-    width: 15,
-    height: 15,
-    borderRadius: 7.5,
-    alignItems: 'center',
-    justifyContent: 'center',
+  textInput: {
+    backgroundColor: '#161920',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#232730',
+    color: '#FFFFFF',
+    fontFamily: fonts.body,
+    fontSize: 13.5,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  tabBadgeText: {
-    color: '#000000',
-    fontSize: 9,
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 20,
+  },
+  cancelBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  cancelBtnText: {
+    fontFamily: fonts.bodyMedium,
+    color: '#A1A1AA',
+    fontSize: 13,
+  },
+  confirmBtn: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+  },
+  confirmBtnText: {
     fontFamily: fonts.displayBold,
+    color: '#000000',
+    fontSize: 13,
   },
 });
