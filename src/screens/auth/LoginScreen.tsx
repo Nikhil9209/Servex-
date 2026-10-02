@@ -251,7 +251,7 @@ export const LoginScreen: React.FC = () => {
               accessibilityLabel="LOGIN"
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color="#000000" />
               ) : (
                 <Text style={styles.loginButtonText}>LOGIN</Text>
               )}
@@ -495,28 +495,28 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontFamily: fonts.bodyMedium,
-    color: '#1A73E8',
+    color: '#94A3B8',
     fontSize: 12.5,
   },
   loginButton: {
-    backgroundColor: '#1A73E8',
+    backgroundColor: '#FFFFFF',
     borderRadius: 10,
     paddingVertical: 13,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
-    shadowColor: '#1A73E8',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    shadowColor: '#FFFFFF',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   loginButtonPressed: {
-    backgroundColor: '#1557B0',
+    backgroundColor: '#E2E8F0',
   },
   loginButtonText: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 14,
     letterSpacing: 1.2,
   },
@@ -536,8 +536,8 @@ const styles = StyleSheet.create({
   },
   createAccountText: {
     fontFamily: fonts.displayBold,
-    color: '#1A73E8',
-    fontSize: 13,
+    color: '#FFFFFF',
+    fontSize: 13.5,
     letterSpacing: 0.8,
   },
   demoHelperRow: {
@@ -620,14 +620,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   modalPrimaryBtn: {
-    backgroundColor: '#1A73E8',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 10,
     paddingHorizontal: 18,
     borderRadius: 8,
   },
   modalPrimaryText: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 13,
   },
 });
