@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   TextInput,
   Alert,
   KeyboardAvoidingView,
@@ -24,6 +23,10 @@ import {
   SendIcon,
   ShieldCheckIcon,
 } from '../../../components/ContractorIcons';
+import {
+  FadeInSlide,
+  SpringPressable,
+} from '../../../components/AnimatedComponents';
 
 interface ProjectChatScreenProps {
   project: ContractorProjectDetail;
@@ -146,105 +149,125 @@ export const ProjectChatScreen: React.FC<ProjectChatScreenProps> = ({
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* TOP HEADER */}
-      <View style={styles.topHeader}>
-        <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <ArrowLeftIcon size={16} color="#94A3B8" />
-          <Text style={styles.backBtnText}>Workspace</Text>
-        </Pressable>
+      {/* 1. TOP HEADER WITH CIRCULAR CONTROLS */}
+      <FadeInSlide delay={40} distance={14}>
+        <View style={styles.topHeader}>
+          <SpringPressable
+            style={styles.circleHeaderBtn}
+            onPress={onBack}
+            scaleTo={0.92}
+            hitSlop={8}
+          >
+            <ArrowLeftIcon size={18} color="#FFFFFF" />
+          </SpringPressable>
 
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Site Tri-Party Chat</Text>
-          <Text style={styles.headerSub}>
-            {project.clientCode} • {project.projectName}
-          </Text>
-        </View>
-
-        <View style={{ width: 40 }} />
-      </View>
-
-      {/* CONTRACTOR AUTHORITY CONTROL BANNER */}
-      <View style={styles.authorityBanner}>
-        <View style={styles.authorityInfoCol}>
-          <View style={styles.authorityTitleRow}>
-            <ShieldCheckIcon size={14} color="#38BDF8" />
-            <Text style={styles.authorityTitle}>Worker Messaging Authority</Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Site Tri-Party Chat</Text>
+            <Text style={styles.headerSub} numberOfLines={1}>
+              {project.clientCode} • {project.projectName}
+            </Text>
           </View>
-          <Text style={styles.authorityDesc}>
-            {chatState.workerMessagingAllowed
-              ? 'Crew permitted to post shift logs & progress photos'
-              : 'Crew channel locked to read-only mode'}
-          </Text>
+
+          <View style={styles.headerRightPlaceholder} />
         </View>
+      </FadeInSlide>
 
-        <Pressable
-          style={[
-            styles.authorityToggleBtn,
-            chatState.workerMessagingAllowed ? styles.authorityAllowed : styles.authorityLocked,
-          ]}
-          onPress={handleToggleWorkerAuthority}
-        >
-          {chatState.workerMessagingAllowed ? (
-            <UnlockIcon size={13} color="#10B981" />
-          ) : (
-            <LockIcon size={13} color="#F59E0B" />
-          )}
-          <Text
+      {/* 2. CONTRACTOR AUTHORITY CONTROL BANNER */}
+      <FadeInSlide delay={80} distance={14}>
+        <View style={styles.authorityBanner}>
+          <View style={styles.authorityInfoCol}>
+            <View style={styles.authorityTitleRow}>
+              <ShieldCheckIcon size={14} color="#FFFFFF" />
+              <Text style={styles.authorityTitle}>Worker Messaging Authority</Text>
+            </View>
+            <Text style={styles.authorityDesc}>
+              {chatState.workerMessagingAllowed
+                ? 'Crew permitted to post shift logs & progress photos'
+                : 'Crew channel restricted to read-only status'}
+            </Text>
+          </View>
+
+          <SpringPressable
             style={[
-              styles.authorityToggleText,
-              chatState.workerMessagingAllowed ? styles.textAllowed : styles.textLocked,
+              styles.authorityToggleBtn,
+              chatState.workerMessagingAllowed ? styles.authorityAllowed : styles.authorityLocked,
             ]}
+            onPress={handleToggleWorkerAuthority}
+            scaleTo={0.94}
           >
-            {chatState.workerMessagingAllowed ? 'PERMITTED' : 'LOCKED'}
-          </Text>
-        </Pressable>
-      </View>
+            {chatState.workerMessagingAllowed ? (
+              <UnlockIcon size={13} color="#10B981" />
+            ) : (
+              <LockIcon size={13} color="#F59E0B" />
+            )}
+            <Text
+              style={[
+                styles.authorityToggleText,
+                chatState.workerMessagingAllowed ? styles.textAllowed : styles.textLocked,
+              ]}
+            >
+              {chatState.workerMessagingAllowed ? 'PERMITTED' : 'LOCKED'}
+            </Text>
+          </SpringPressable>
+        </View>
+      </FadeInSlide>
 
-      {/* SENDER PERSONA SWITCHER */}
-      <View style={styles.personaBar}>
-        <Text style={styles.personaLabel}>POSTING AS:</Text>
+      {/* 3. SENDER PERSONA SWITCHER */}
+      <FadeInSlide delay={120} distance={14}>
+        <View style={styles.personaBar}>
+          <Text style={styles.personaLabel}>POSTING AS:</Text>
 
-        <Pressable
-          style={[
-            styles.personaPill,
-            activePersona === 'contractor' && styles.personaContractorActive,
-          ]}
-          onPress={() => setActivePersona('contractor')}
-        >
-          <Text
+          <SpringPressable
             style={[
-              styles.personaPillText,
-              activePersona === 'contractor' && styles.personaContractorText,
+              styles.personaPill,
+              activePersona === 'contractor' && styles.personaPillActive,
             ]}
+            onPress={() => setActivePersona('contractor')}
+            scaleTo={0.96}
           >
-            Contractor (Lead)
-          </Text>
-        </Pressable>
+            <Text
+              style={[
+                styles.personaPillText,
+                activePersona === 'contractor' && styles.personaPillTextActive,
+              ]}
+            >
+              Contractor
+            </Text>
+          </SpringPressable>
 
-        <Pressable
-          style={[styles.personaPill, activePersona === 'client' && styles.personaClientActive]}
-          onPress={() => setActivePersona('client')}
-        >
-          <Text
-            style={[styles.personaPillText, activePersona === 'client' && styles.personaClientText]}
+          <SpringPressable
+            style={[styles.personaPill, activePersona === 'client' && styles.personaPillActive]}
+            onPress={() => setActivePersona('client')}
+            scaleTo={0.96}
           >
-            Client
-          </Text>
-        </Pressable>
+            <Text
+              style={[
+                styles.personaPillText,
+                activePersona === 'client' && styles.personaPillTextActive,
+              ]}
+            >
+              Client
+            </Text>
+          </SpringPressable>
 
-        <Pressable
-          style={[styles.personaPill, activePersona === 'worker' && styles.personaWorkerActive]}
-          onPress={() => setActivePersona('worker')}
-        >
-          <Text
-            style={[styles.personaPillText, activePersona === 'worker' && styles.personaWorkerText]}
+          <SpringPressable
+            style={[styles.personaPill, activePersona === 'worker' && styles.personaPillActive]}
+            onPress={() => setActivePersona('worker')}
+            scaleTo={0.96}
           >
-            Worker
-          </Text>
-        </Pressable>
-      </View>
+            <Text
+              style={[
+                styles.personaPillText,
+                activePersona === 'worker' && styles.personaPillTextActive,
+              ]}
+            >
+              Worker
+            </Text>
+          </SpringPressable>
+        </View>
+      </FadeInSlide>
 
-      {/* CHAT MESSAGES SCROLL */}
+      {/* 4. CHAT MESSAGES SCROLL */}
       <ScrollView
         ref={scrollViewRef}
         style={styles.messagesScroll}
@@ -256,7 +279,7 @@ export const ProjectChatScreen: React.FC<ProjectChatScreenProps> = ({
             return (
               <View key={msg.id} style={styles.systemActionRow}>
                 <View style={styles.systemActionPill}>
-                  <ShieldCheckIcon size={12} color="#38BDF8" />
+                  <ShieldCheckIcon size={12} color="#8E8E93" />
                   <Text style={styles.systemActionText}>{msg.content}</Text>
                 </View>
               </View>
@@ -275,11 +298,7 @@ export const ProjectChatScreen: React.FC<ProjectChatScreenProps> = ({
               <View
                 style={[
                   styles.messageBubble,
-                  isContractor
-                    ? styles.bubbleContractor
-                    : isClient
-                    ? styles.bubbleClient
-                    : styles.bubbleWorker,
+                  isMe ? styles.bubbleMe : styles.bubbleOther,
                 ]}
               >
                 <View style={styles.msgHeader}>
@@ -305,22 +324,23 @@ export const ProjectChatScreen: React.FC<ProjectChatScreenProps> = ({
         })}
       </ScrollView>
 
-      {/* QUICK PROMPT CHIPS */}
+      {/* 5. QUICK PROMPT CHIPS */}
       <View style={styles.quickPromptsRow}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.promptsScroll}>
           {DEFAULT_QUICK_PROMPTS.map((prompt, idx) => (
-            <Pressable
+            <SpringPressable
               key={idx}
               style={styles.promptChip}
               onPress={() => handleSendMessage(prompt)}
+              scaleTo={0.96}
             >
               <Text style={styles.promptChipText}>{prompt}</Text>
-            </Pressable>
+            </SpringPressable>
           ))}
         </ScrollView>
       </View>
 
-      {/* INPUT BAR */}
+      {/* 6. INPUT BAR */}
       <View style={styles.inputContainer}>
         {isWorkerLocked ? (
           <View style={styles.lockedInputBanner}>
@@ -334,18 +354,19 @@ export const ProjectChatScreen: React.FC<ProjectChatScreenProps> = ({
             <TextInput
               style={styles.textInput}
               placeholder={`Message as ${activePersona}...`}
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#55555C"
               value={inputText}
               onChangeText={setInputText}
               multiline
             />
-            <Pressable
-              style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
+            <SpringPressable
+              style={[styles.circleSendBtn, !inputText.trim() && styles.sendBtnDisabled]}
               onPress={() => handleSendMessage()}
               disabled={!inputText.trim()}
+              scaleTo={0.92}
             >
-              <SendIcon size={14} color="#0B0E14" />
-            </Pressable>
+              <SendIcon size={14} color="#000000" />
+            </SpringPressable>
           </View>
         )}
       </View>
@@ -356,53 +377,62 @@ export const ProjectChatScreen: React.FC<ProjectChatScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0E14',
+    backgroundColor: '#000000',
   },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E2638',
-    backgroundColor: '#0E121B',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 14,
+    backgroundColor: '#000000',
   },
-  backBtn: {
-    flexDirection: 'row',
+  circleHeaderBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#16161A',
+    borderWidth: 1,
+    borderColor: '#222228',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
+    justifyContent: 'center',
   },
-  backBtnText: {
-    fontFamily: fonts.displayBold,
-    color: '#94A3B8',
-    fontSize: 12.5,
+  headerRightPlaceholder: {
+    width: 44,
   },
   headerCenter: {
-    alignItems: 'center',
     flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 12,
   },
   headerTitle: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 14.5,
+    color: '#FFFFFF',
+    fontSize: 16,
+    letterSpacing: -0.2,
   },
   headerSub: {
     fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 10.5,
-    marginTop: 1,
+    color: '#8E8E93',
+    fontSize: 11,
+    marginTop: 2,
   },
+
+  // AUTHORITY BANNER
   authorityBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#111622',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E2638',
+    backgroundColor: '#16161A',
+    marginHorizontal: 18,
+    marginTop: 4,
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#222228',
   },
   authorityInfoCol: {
     flex: 1,
@@ -416,30 +446,30 @@ const styles = StyleSheet.create({
   },
   authorityTitle: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 12,
+    color: '#FFFFFF',
+    fontSize: 12.5,
   },
   authorityDesc: {
     fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 10.5,
+    color: '#8E8E93',
+    fontSize: 11,
   },
   authorityToggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingVertical: 6,
+    borderRadius: 10,
     borderWidth: 1,
     gap: 5,
   },
   authorityAllowed: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderColor: 'rgba(16, 185, 129, 0.35)',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
   },
   authorityLocked: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    borderColor: 'rgba(245, 158, 11, 0.35)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
   },
   authorityToggleText: {
     fontFamily: fonts.displayBold,
@@ -452,66 +482,51 @@ const styles = StyleSheet.create({
   textLocked: {
     color: '#F59E0B',
   },
+
+  // PERSONA SWITCHER
   personaBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0E121B',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E2638',
+    paddingHorizontal: 20,
+    marginBottom: 10,
     gap: 8,
   },
   personaLabel: {
     fontFamily: fonts.displayBold,
-    color: '#64748B',
+    color: '#636366',
     fontSize: 9.5,
-    letterSpacing: 0.6,
+    letterSpacing: 0.8,
+    marginRight: 4,
   },
   personaPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 5,
-    backgroundColor: '#151C2C',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 12,
+    backgroundColor: '#16161A',
     borderWidth: 1,
-    borderColor: '#28354D',
+    borderColor: '#222228',
+  },
+  personaPillActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
   },
   personaPillText: {
-    fontFamily: fonts.bodyMedium,
-    color: '#94A3B8',
-    fontSize: 10.5,
-  },
-  personaContractorActive: {
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
-    borderColor: '#38BDF8',
-  },
-  personaContractorText: {
-    color: '#38BDF8',
     fontFamily: fonts.displayBold,
+    color: '#8E8E93',
+    fontSize: 11,
   },
-  personaClientActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderColor: '#10B981',
+  personaPillTextActive: {
+    color: '#000000',
   },
-  personaClientText: {
-    color: '#10B981',
-    fontFamily: fonts.displayBold,
-  },
-  personaWorkerActive: {
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-    borderColor: '#F59E0B',
-  },
-  personaWorkerText: {
-    color: '#F59E0B',
-    fontFamily: fonts.displayBold,
-  },
+
+  // MESSAGES
   messagesScroll: {
     flex: 1,
   },
   messagesContent: {
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    gap: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    gap: 12,
   },
   systemActionRow: {
     alignItems: 'center',
@@ -520,20 +535,18 @@ const styles = StyleSheet.create({
   systemActionPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111622',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#1E2638',
     gap: 6,
-    maxWidth: '92%',
+    backgroundColor: '#16161A',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#222228',
   },
   systemActionText: {
     fontFamily: fonts.body,
-    color: '#94A3B8',
-    fontSize: 10.5,
-    textAlign: 'center',
+    color: '#8E8E93',
+    fontSize: 11,
   },
   messageBubbleRow: {
     flexDirection: 'row',
@@ -546,28 +559,27 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: '82%',
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
   },
-  bubbleContractor: {
-    backgroundColor: '#0F2942',
-    borderColor: '#1E4976',
+  bubbleMe: {
+    backgroundColor: '#1C1C22',
+    borderColor: '#262630',
+    borderBottomRightRadius: 6,
   },
-  bubbleClient: {
-    backgroundColor: '#0A3326',
-    borderColor: '#155E47',
-  },
-  bubbleWorker: {
-    backgroundColor: '#2E2211',
-    borderColor: '#543D1D',
+  bubbleOther: {
+    backgroundColor: '#16161A',
+    borderColor: '#222228',
+    borderBottomLeftRadius: 6,
   },
   msgHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
-    gap: 10,
+    gap: 12,
   },
   senderName: {
     fontFamily: fonts.displayBold,
@@ -577,94 +589,99 @@ const styles = StyleSheet.create({
     color: '#38BDF8',
   },
   senderClient: {
-    color: '#34D399',
+    color: '#10B981',
   },
   senderWorker: {
-    color: '#FBBF24',
+    color: '#F59E0B',
   },
   timestampText: {
     fontFamily: fonts.body,
-    color: '#64748B',
+    color: '#636366',
     fontSize: 9.5,
   },
   msgContent: {
     fontFamily: fonts.body,
-    color: '#F8FAFC',
-    fontSize: 12.5,
-    lineHeight: 17,
+    color: '#FFFFFF',
+    fontSize: 13,
+    lineHeight: 18,
   },
+
+  // PROMPTS
   quickPromptsRow: {
-    backgroundColor: '#0E121B',
-    paddingVertical: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#1E2638',
-  },
-  promptsScroll: {
-    paddingHorizontal: 12,
-    gap: 6,
-  },
-  promptChip: {
-    backgroundColor: '#151C2C',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#242F44',
-  },
-  promptChipText: {
-    fontFamily: fonts.body,
-    color: '#94A3B8',
-    fontSize: 11,
-  },
-  inputContainer: {
-    backgroundColor: '#0E121B',
-    paddingHorizontal: 12,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#1E2638',
+    borderTopColor: '#16161A',
   },
-  lockedInputBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#151C2C',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+  promptsScroll: {
+    paddingHorizontal: 18,
     gap: 8,
   },
-  lockedInputText: {
+  promptChip: {
+    backgroundColor: '#16161A',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#222228',
+  },
+  promptChipText: {
     fontFamily: fonts.bodyMedium,
-    color: '#94A3B8',
-    fontSize: 11.5,
-    flex: 1,
+    color: '#8E8E93',
+    fontSize: 11,
+  },
+
+  // INPUT
+  inputContainer: {
+    paddingHorizontal: 18,
+    paddingBottom: 22,
+    paddingTop: 8,
+    backgroundColor: '#000000',
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
+    backgroundColor: '#16161A',
+    borderRadius: 24,
+    paddingLeft: 16,
+    paddingRight: 6,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#222228',
   },
   textInput: {
     flex: 1,
-    backgroundColor: '#151C2C',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 13.5,
     maxHeight: 80,
-    borderWidth: 1,
-    borderColor: '#28354D',
+    paddingVertical: 6,
   },
-  sendBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+  circleSendBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   sendBtnDisabled: {
-    opacity: 0.4,
+    opacity: 0.35,
+  },
+  lockedInputBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#16161A',
+    paddingVertical: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#222228',
+  },
+  lockedInputText: {
+    fontFamily: fonts.body,
+    color: '#8E8E93',
+    fontSize: 11.5,
   },
 });

@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   TextInput,
   Alert,
 } from 'react-native';
@@ -19,6 +18,10 @@ import {
   CheckCircleIcon,
   ShieldCheckIcon,
 } from '../../../components/ContractorIcons';
+import {
+  FadeInSlide,
+  SpringPressable,
+} from '../../../components/AnimatedComponents';
 
 interface DailyWorkVerificationScreenProps {
   project: ContractorProjectDetail;
@@ -115,158 +118,190 @@ export const DailyWorkVerificationScreen: React.FC<DailyWorkVerificationScreenPr
 
   return (
     <View style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.topHeader}>
-        <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <ArrowLeftIcon size={16} color="#94A3B8" />
-          <Text style={styles.backBtnText}>Workspace</Text>
-        </Pressable>
+      {/* 1. TOP HEADER WITH CIRCULAR CONTROLS */}
+      <FadeInSlide delay={40} distance={14}>
+        <View style={styles.topHeader}>
+          <SpringPressable
+            style={styles.circleHeaderBtn}
+            onPress={onBack}
+            scaleTo={0.92}
+            hitSlop={8}
+          >
+            <ArrowLeftIcon size={18} color="#FFFFFF" />
+          </SpringPressable>
 
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Daily Work Verification</Text>
-          <Text style={styles.headerSub}>End-of-Day Inspection & Billing Audit</Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Daily Work Audit</Text>
+            <Text style={styles.headerSub} numberOfLines={1}>
+              End-of-Day Inspection & Billing Audit
+            </Text>
+          </View>
+
+          <View style={styles.headerRightPlaceholder} />
         </View>
-
-        <View style={{ width: 40 }} />
-      </View>
+      </FadeInSlide>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* TODAY'S FINANCIAL RECONCILIATION SUMMARY */}
-        <View style={styles.reconciliationCard}>
-          <View style={styles.recRow}>
-            <View style={styles.recCol}>
-              <Text style={styles.recLabel}>Work Done Today</Text>
-              <Text style={styles.recValGreen}>
-                ₹{totalWorkValueToday.toLocaleString('en-IN')}
-              </Text>
-              <Text style={styles.recSub}>Contract Output</Text>
-            </View>
-            <View style={styles.recDivider} />
-            <View style={styles.recCol}>
-              <Text style={styles.recLabel}>Worker Wages</Text>
-              <Text style={styles.recValRed}>
-                -₹{totalWageToday.toLocaleString('en-IN')}
-              </Text>
-              <Text style={styles.recSub}>Today&apos;s Payroll</Text>
-            </View>
-            <View style={styles.recDivider} />
-            <View style={styles.recCol}>
-              <Text style={styles.recLabel}>Net Margin</Text>
-              <Text style={netContractorMarginToday >= 0 ? styles.recValGold : styles.recValRed}>
-                ₹{netContractorMarginToday.toLocaleString('en-IN')}
-              </Text>
-              <Text style={styles.recSub}>Gross Profit</Text>
+        {/* 2. TODAY'S FINANCIAL RECONCILIATION SUMMARY */}
+        <FadeInSlide delay={80} distance={14}>
+          <View style={styles.reconciliationCard}>
+            <View style={styles.recRow}>
+              <View style={styles.recCol}>
+                <Text style={styles.recLabel}>WORK DONE TODAY</Text>
+                <Text style={styles.recValGreen} numberOfLines={1}>
+                  ₹{totalWorkValueToday.toLocaleString('en-IN')}
+                </Text>
+                <Text style={styles.recSub}>Contract Output</Text>
+              </View>
+              <View style={styles.recDivider} />
+              <View style={styles.recCol}>
+                <Text style={styles.recLabel}>CREW WAGES</Text>
+                <Text style={styles.recValRed} numberOfLines={1}>
+                  -₹{totalWageToday.toLocaleString('en-IN')}
+                </Text>
+                <Text style={styles.recSub}>Today&apos;s Payroll</Text>
+              </View>
+              <View style={styles.recDivider} />
+              <View style={styles.recCol}>
+                <Text style={styles.recLabel}>NET MARGIN</Text>
+                <Text
+                  style={[
+                    styles.recValMargin,
+                    netContractorMarginToday >= 0 ? styles.recValGreen : styles.recValRed,
+                  ]}
+                  numberOfLines={1}
+                >
+                  ₹{netContractorMarginToday.toLocaleString('en-IN')}
+                </Text>
+                <Text style={styles.recSub}>Gross Profit</Text>
+              </View>
             </View>
           </View>
-        </View>
+        </FadeInSlide>
 
-        {/* WORK INSPECTION INPUTS FOR EACH REQUIREMENT */}
-        <Text style={styles.sectionHeaderTitle}>Site Inspection: Quantities Completed Today</Text>
-        <Text style={styles.sectionHeaderSub}>
-          Enter measured progress for each trade item executed on site during today&apos;s shift
-        </Text>
+        {/* 3. SECTION HEADER */}
+        <FadeInSlide delay={120} distance={14}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>MEASURED QUANTITIES TODAY</Text>
+            <Text style={styles.sectionSub}>Enter units completed during today&apos;s shift</Text>
+          </View>
+        </FadeInSlide>
 
+        {/* 4. WORK INSPECTION INPUT CARDS */}
         <View style={styles.itemsList}>
-          {project.scopeItems.map((item) => {
+          {project.scopeItems.map((item, idx) => {
             const enteredQty = parseFloat(quantitiesToday[item.id] || '0');
             const calculatedVal =
               !isNaN(enteredQty) && enteredQty > 0 ? enteredQty * item.ratePerUnit : 0;
             const remaining = Math.max(0, item.quantity - item.completedQuantity);
 
             return (
-              <View key={item.id} style={styles.inspectionCard}>
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.itemNameText}>{item.name}</Text>
-                    <Text style={styles.itemMetaText}>
-                      Contract: {item.quantity} {item.unit} • Completed: {item.completedQuantity} {item.unit} • Remaining: {remaining} {item.unit}
-                    </Text>
-                  </View>
-                  <View style={styles.rateTag}>
-                    <Text style={styles.rateTagText}>
-                      ₹{item.ratePerUnit}/{item.unit}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.inputRow}>
-                  <View style={styles.inputCol}>
-                    <Text style={styles.inputLabel}>Quantity Done Today ({item.unit})</Text>
-                    <TextInput
-                      style={styles.qtyInput}
-                      placeholder={`0 ${item.unit}`}
-                      placeholderTextColor="#64748B"
-                      keyboardType="numeric"
-                      value={quantitiesToday[item.id] || ''}
-                      onChangeText={(t) => handleQtyChange(item.id, t)}
-                    />
-                  </View>
-
-                  <View style={styles.valPreviewCol}>
-                    <Text style={styles.inputLabel}>Today&apos;s Value</Text>
-                    <View style={styles.valPreviewBox}>
-                      <Text style={styles.valPreviewText}>
-                        ₹{calculatedVal.toLocaleString('en-IN')}
+              <FadeInSlide key={item.id} delay={140 + idx * 40} distance={14}>
+                <View style={styles.inspectionCard}>
+                  <View style={styles.cardHeader}>
+                    <View style={{ flex: 1, marginRight: 8 }}>
+                      <Text style={styles.itemNameText}>{item.name}</Text>
+                      <Text style={styles.itemMetaText}>
+                        Total: {item.quantity} {item.unit} • Done: {item.completedQuantity} • Left: {remaining} {item.unit}
+                      </Text>
+                    </View>
+                    <View style={styles.rateTag}>
+                      <Text style={styles.rateTagText}>
+                        ₹{item.ratePerUnit} / {item.unit.toUpperCase()}
                       </Text>
                     </View>
                   </View>
+
+                  <View style={styles.inputRow}>
+                    <View style={styles.inputCol}>
+                      <Text style={styles.inputLabel}>Quantity Done Today ({item.unit})</Text>
+                      <TextInput
+                        style={styles.qtyInput}
+                        placeholder={`0 ${item.unit}`}
+                        placeholderTextColor="#55555C"
+                        keyboardType="numeric"
+                        value={quantitiesToday[item.id] || ''}
+                        onChangeText={(t) => handleQtyChange(item.id, t)}
+                      />
+                    </View>
+
+                    <View style={styles.valPreviewCol}>
+                      <Text style={styles.inputLabel}>Value Generated</Text>
+                      <View style={styles.valPreviewBox}>
+                        <Text style={styles.valPreviewText}>
+                          ₹{calculatedVal.toLocaleString('en-IN')}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
                 </View>
-              </View>
+              </FadeInSlide>
             );
           })}
         </View>
 
-        {/* VERIFICATION & BILL GENERATE CTA BUTTON */}
-        <Pressable
-          style={styles.verifyActionBtn}
-          onPress={handleVerifyAndGenerateDailyBill}
-        >
-          <CheckCircleIcon size={18} color="#0B0E14" />
-          <Text style={styles.verifyActionBtnText}>
-            Verify Work & Lock Today&apos;s Daily Bill (₹{totalWorkValueToday.toLocaleString('en-IN')})
-          </Text>
-        </Pressable>
+        {/* 5. VERIFICATION & BILL GENERATE CTA */}
+        <FadeInSlide delay={200} distance={14}>
+          <SpringPressable
+            style={styles.verifyActionBtn}
+            onPress={handleVerifyAndGenerateDailyBill}
+            scaleTo={0.96}
+          >
+            <CheckCircleIcon size={18} color="#000000" />
+            <Text style={styles.verifyActionBtnText}>
+              Verify Work & Lock Daily Bill (₹{totalWorkValueToday.toLocaleString('en-IN')})
+            </Text>
+          </SpringPressable>
+        </FadeInSlide>
 
-        {/* RECENT INSPECTION AUDIT LOGS */}
+        {/* 6. VERIFIED HISTORICAL SITE LOGS */}
         {project.dailyReports.length > 0 && (
-          <View style={styles.historySection}>
-            <Text style={styles.sectionHeaderTitle}>Verified Daily Site Logs</Text>
-            {project.dailyReports.map((report) => (
-              <View key={report.id} style={styles.historyCard}>
-                <View style={styles.historyHeader}>
-                  <View style={styles.historyHeaderLeft}>
-                    <ShieldCheckIcon size={14} color="#10B981" />
-                    <Text style={styles.historyDateText}>{report.date}</Text>
-                  </View>
-                  <View style={styles.historyVerifiedBadge}>
-                    <Text style={styles.historyVerifiedBadgeText}>VERIFIED</Text>
-                  </View>
-                </View>
-
-                <View style={styles.historyMetricsRow}>
-                  <View style={styles.historyMetric}>
-                    <Text style={styles.historyMetricLabel}>Work Done</Text>
-                    <Text style={styles.historyMetricValGreen}>
-                      ₹{report.totalWorkValueToday.toLocaleString('en-IN')}
-                    </Text>
-                  </View>
-                  <View style={styles.historyMetric}>
-                    <Text style={styles.historyMetricLabel}>Wages Paid</Text>
-                    <Text style={styles.historyMetricValRed}>
-                      ₹{report.totalWorkerWageToday.toLocaleString('en-IN')}
-                    </Text>
-                  </View>
-                  <View style={styles.historyMetric}>
-                    <Text style={styles.historyMetricLabel}>Net Margin</Text>
-                    <Text style={styles.historyMetricValGold}>
-                      ₹{report.contractorMarginToday.toLocaleString('en-IN')}
-                    </Text>
-                  </View>
-                </View>
+          <FadeInSlide delay={240} distance={14}>
+            <View style={styles.historySection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>PREVIOUS AUDITED LOGS</Text>
+                <Text style={styles.sectionSub}>{project.dailyReports.length} records</Text>
               </View>
-            ))}
-          </View>
+
+              {project.dailyReports.map((report) => (
+                <View key={report.id} style={styles.historyCard}>
+                  <View style={styles.historyHeader}>
+                    <View style={styles.historyHeaderLeft}>
+                      <ShieldCheckIcon size={14} color="#10B981" />
+                      <Text style={styles.historyDateText}>{report.date}</Text>
+                    </View>
+                    <View style={styles.historyVerifiedBadge}>
+                      <Text style={styles.historyVerifiedBadgeText}>VERIFIED</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.historyMetricsRow}>
+                    <View style={styles.historyMetric}>
+                      <Text style={styles.historyMetricLabel}>WORK DONE</Text>
+                      <Text style={styles.historyMetricValGreen}>
+                        ₹{report.totalWorkValueToday.toLocaleString('en-IN')}
+                      </Text>
+                    </View>
+                    <View style={styles.historyMetric}>
+                      <Text style={styles.historyMetricLabel}>WAGES PAID</Text>
+                      <Text style={styles.historyMetricValRed}>
+                        -₹{report.totalWorkerWageToday.toLocaleString('en-IN')}
+                      </Text>
+                    </View>
+                    <View style={styles.historyMetric}>
+                      <Text style={styles.historyMetricLabel}>NET MARGIN</Text>
+                      <Text style={styles.historyMetricValGold}>
+                        ₹{report.contractorMarginToday.toLocaleString('en-IN')}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </FadeInSlide>
         )}
+
+        <View style={{ height: 60 }} />
       </ScrollView>
     </View>
   );
@@ -275,55 +310,60 @@ export const DailyWorkVerificationScreen: React.FC<DailyWorkVerificationScreenPr
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0E14',
+    backgroundColor: '#000000',
   },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E2638',
-    backgroundColor: '#0E121B',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 14,
+    backgroundColor: '#000000',
   },
-  backBtn: {
-    flexDirection: 'row',
+  circleHeaderBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#16161A',
+    borderWidth: 1,
+    borderColor: '#222228',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
+    justifyContent: 'center',
   },
-  backBtnText: {
-    fontFamily: fonts.displayBold,
-    color: '#94A3B8',
-    fontSize: 12.5,
+  headerRightPlaceholder: {
+    width: 44,
   },
   headerCenter: {
-    alignItems: 'center',
     flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 12,
   },
   headerTitle: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 14.5,
+    color: '#FFFFFF',
+    fontSize: 16,
+    letterSpacing: -0.2,
   },
   headerSub: {
     fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 10.5,
-    marginTop: 1,
+    color: '#8E8E93',
+    fontSize: 11,
+    marginTop: 2,
   },
+
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 40,
+    paddingHorizontal: 18,
+    paddingTop: 10,
   },
+
+  // RECONCILIATION SUMMARY CARD
   reconciliationCard: {
-    backgroundColor: '#111622',
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: '#16161A',
+    borderRadius: 22,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#1E2638',
+    borderColor: '#222228',
     marginBottom: 16,
   },
   recRow: {
@@ -332,94 +372,105 @@ const styles = StyleSheet.create({
   },
   recCol: {
     flex: 1,
+    alignItems: 'center',
   },
   recDivider: {
     width: 1,
-    backgroundColor: '#1E2638',
-    marginHorizontal: 10,
+    backgroundColor: '#222228',
   },
   recLabel: {
-    fontFamily: fonts.body,
-    color: '#64748B',
+    fontFamily: fonts.displayBold,
+    color: '#8E8E93',
     fontSize: 9.5,
-    marginBottom: 2,
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
   recValGreen: {
     fontFamily: fonts.displayBold,
     color: '#10B981',
-    fontSize: 14.5,
-    marginBottom: 1,
+    fontSize: 15,
+    marginBottom: 2,
   },
   recValRed: {
     fontFamily: fonts.displayBold,
     color: '#EF4444',
-    fontSize: 14.5,
-    marginBottom: 1,
+    fontSize: 15,
+    marginBottom: 2,
   },
-  recValGold: {
+  recValMargin: {
     fontFamily: fonts.displayBold,
-    color: '#F59E0B',
-    fontSize: 14.5,
-    marginBottom: 1,
+    fontSize: 15,
+    marginBottom: 2,
   },
   recSub: {
     fontFamily: fonts.body,
-    color: '#94A3B8',
-    fontSize: 9.5,
+    color: '#636366',
+    fontSize: 10,
   },
-  sectionHeaderTitle: {
-    fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 13.5,
-    marginBottom: 2,
-  },
-  sectionHeaderSub: {
-    fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 11,
+
+  // SECTION HEADERS
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
+    paddingHorizontal: 2,
   },
+  sectionTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#8E8E93',
+    fontSize: 11,
+    letterSpacing: 0.8,
+  },
+  sectionSub: {
+    fontFamily: fonts.body,
+    color: '#636366',
+    fontSize: 10.5,
+  },
+
+  // ITEMS LIST
   itemsList: {
-    gap: 10,
+    gap: 12,
     marginBottom: 18,
   },
   inspectionCard: {
-    backgroundColor: '#111622',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: '#16161A',
+    borderRadius: 22,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#1E2638',
+    borderColor: '#222228',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   itemNameText: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 13,
-    marginBottom: 2,
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginBottom: 4,
   },
   itemMetaText: {
     fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 10,
+    color: '#636366',
+    fontSize: 10.5,
   },
   rateTag: {
-    backgroundColor: '#161D2C',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
+    backgroundColor: '#1F1F26',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#242F44',
+    borderColor: '#2A2A34',
   },
   rateTagText: {
-    fontFamily: fonts.displayBold,
-    color: '#38BDF8',
-    fontSize: 10,
+    fontFamily: fonts.bodyMedium,
+    color: '#8E8E93',
+    fontSize: 10.5,
   },
+
   inputRow: {
     flexDirection: 'row',
     gap: 10,
@@ -429,73 +480,80 @@ const styles = StyleSheet.create({
     flex: 1.2,
   },
   inputLabel: {
-    fontFamily: fonts.body,
-    color: '#94A3B8',
+    fontFamily: fonts.displayBold,
+    color: '#8E8E93',
     fontSize: 10,
-    marginBottom: 4,
+    letterSpacing: 0.4,
+    marginBottom: 6,
   },
   qtyInput: {
-    backgroundColor: '#151C2C',
-    borderRadius: 8,
+    backgroundColor: '#0C0C0E',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#28354D',
-    color: '#F8FAFC',
+    borderColor: '#262632',
+    color: '#FFFFFF',
     fontFamily: fonts.displayBold,
-    fontSize: 13,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    fontSize: 13.5,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
   },
   valPreviewCol: {
     flex: 1,
   },
   valPreviewBox: {
-    backgroundColor: '#0E121B',
-    borderRadius: 8,
+    backgroundColor: '#111114',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1A2130',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderColor: '#222228',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   valPreviewText: {
     fontFamily: fonts.displayBold,
     color: '#10B981',
-    fontSize: 13,
+    fontSize: 13.5,
   },
+
+  // VERIFY CTA
   verifyActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
     gap: 8,
-    marginBottom: 22,
+    marginBottom: 24,
   },
   verifyActionBtnText: {
     fontFamily: fonts.displayBold,
-    color: '#0B0E14',
-    fontSize: 12.5,
+    color: '#000000',
+    fontSize: 13,
   },
+
+  // HISTORY SECTION
   historySection: {
     gap: 10,
   },
   historyCard: {
-    backgroundColor: '#111622',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: '#16161A',
+    borderRadius: 20,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#1E2638',
+    borderColor: '#222228',
+    marginBottom: 10,
   },
   historyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-    paddingBottom: 6,
+    marginBottom: 10,
+    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#1A2130',
+    borderBottomColor: '#222228',
   },
   historyHeaderLeft: {
     flexDirection: 'row',
@@ -504,19 +562,19 @@ const styles = StyleSheet.create({
   },
   historyDateText: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 12,
   },
   historyVerifiedBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    paddingHorizontal: 6,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   historyVerifiedBadgeText: {
     fontFamily: fonts.displayBold,
     color: '#10B981',
-    fontSize: 9,
+    fontSize: 9.5,
     letterSpacing: 0.5,
   },
   historyMetricsRow: {
@@ -525,12 +583,14 @@ const styles = StyleSheet.create({
   },
   historyMetric: {
     flex: 1,
+    alignItems: 'center',
   },
   historyMetricLabel: {
-    fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 9.5,
-    marginBottom: 1,
+    fontFamily: fonts.displayBold,
+    color: '#636366',
+    fontSize: 9,
+    letterSpacing: 0.4,
+    marginBottom: 2,
   },
   historyMetricValGreen: {
     fontFamily: fonts.displayBold,

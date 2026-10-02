@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   TextInput,
   Modal,
   Alert,
@@ -20,6 +19,10 @@ import {
   CameraIcon,
   CheckIcon,
 } from '../../../components/ContractorIcons';
+import {
+  FadeInSlide,
+  SpringPressable,
+} from '../../../components/AnimatedComponents';
 
 interface WorkerAttendanceScreenProps {
   project: ContractorProjectDetail;
@@ -111,179 +114,229 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.topHeader}>
-        <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <ArrowLeftIcon size={16} color="#94A3B8" />
-          <Text style={styles.backBtnText}>Workspace</Text>
-        </Pressable>
+      {/* 1. TOP HEADER WITH CIRCULAR CONTROLS */}
+      <FadeInSlide delay={40} distance={14}>
+        <View style={styles.topHeader}>
+          <SpringPressable
+            style={styles.circleHeaderBtn}
+            onPress={onBack}
+            scaleTo={0.92}
+            hitSlop={8}
+          >
+            <ArrowLeftIcon size={18} color="#FFFFFF" />
+          </SpringPressable>
 
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Daily Attendance & Wages</Text>
-          <Text style={styles.headerSub}>{project.projectName}</Text>
-        </View>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Crew & Attendance</Text>
+            <Text style={styles.headerSub} numberOfLines={1}>
+              {project.projectName}
+            </Text>
+          </View>
 
-        <Pressable style={styles.addBtn} onPress={() => setShowAddWorkerModal(true)}>
-          <PlusIcon size={14} color="#0B0E14" />
-          <Text style={styles.addBtnText}>Worker</Text>
-        </Pressable>
-      </View>
+          <SpringPressable
+            style={styles.circleAddBtn}
+            onPress={() => setShowAddWorkerModal(true)}
+            scaleTo={0.92}
+            hitSlop={8}
+          >
+            <PlusIcon size={18} color="#000000" />
+          </SpringPressable>
+        </View>
+      </FadeInSlide>
 
-      {/* TODAY'S ATTENDANCE SUMMARY CARD */}
-      <View style={styles.summaryCard}>
-        <View style={styles.statBox}>
-          <Text style={[styles.statNum, { color: '#10B981' }]}>{presentCount}</Text>
-          <Text style={styles.statLabel}>Present</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statBox}>
-          <Text style={[styles.statNum, { color: '#F59E0B' }]}>{halfDayCount}</Text>
-          <Text style={styles.statLabel}>Half-Day</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statBox}>
-          <Text style={[styles.statNum, { color: '#EF4444' }]}>{absentCount}</Text>
-          <Text style={styles.statLabel}>Absent</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statBox}>
-          <Text style={styles.statNumGreen}>₹{totalWageToday.toLocaleString('en-IN')}</Text>
-          <Text style={styles.statLabel}>Wage Liability</Text>
-        </View>
-      </View>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* 2. TODAY'S ATTENDANCE SUMMARY CARD */}
+        <FadeInSlide delay={80} distance={14}>
+          <View style={styles.summaryCard}>
+            <View style={styles.statBox}>
+              <Text style={[styles.statNum, { color: '#10B981' }]}>{presentCount}</Text>
+              <Text style={styles.statLabel}>Present</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={[styles.statNum, { color: '#F59E0B' }]}>{halfDayCount}</Text>
+              <Text style={styles.statLabel}>Half-Day</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={[styles.statNum, { color: '#EF4444' }]}>{absentCount}</Text>
+              <Text style={styles.statLabel}>Absent</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statNumWhite}>₹{totalWageToday.toLocaleString('en-IN')}</Text>
+              <Text style={styles.statLabel}>Wage Liability</Text>
+            </View>
+          </View>
+        </FadeInSlide>
 
-      {/* WORKER ATTENDANCE LIST */}
-      <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionHeaderTitle}>Today&apos;s Worker Roster & Proof Verification</Text>
+        {/* 3. SECTION HEADER */}
+        <FadeInSlide delay={120} distance={14}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>TODAY&apos;S WORKER ROSTER</Text>
+            <Text style={styles.sectionCount}>{attendance.length} enrolled</Text>
+          </View>
+        </FadeInSlide>
 
-        {attendance.map((entry) => (
-          <View key={entry.workerId} style={styles.workerCard}>
-            <View style={styles.workerTopRow}>
-              <View style={styles.workerAvatar}>
-                <Text style={styles.avatarInitial}>{entry.workerName.charAt(0)}</Text>
-              </View>
-              <View style={styles.workerInfo}>
-                <View style={styles.workerNameRow}>
-                  <Text style={styles.workerNameText}>{entry.workerName}</Text>
-                  <View style={styles.roleBadge}>
-                    <Text style={styles.roleBadgeText}>{entry.role.toUpperCase()}</Text>
+        {/* 4. WORKER LIST */}
+        {attendance.map((entry, idx) => (
+          <FadeInSlide key={entry.workerId} delay={140 + idx * 40} distance={14}>
+            <View style={styles.workerCard}>
+              {/* Worker Top Info */}
+              <View style={styles.workerTopRow}>
+                <View style={styles.workerAvatar}>
+                  <Text style={styles.avatarInitial}>{entry.workerName.charAt(0)}</Text>
+                </View>
+
+                <View style={styles.workerInfo}>
+                  <View style={styles.workerNameRow}>
+                    <Text style={styles.workerNameText}>{entry.workerName}</Text>
+                    <View style={styles.roleBadge}>
+                      <Text style={styles.roleBadgeText}>{entry.role.toUpperCase()}</Text>
+                    </View>
                   </View>
+                  <Text style={styles.workerWageRate}>
+                    Rate: ₹{entry.dailyWage}/day • {entry.checkInTime}
+                  </Text>
                 </View>
-                <Text style={styles.workerWageRate}>
-                  Standard Rate: ₹{entry.dailyWage}/day • Check-in: {entry.checkInTime}
-                </Text>
+
+                <View style={styles.earnedBox}>
+                  <Text style={styles.earnedVal}>₹{entry.wageCalculated.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.earnedLabel}>Pay Calculated</Text>
+                </View>
               </View>
 
-              <View style={styles.earnedBox}>
-                <Text style={styles.earnedVal}>₹{entry.wageCalculated}</Text>
-                <Text style={styles.earnedLabel}>Calculated</Text>
-              </View>
-            </View>
-
-            {/* STATUS SELECTOR (SEGMENTED TABS) */}
-            <View style={styles.statusRow}>
-              <Pressable
-                style={[
-                  styles.statusTab,
-                  entry.status === 'present' ? styles.statusTabPresent : styles.statusTabInactive,
-                ]}
-                onPress={() => setStatus(entry.workerId, 'present')}
-              >
-                <Text
+              {/* Status Segmented Buttons */}
+              <View style={styles.statusRow}>
+                <SpringPressable
                   style={[
-                    styles.statusTabText,
-                    entry.status === 'present' ? styles.textPresent : styles.textInactive,
+                    styles.statusTab,
+                    entry.status === 'present' && styles.statusTabPresent,
                   ]}
+                  onPress={() => setStatus(entry.workerId, 'present')}
+                  scaleTo={0.96}
                 >
-                  Present (Full)
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.statusTab,
-                  entry.status === 'half_day' ? styles.statusTabHalf : styles.statusTabInactive,
-                ]}
-                onPress={() => setStatus(entry.workerId, 'half_day')}
-              >
-                <Text
-                  style={[
-                    styles.statusTabText,
-                    entry.status === 'half_day' ? styles.textHalf : styles.textInactive,
-                  ]}
-                >
-                  Half-Day
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.statusTab,
-                  entry.status === 'absent' ? styles.statusTabAbsent : styles.statusTabInactive,
-                ]}
-                onPress={() => setStatus(entry.workerId, 'absent')}
-              >
-                <Text
-                  style={[
-                    styles.statusTabText,
-                    entry.status === 'absent' ? styles.textAbsent : styles.textInactive,
-                  ]}
-                >
-                  Absent
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* PROOF VERIFICATION TOGGLE */}
-            <Pressable
-              style={[
-                styles.proofToggleRow,
-                entry.proofVerified ? styles.proofVerifiedBg : styles.proofPendingBg,
-              ]}
-              onPress={() => toggleProof(entry.workerId)}
-            >
-              <View style={styles.proofLeftCol}>
-                <View style={styles.proofIconBox}>
-                  {entry.proofVerified ? (
-                    <ShieldCheckIcon size={14} color="#10B981" />
-                  ) : (
-                    <CameraIcon size={14} color="#F59E0B" />
-                  )}
-                </View>
-                <View>
                   <Text
                     style={[
-                      styles.proofStatusTitle,
-                      entry.proofVerified ? styles.proofTextGreen : styles.proofTextAmber,
+                      styles.statusTabText,
+                      entry.status === 'present' ? styles.textPresent : styles.textInactive,
                     ]}
                   >
-                    {entry.proofVerified ? 'Site Photo Verified' : 'Awaiting Photo Proof'}
+                    Present (Full)
                   </Text>
-                  <Text style={styles.proofNoteText}>{entry.proofNote}</Text>
-                </View>
+                </SpringPressable>
+
+                <SpringPressable
+                  style={[
+                    styles.statusTab,
+                    entry.status === 'half_day' && styles.statusTabHalf,
+                  ]}
+                  onPress={() => setStatus(entry.workerId, 'half_day')}
+                  scaleTo={0.96}
+                >
+                  <Text
+                    style={[
+                      styles.statusTabText,
+                      entry.status === 'half_day' ? styles.textHalf : styles.textInactive,
+                    ]}
+                  >
+                    Half-Day
+                  </Text>
+                </SpringPressable>
+
+                <SpringPressable
+                  style={[
+                    styles.statusTab,
+                    entry.status === 'absent' && styles.statusTabAbsent,
+                  ]}
+                  onPress={() => setStatus(entry.workerId, 'absent')}
+                  scaleTo={0.96}
+                >
+                  <Text
+                    style={[
+                      styles.statusTabText,
+                      entry.status === 'absent' ? styles.textAbsent : styles.textInactive,
+                    ]}
+                  >
+                    Absent
+                  </Text>
+                </SpringPressable>
               </View>
 
-              <View
+              {/* Photo Proof Verification Capsule */}
+              <SpringPressable
                 style={[
-                  styles.verifyActionPill,
-                  entry.proofVerified ? styles.verifyActionDone : styles.verifyActionPending,
+                  styles.proofToggleRow,
+                  entry.proofVerified ? styles.proofVerifiedBg : styles.proofPendingBg,
                 ]}
+                onPress={() => toggleProof(entry.workerId)}
+                scaleTo={0.98}
               >
-                <Text
+                <View style={styles.proofLeftCol}>
+                  <View style={styles.proofIconBox}>
+                    {entry.proofVerified ? (
+                      <ShieldCheckIcon size={14} color="#10B981" />
+                    ) : (
+                      <CameraIcon size={14} color="#F59E0B" />
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.proofStatusTitle,
+                        entry.proofVerified ? styles.proofTextGreen : styles.proofTextAmber,
+                      ]}
+                    >
+                      {entry.proofVerified ? 'Site Photo Verified' : 'Awaiting Photo Proof'}
+                    </Text>
+                    <Text style={styles.proofNoteText} numberOfLines={1}>
+                      {entry.proofNote}
+                    </Text>
+                  </View>
+                </View>
+
+                <View
                   style={[
-                    styles.verifyActionText,
-                    entry.proofVerified ? styles.verifyTextDone : styles.verifyTextPending,
+                    styles.verifyActionPill,
+                    entry.proofVerified ? styles.verifyActionDone : styles.verifyActionPending,
                   ]}
                 >
-                  {entry.proofVerified ? 'Verified' : 'Verify'}
-                </Text>
-              </View>
-            </Pressable>
-          </View>
+                  <Text
+                    style={[
+                      styles.verifyActionText,
+                      entry.proofVerified ? styles.verifyTextDone : styles.verifyTextPending,
+                    ]}
+                  >
+                    {entry.proofVerified ? 'Verified ✓' : 'Verify'}
+                  </Text>
+                </View>
+              </SpringPressable>
+            </View>
+          </FadeInSlide>
         ))}
+
+        <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* ADD WORKER MODAL */}
+      {/* 5. FLOATING BOTTOM BAR */}
+      <FadeInSlide delay={200} distance={20}>
+        <View style={styles.floatingBottomBar}>
+          <View style={styles.floatingLeft}>
+            <Text style={styles.floatingTitle}>{attendance.length} Crew Members Active</Text>
+            <Text style={styles.floatingSubtitle}>Daily biometric & photo muster roll</Text>
+          </View>
+          <SpringPressable
+            style={styles.floatingAddBtn}
+            onPress={() => setShowAddWorkerModal(true)}
+            scaleTo={0.94}
+          >
+            <PlusIcon size={16} color="#000000" />
+            <Text style={styles.floatingAddBtnText}>Add Worker</Text>
+          </SpringPressable>
+        </View>
+      </FadeInSlide>
+
+      {/* 6. ADD WORKER MODAL */}
       <Modal
         visible={showAddWorkerModal}
         transparent={true}
@@ -292,13 +345,19 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContent}>
+            {/* Modal Header */}
             <View style={styles.modalTopRow}>
               <View style={styles.modalIconBox}>
-                <CrewIcon size={18} color="#10B981" />
+                <CrewIcon size={18} color="#FFFFFF" />
               </View>
-              <Pressable onPress={() => setShowAddWorkerModal(false)} hitSlop={8}>
-                <CloseIcon size={18} color="#94A3B8" />
-              </Pressable>
+              <SpringPressable
+                onPress={() => setShowAddWorkerModal(false)}
+                style={styles.modalCloseBtn}
+                scaleTo={0.9}
+                hitSlop={8}
+              >
+                <CloseIcon size={16} color="#8E8E93" />
+              </SpringPressable>
             </View>
 
             <Text style={styles.modalTitle}>Enroll New Worker</Text>
@@ -306,63 +365,81 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
               Add a new crew member to this site roster with daily wage and trade category.
             </Text>
 
-            <Text style={styles.inputLabel}>Worker Full Name</Text>
+            {/* Name */}
+            <Text style={styles.inputLabel}>WORKER FULL NAME</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. Rameshwar Yadav"
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#55555C"
               value={newWorkerName}
               onChangeText={setNewWorkerName}
             />
 
-            <Text style={styles.inputLabel}>Trade Category</Text>
+            {/* Role Pills */}
+            <Text style={styles.inputLabel}>TRADE CATEGORY</Text>
             <View style={styles.rolePickerRow}>
-              {AVAILABLE_ROLES.map((r) => (
-                <Pressable
-                  key={r}
-                  style={[styles.rolePill, newWorkerRole === r && styles.rolePillActive]}
-                  onPress={() => setNewWorkerRole(r)}
-                >
-                  <Text
-                    style={[
-                      styles.rolePillText,
-                      newWorkerRole === r && styles.rolePillTextActive,
-                    ]}
+              {AVAILABLE_ROLES.map((r) => {
+                const isActive = newWorkerRole === r;
+                return (
+                  <SpringPressable
+                    key={r}
+                    style={[styles.rolePill, isActive && styles.rolePillActive]}
+                    onPress={() => setNewWorkerRole(r)}
+                    scaleTo={0.95}
                   >
-                    {r}
-                  </Text>
-                </Pressable>
-              ))}
+                    <Text
+                      style={[
+                        styles.rolePillText,
+                        isActive && styles.rolePillTextActive,
+                      ]}
+                    >
+                      {r}
+                    </Text>
+                  </SpringPressable>
+                );
+              })}
             </View>
 
-            <Text style={styles.inputLabel}>Daily Wage Rate (₹)</Text>
+            {/* Daily Wage */}
+            <Text style={styles.inputLabel}>DAILY WAGE RATE (₹)</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. 950"
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#55555C"
               keyboardType="numeric"
               value={newWorkerWage}
               onChangeText={setNewWorkerWage}
             />
 
-            <Text style={styles.inputLabel}>Phone Number</Text>
+            {/* Phone */}
+            <Text style={styles.inputLabel}>PHONE NUMBER</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. +91 98111 22334"
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#55555C"
               keyboardType="phone-pad"
               value={newWorkerPhone}
               onChangeText={setNewWorkerPhone}
             />
 
+            {/* Actions */}
             <View style={styles.modalActions}>
-              <Pressable style={styles.cancelBtn} onPress={() => setShowAddWorkerModal(false)}>
+              <SpringPressable
+                style={styles.cancelBtn}
+                onPress={() => setShowAddWorkerModal(false)}
+                scaleTo={0.95}
+              >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
-              </Pressable>
-              <Pressable style={styles.confirmBtn} onPress={handleSaveWorker}>
-                <CheckIcon size={14} color="#0B0E14" />
+              </SpringPressable>
+
+              <SpringPressable
+                style={styles.confirmBtn}
+                onPress={handleSaveWorker}
+                scaleTo={0.95}
+              >
+                <CheckIcon size={14} color="#000000" />
                 <Text style={styles.confirmBtnText}>Enroll Worker</Text>
-              </Pressable>
+              </SpringPressable>
             </View>
           </View>
         </View>
@@ -374,68 +451,67 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0E14',
+    backgroundColor: '#000000',
   },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E2638',
-    backgroundColor: '#0E121B',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 14,
+    backgroundColor: '#000000',
   },
-  backBtn: {
-    flexDirection: 'row',
+  circleHeaderBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#16161A',
+    borderWidth: 1,
+    borderColor: '#222228',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
+    justifyContent: 'center',
   },
-  backBtnText: {
-    fontFamily: fonts.displayBold,
-    color: '#94A3B8',
-    fontSize: 12.5,
+  circleAddBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCenter: {
-    alignItems: 'center',
     flex: 1,
-    paddingHorizontal: 8,
+    alignItems: 'center',
+    paddingHorizontal: 12,
   },
   headerTitle: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 14.5,
+    color: '#FFFFFF',
+    fontSize: 16,
+    letterSpacing: -0.2,
   },
   headerSub: {
     fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 10.5,
-    marginTop: 1,
+    color: '#8E8E93',
+    fontSize: 11,
+    marginTop: 2,
   },
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 7,
-    gap: 4,
+
+  scrollContent: {
+    paddingHorizontal: 18,
+    paddingTop: 10,
   },
-  addBtnText: {
-    fontFamily: fonts.displayBold,
-    color: '#0B0E14',
-    fontSize: 11.5,
-  },
+
+  // SUMMARY CARD
   summaryCard: {
     flexDirection: 'row',
-    backgroundColor: '#111622',
-    marginHorizontal: 16,
-    marginTop: 14,
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: '#16161A',
+    borderRadius: 22,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#1E2638',
+    borderColor: '#222228',
+    marginBottom: 16,
   },
   statBox: {
     flex: 1,
@@ -443,61 +519,73 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    backgroundColor: '#1E2638',
+    backgroundColor: '#222228',
   },
   statNum: {
     fontFamily: fonts.displayBold,
-    fontSize: 15,
+    fontSize: 17,
     marginBottom: 2,
   },
-  statNumGreen: {
+  statNumWhite: {
     fontFamily: fonts.displayBold,
-    color: '#10B981',
-    fontSize: 14,
+    color: '#FFFFFF',
+    fontSize: 15,
     marginBottom: 2,
   },
   statLabel: {
     fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 9.5,
+    color: '#8E8E93',
+    fontSize: 10,
   },
-  listContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 40,
-    gap: 12,
+
+  // SECTION HEADER
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 2,
   },
-  sectionHeaderTitle: {
+  sectionTitle: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 13,
+    color: '#8E8E93',
+    fontSize: 11,
+    letterSpacing: 0.8,
   },
+  sectionCount: {
+    fontFamily: fonts.body,
+    color: '#636366',
+    fontSize: 11,
+  },
+
+  // WORKER CARDS
   workerCard: {
-    backgroundColor: '#111622',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: '#16161A',
+    borderRadius: 22,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#1E2638',
+    borderColor: '#222228',
+    marginBottom: 12,
   },
   workerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
+    gap: 12,
+    marginBottom: 12,
   },
   workerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 9,
-    backgroundColor: '#1E2638',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#222228',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#2D384E',
+    borderColor: '#2C2C34',
   },
   avatarInitial: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 15,
   },
   workerInfo: {
@@ -507,113 +595,118 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 2,
+    marginBottom: 3,
   },
   workerNameText: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 13.5,
+    color: '#FFFFFF',
+    fontSize: 14,
   },
   roleBadge: {
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
+    backgroundColor: '#1F1F26',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#2A2A34',
   },
   roleBadgeText: {
-    fontFamily: fonts.bodyMedium,
-    color: '#38BDF8',
-    fontSize: 9,
+    fontFamily: fonts.displayBold,
+    color: '#8E8E93',
+    fontSize: 9.5,
   },
   workerWageRate: {
     fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 10.5,
+    color: '#636366',
+    fontSize: 11,
   },
   earnedBox: {
     alignItems: 'flex-end',
   },
   earnedVal: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 14,
+    color: '#FFFFFF',
+    fontSize: 15,
   },
   earnedLabel: {
     fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 9.5,
+    color: '#636366',
+    fontSize: 10,
+    marginTop: 2,
   },
+
+  // STATUS SELECTOR (CAPSULE ROW)
   statusRow: {
     flexDirection: 'row',
-    backgroundColor: '#0E121B',
-    borderRadius: 8,
+    backgroundColor: '#111114',
+    borderRadius: 12,
     padding: 3,
     marginBottom: 10,
-    gap: 3,
+    gap: 4,
   },
   statusTab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 7,
-    borderRadius: 6,
+    paddingVertical: 8,
+    borderRadius: 9,
   },
   statusTabPresent: {
-    backgroundColor: '#064E3B',
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
   },
   statusTabHalf: {
-    backgroundColor: '#78350F',
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
   },
   statusTabAbsent: {
-    backgroundColor: '#7F1D1D',
-  },
-  statusTabInactive: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
   },
   statusTabText: {
     fontFamily: fonts.displayBold,
     fontSize: 10.5,
   },
   textPresent: {
-    color: '#34D399',
+    color: '#10B981',
   },
   textHalf: {
-    color: '#FBBF24',
+    color: '#F59E0B',
   },
   textAbsent: {
-    color: '#F87171',
+    color: '#EF4444',
   },
   textInactive: {
-    color: '#64748B',
+    color: '#636366',
   },
+
+  // PROOF TOGGLE
   proofToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 12,
     borderWidth: 1,
   },
   proofVerifiedBg: {
     backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    borderColor: 'rgba(16, 185, 129, 0.25)',
+    borderColor: 'rgba(16, 185, 129, 0.2)',
   },
   proofPendingBg: {
     backgroundColor: 'rgba(245, 158, 11, 0.08)',
-    borderColor: 'rgba(245, 158, 11, 0.25)',
+    borderColor: 'rgba(245, 158, 11, 0.2)',
   },
   proofLeftCol: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     flex: 1,
+    marginRight: 8,
   },
   proofIconBox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: '#1E2638',
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: '#222228',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -629,35 +722,87 @@ const styles = StyleSheet.create({
   },
   proofNoteText: {
     fontFamily: fonts.body,
-    color: '#64748B',
+    color: '#8E8E93',
     fontSize: 10,
+    marginTop: 1,
   },
   verifyActionPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
   verifyActionDone: {
     backgroundColor: '#10B981',
   },
   verifyActionPending: {
-    backgroundColor: '#1E2638',
+    backgroundColor: '#222228',
   },
   verifyActionText: {
     fontFamily: fonts.displayBold,
-    fontSize: 9.5,
+    fontSize: 10,
   },
   verifyTextDone: {
-    color: '#0B0E14',
+    color: '#000000',
   },
   verifyTextPending: {
-    color: '#94A3B8',
+    color: '#FFFFFF',
   },
 
-  // Modal
+  // FLOATING BOTTOM BAR
+  floatingBottomBar: {
+    position: 'absolute',
+    bottom: 24,
+    left: 18,
+    right: 18,
+    backgroundColor: '#16161A',
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#262630',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  floatingLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  floatingTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 13,
+  },
+  floatingSubtitle: {
+    fontFamily: fonts.body,
+    color: '#8E8E93',
+    fontSize: 10.5,
+    marginTop: 2,
+  },
+  floatingAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
+    gap: 6,
+  },
+  floatingAddBtnText: {
+    fontFamily: fonts.displayBold,
+    color: '#000000',
+    fontSize: 12,
+  },
+
+  // MODAL STYLING
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.82)',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -665,56 +810,55 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 390,
-    backgroundColor: '#0E121B',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: '#16161A',
+    borderRadius: 26,
+    padding: 22,
     borderWidth: 1,
-    borderColor: '#242F44',
+    borderColor: '#262632',
   },
   modalTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   modalIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#222228',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseBtn: {
     width: 34,
     height: 34,
-    borderRadius: 8,
-    backgroundColor: '#1E2638',
+    borderRadius: 17,
+    backgroundColor: '#222228',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalTitle: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 16,
+    color: '#FFFFFF',
+    fontSize: 17,
+    letterSpacing: -0.2,
     marginBottom: 4,
   },
   modalDesc: {
     fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 11.5,
-    lineHeight: 16,
-    marginBottom: 14,
+    color: '#8E8E93',
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 16,
   },
   inputLabel: {
-    fontFamily: fonts.bodyMedium,
-    color: '#94A3B8',
-    fontSize: 11,
-    marginBottom: 5,
-    marginTop: 8,
-  },
-  textInput: {
-    backgroundColor: '#151C2C',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#28354D',
-    color: '#F8FAFC',
-    fontFamily: fonts.body,
-    fontSize: 13,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    fontFamily: fonts.displayBold,
+    color: '#8E8E93',
+    fontSize: 10.5,
+    letterSpacing: 0.4,
+    marginBottom: 6,
+    marginTop: 10,
   },
   rolePickerRow: {
     flexDirection: 'row',
@@ -723,52 +867,64 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   rolePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#151C2C',
-    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: '#1C1C22',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#28354D',
+    borderColor: '#262630',
   },
   rolePillActive: {
-    backgroundColor: '#1E2638',
-    borderColor: '#10B981',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
   },
   rolePillText: {
     fontFamily: fonts.displayBold,
-    color: '#64748B',
-    fontSize: 10.5,
+    color: '#8E8E93',
+    fontSize: 11,
   },
   rolePillTextActive: {
-    color: '#10B981',
+    color: '#000000',
+  },
+  textInput: {
+    backgroundColor: '#0C0C0E',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#262632',
+    color: '#FFFFFF',
+    fontFamily: fonts.body,
+    fontSize: 13.5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 10,
-    marginTop: 18,
+    marginTop: 20,
   },
   cancelBtn: {
-    paddingVertical: 9,
-    paddingHorizontal: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
   },
   cancelBtnText: {
     fontFamily: fonts.bodyMedium,
-    color: '#94A3B8',
-    fontSize: 12.5,
+    color: '#8E8E93',
+    fontSize: 13,
   },
   confirmBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 5,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    gap: 6,
   },
   confirmBtnText: {
     fontFamily: fonts.displayBold,
-    color: '#0B0E14',
-    fontSize: 12.5,
+    color: '#000000',
+    fontSize: 13,
   },
 });

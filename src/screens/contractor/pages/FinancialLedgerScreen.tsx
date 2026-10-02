@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   TextInput,
   Modal,
   Alert,
@@ -18,6 +17,10 @@ import {
   CurrencyRupeeIcon,
   CheckIcon,
 } from '../../../components/ContractorIcons';
+import {
+  FadeInSlide,
+  SpringPressable,
+} from '../../../components/AnimatedComponents';
 
 interface FinancialLedgerScreenProps {
   project: ContractorProjectDetail;
@@ -83,132 +86,191 @@ export const FinancialLedgerScreen: React.FC<FinancialLedgerScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.topHeader}>
-        <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <ArrowLeftIcon size={16} color="#94A3B8" />
-          <Text style={styles.backBtnText}>Workspace</Text>
-        </Pressable>
+      {/* 1. TOP HEADER WITH CIRCULAR BUTTONS */}
+      <FadeInSlide delay={40} distance={14}>
+        <View style={styles.topHeader}>
+          <SpringPressable
+            style={styles.circleHeaderBtn}
+            onPress={onBack}
+            scaleTo={0.92}
+            hitSlop={8}
+          >
+            <ArrowLeftIcon size={18} color="#FFFFFF" />
+          </SpringPressable>
 
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Financial Ledger</Text>
-          <Text style={styles.headerSub}>Client Collections vs Worker Wages</Text>
-        </View>
-
-        <Pressable style={styles.addBtn} onPress={() => setShowAddModal(true)}>
-          <PlusIcon size={14} color="#0B0E14" />
-          <Text style={styles.addBtnText}>Entry</Text>
-        </Pressable>
-      </View>
-
-      {/* CASHFLOW KPI SUMMARY */}
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryRow}>
-          <View style={styles.sumCol}>
-            <Text style={styles.sumLabel}>Received from Client</Text>
-            <Text style={styles.sumGreen}>
-              ₹{totalReceivedFromClient.toLocaleString('en-IN')}
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Financial Ledger</Text>
+            <Text style={styles.headerSub} numberOfLines={1}>
+              Cash Inflows & Wage Disbursements
             </Text>
-            <Text style={styles.sumSub}>Client: {project.clientName}</Text>
           </View>
-          <View style={styles.sumDivider} />
-          <View style={styles.sumCol}>
-            <Text style={styles.sumLabel}>Paid to Workers</Text>
-            <Text style={styles.sumRed}>
-              ₹{totalPaidToWorkers.toLocaleString('en-IN')}
+
+          <SpringPressable
+            style={styles.circleAddBtn}
+            onPress={() => setShowAddModal(true)}
+            scaleTo={0.92}
+            hitSlop={8}
+          >
+            <PlusIcon size={18} color="#000000" />
+          </SpringPressable>
+        </View>
+      </FadeInSlide>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* 2. DUAL CASHFLOW KPI CARDS */}
+        <FadeInSlide delay={80} distance={14}>
+          <View style={styles.kpiRow}>
+            {/* CASH COLLECTED */}
+            <View style={styles.kpiCard}>
+              <Text style={styles.kpiLabel}>CASH COLLECTED</Text>
+              <Text style={[styles.kpiValue, { color: '#10B981' }]} numberOfLines={1}>
+                ₹{totalReceivedFromClient.toLocaleString('en-IN')}
+              </Text>
+              <View style={styles.kpiSubRow}>
+                <Text style={styles.kpiSubText} numberOfLines={1}>
+                  {project.clientName}
+                </Text>
+              </View>
+            </View>
+
+            {/* WAGES PAID */}
+            <View style={styles.kpiCard}>
+              <Text style={styles.kpiLabel}>WAGES PAID</Text>
+              <Text style={[styles.kpiValue, { color: '#F59E0B' }]} numberOfLines={1}>
+                ₹{totalPaidToWorkers.toLocaleString('en-IN')}
+              </Text>
+              <View style={styles.kpiSubRow}>
+                <Text style={styles.kpiSubText}>
+                  {project.workers.length} Crew Payroll
+                </Text>
+              </View>
+            </View>
+          </View>
+        </FadeInSlide>
+
+        {/* 3. NET OPERATING BALANCE CARD */}
+        <FadeInSlide delay={120} distance={14}>
+          <View style={styles.balanceCard}>
+            <View style={styles.balanceHeader}>
+              <View>
+                <Text style={styles.balanceLabel}>NET SITE CASH BALANCE</Text>
+                <Text style={styles.balanceSub}>Retained liquid margin on site</Text>
+              </View>
+              <View style={[styles.statusPill, netCashflowBalance >= 0 ? styles.statusPillGreen : styles.statusPillAmber]}>
+                <Text style={[styles.statusPillText, netCashflowBalance >= 0 ? styles.statusPillTextGreen : styles.statusPillTextAmber]}>
+                  {netCashflowBalance >= 0 ? 'Surplus Inflow' : 'Wage Deficit'}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.balanceValue}>
+              ₹{netCashflowBalance.toLocaleString('en-IN')}
             </Text>
-            <Text style={styles.sumSub}>{project.workers.length} Workers Payroll</Text>
           </View>
-        </View>
+        </FadeInSlide>
 
-        <View style={styles.netSurplusBar}>
-          <Text style={styles.netSurplusLabel}>Net Operating Balance:</Text>
-          <Text style={styles.netSurplusVal}>
-            ₹{netCashflowBalance.toLocaleString('en-IN')}
-          </Text>
-        </View>
-      </View>
+        {/* 4. FILTER TABS */}
+        <FadeInSlide delay={160} distance={14}>
+          <View style={styles.filterRow}>
+            <SpringPressable
+              style={[styles.filterPill, filterType === 'all' && styles.filterPillActive]}
+              onPress={() => setFilterType('all')}
+              scaleTo={0.96}
+            >
+              <Text style={[styles.filterPillText, filterType === 'all' && styles.filterPillTextActive]}>
+                All ({project.transactions.length})
+              </Text>
+            </SpringPressable>
 
-      {/* FILTER BUTTONS */}
-      <View style={styles.filterBar}>
-        <Pressable
-          style={[styles.filterBtn, filterType === 'all' && styles.filterBtnActive]}
-          onPress={() => setFilterType('all')}
-        >
-          <Text
-            style={[styles.filterBtnText, filterType === 'all' && styles.filterBtnTextActive]}
-          >
-            All ({project.transactions.length})
-          </Text>
-        </Pressable>
+            <SpringPressable
+              style={[styles.filterPill, filterType === 'client' && styles.filterPillActive]}
+              onPress={() => setFilterType('client')}
+              scaleTo={0.96}
+            >
+              <Text style={[styles.filterPillText, filterType === 'client' && styles.filterPillTextActive]}>
+                Client Receipts
+              </Text>
+            </SpringPressable>
 
-        <Pressable
-          style={[styles.filterBtn, filterType === 'client' && styles.filterBtnActive]}
-          onPress={() => setFilterType('client')}
-        >
-          <Text
-            style={[styles.filterBtnText, filterType === 'client' && styles.filterBtnTextActive]}
-          >
-            Client Inflows
-          </Text>
-        </Pressable>
+            <SpringPressable
+              style={[styles.filterPill, filterType === 'worker' && styles.filterPillActive]}
+              onPress={() => setFilterType('worker')}
+              scaleTo={0.96}
+            >
+              <Text style={[styles.filterPillText, filterType === 'worker' && styles.filterPillTextActive]}>
+                Crew Outflows
+              </Text>
+            </SpringPressable>
+          </View>
+        </FadeInSlide>
 
-        <Pressable
-          style={[styles.filterBtn, filterType === 'worker' && styles.filterBtnActive]}
-          onPress={() => setFilterType('worker')}
-        >
-          <Text
-            style={[styles.filterBtnText, filterType === 'worker' && styles.filterBtnTextActive]}
-          >
-            Crew Outflows
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* TRANSACTION LIST */}
-      <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
-        {filteredTransactions.map((tx) => {
+        {/* 5. TRANSACTION LIST */}
+        {filteredTransactions.map((tx, idx) => {
           const isInflow = tx.type === 'received_from_client';
 
           return (
-            <View key={tx.id} style={styles.txCard}>
-              <View style={styles.txTopRow}>
-                <View style={styles.txLeftGroup}>
-                  <View
-                    style={[
-                      styles.txBadge,
-                      isInflow ? styles.txBadgeInflow : styles.txBadgeOutflow,
-                    ]}
-                  >
-                    <Text
+            <FadeInSlide key={tx.id} delay={180 + idx * 40} distance={14}>
+              <View style={styles.txCard}>
+                <View style={styles.txTopRow}>
+                  <View style={styles.txBadgeGroup}>
+                    <View
                       style={[
-                        styles.txBadgeText,
-                        isInflow ? styles.txBadgeTextInflow : styles.txBadgeTextOutflow,
+                        styles.txBadge,
+                        isInflow ? styles.txBadgeInflow : styles.txBadgeOutflow,
                       ]}
                     >
-                      {isInflow ? 'CLIENT INFLOW' : 'CREW OUTFLOW'}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.txBadgeText,
+                          isInflow ? styles.txBadgeTextInflow : styles.txBadgeTextOutflow,
+                        ]}
+                      >
+                        {isInflow ? 'CLIENT INFLOW' : 'CREW OUTFLOW'}
+                      </Text>
+                    </View>
+                    <Text style={styles.txRefText}>{tx.referenceNo}</Text>
                   </View>
-                  <Text style={styles.txRefText}>{tx.referenceNo}</Text>
+
+                  <Text style={[styles.txAmount, isInflow ? styles.txAmountGreen : styles.txAmountAmber]}>
+                    {isInflow ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
+                  </Text>
                 </View>
 
-                <Text style={isInflow ? styles.txAmountGreen : styles.txAmountRed}>
-                  {isInflow ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
-                </Text>
-              </View>
+                <Text style={styles.txNoteText}>{tx.note}</Text>
 
-              <Text style={styles.txNoteText}>{tx.note}</Text>
-
-              <View style={styles.txFooterRow}>
-                <Text style={styles.txRecipientText}>{tx.recipientOrPayer}</Text>
-                <Text style={styles.txDateText}>{tx.date}</Text>
+                <View style={styles.txFooterRow}>
+                  <Text style={styles.txRecipientText} numberOfLines={1}>
+                    {tx.recipientOrPayer}
+                  </Text>
+                  <Text style={styles.txDateText}>{tx.date}</Text>
+                </View>
               </View>
-            </View>
+            </FadeInSlide>
           );
         })}
+
+        <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* ADD TRANSACTION MODAL */}
+      {/* 6. FLOATING BOTTOM BAR */}
+      <FadeInSlide delay={200} distance={20}>
+        <View style={styles.floatingBottomBar}>
+          <View style={styles.floatingLeft}>
+            <Text style={styles.floatingTitle}>{filteredTransactions.length} Transactions Logged</Text>
+            <Text style={styles.floatingSubtitle}>Immutable site financial ledger</Text>
+          </View>
+          <SpringPressable
+            style={styles.floatingAddBtn}
+            onPress={() => setShowAddModal(true)}
+            scaleTo={0.94}
+          >
+            <PlusIcon size={16} color="#000000" />
+            <Text style={styles.floatingAddBtnText}>Record Entry</Text>
+          </SpringPressable>
+        </View>
+      </FadeInSlide>
+
+      {/* 7. ADD TRANSACTION MODAL */}
       <Modal
         visible={showAddModal}
         transparent={true}
@@ -217,13 +279,19 @@ export const FinancialLedgerScreen: React.FC<FinancialLedgerScreenProps> = ({
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContent}>
+            {/* Modal Header */}
             <View style={styles.modalTopRow}>
               <View style={styles.modalIconBox}>
-                <CurrencyRupeeIcon size={18} color="#38BDF8" />
+                <CurrencyRupeeIcon size={18} color="#FFFFFF" />
               </View>
-              <Pressable onPress={() => setShowAddModal(false)} hitSlop={8}>
-                <CloseIcon size={18} color="#94A3B8" />
-              </Pressable>
+              <SpringPressable
+                onPress={() => setShowAddModal(false)}
+                style={styles.modalCloseBtn}
+                scaleTo={0.9}
+                hitSlop={8}
+              >
+                <CloseIcon size={16} color="#8E8E93" />
+              </SpringPressable>
             </View>
 
             <Text style={styles.modalTitle}>Record Financial Entry</Text>
@@ -231,64 +299,70 @@ export const FinancialLedgerScreen: React.FC<FinancialLedgerScreenProps> = ({
               Log client payment receipt or crew payroll wage payout for this site.
             </Text>
 
-            <Text style={styles.inputLabel}>Transaction Type</Text>
+            {/* Type selector */}
+            <Text style={styles.inputLabel}>TRANSACTION TYPE</Text>
             <View style={styles.typeSelectorRow}>
-              <Pressable
+              <SpringPressable
                 style={[
                   styles.typePill,
-                  txType === 'received_from_client' && styles.typePillInflowActive,
+                  txType === 'received_from_client' && styles.typePillActive,
                 ]}
                 onPress={() => setTxType('received_from_client')}
+                scaleTo={0.96}
               >
                 <Text
                   style={[
                     styles.typePillText,
-                    txType === 'received_from_client' && styles.typePillTextInflow,
+                    txType === 'received_from_client' && styles.typePillTextActive,
                   ]}
                 >
-                  Received from Client
+                  Cash Received (Client)
                 </Text>
-              </Pressable>
+              </SpringPressable>
 
-              <Pressable
+              <SpringPressable
                 style={[
                   styles.typePill,
-                  txType === 'paid_to_worker' && styles.typePillOutflowActive,
+                  txType === 'paid_to_worker' && styles.typePillActive,
                 ]}
                 onPress={() => setTxType('paid_to_worker')}
+                scaleTo={0.96}
               >
                 <Text
                   style={[
                     styles.typePillText,
-                    txType === 'paid_to_worker' && styles.typePillTextOutflow,
+                    txType === 'paid_to_worker' && styles.typePillTextActive,
                   ]}
                 >
-                  Paid to Worker
+                  Wage Paid (Crew)
                 </Text>
-              </Pressable>
+              </SpringPressable>
             </View>
 
-            <Text style={styles.inputLabel}>Amount (₹)</Text>
+            {/* Amount input */}
+            <Text style={styles.inputLabel}>AMOUNT (₹)</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. 50000"
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#55555C"
               keyboardType="numeric"
               value={amountStr}
               onChangeText={setAmountStr}
             />
 
-            <Text style={styles.inputLabel}>Description / Purpose</Text>
+            {/* Note input */}
+            <Text style={styles.inputLabel}>PURPOSE / NOTE</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. Milestone 2 Advance for Material & Flooring"
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#55555C"
               value={noteStr}
               onChangeText={setNoteStr}
             />
 
+            {/* Recipient / Payer */}
             <Text style={styles.inputLabel}>
-              {txType === 'received_from_client' ? 'Received From' : 'Paid To (Worker Name)'}
+              {txType === 'received_from_client' ? 'RECEIVED FROM' : 'PAID TO (WORKER NAME)'}
             </Text>
             <TextInput
               style={styles.textInput}
@@ -297,19 +371,29 @@ export const FinancialLedgerScreen: React.FC<FinancialLedgerScreenProps> = ({
                   ? `Client: ${project.clientName}`
                   : 'e.g. Rameshwar Yadav (Mason)'
               }
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#55555C"
               value={payerRecipient}
               onChangeText={setPayerRecipient}
             />
 
+            {/* Actions */}
             <View style={styles.modalActions}>
-              <Pressable style={styles.cancelBtn} onPress={() => setShowAddModal(false)}>
+              <SpringPressable
+                style={styles.cancelBtn}
+                onPress={() => setShowAddModal(false)}
+                scaleTo={0.95}
+              >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
-              </Pressable>
-              <Pressable style={styles.confirmBtn} onPress={handleSaveTransaction}>
-                <CheckIcon size={14} color="#0B0E14" />
+              </SpringPressable>
+
+              <SpringPressable
+                style={styles.confirmBtn}
+                onPress={handleSaveTransaction}
+                scaleTo={0.95}
+              >
+                <CheckIcon size={14} color="#000000" />
                 <Text style={styles.confirmBtnText}>Save Entry</Text>
-              </Pressable>
+              </SpringPressable>
             </View>
           </View>
         </View>
@@ -321,238 +405,318 @@ export const FinancialLedgerScreen: React.FC<FinancialLedgerScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0E14',
+    backgroundColor: '#000000',
   },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E2638',
-    backgroundColor: '#0E121B',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 14,
+    backgroundColor: '#000000',
   },
-  backBtn: {
-    flexDirection: 'row',
+  circleHeaderBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#16161A',
+    borderWidth: 1,
+    borderColor: '#222228',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
+    justifyContent: 'center',
   },
-  backBtnText: {
-    fontFamily: fonts.displayBold,
-    color: '#94A3B8',
-    fontSize: 12.5,
+  circleAddBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCenter: {
-    alignItems: 'center',
     flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 12,
   },
   headerTitle: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 14.5,
+    color: '#FFFFFF',
+    fontSize: 16,
+    letterSpacing: -0.2,
   },
   headerSub: {
     fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 10.5,
-    marginTop: 1,
+    color: '#8E8E93',
+    fontSize: 11,
+    marginTop: 2,
   },
-  addBtn: {
+
+  scrollContent: {
+    paddingHorizontal: 18,
+    paddingTop: 10,
+  },
+
+  // DUAL KPI CARDS
+  kpiRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
+  },
+  kpiCard: {
+    flex: 1,
+    backgroundColor: '#16161A',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#222228',
+  },
+  kpiLabel: {
+    fontFamily: fonts.displayBold,
+    color: '#8E8E93',
+    fontSize: 10,
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  kpiValue: {
+    fontFamily: fonts.displayBold,
+    fontSize: 20,
+    letterSpacing: -0.4,
+    marginBottom: 6,
+  },
+  kpiSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 7,
-    gap: 4,
   },
-  addBtnText: {
-    fontFamily: fonts.displayBold,
-    color: '#0B0E14',
-    fontSize: 11.5,
+  kpiSubText: {
+    fontFamily: fonts.body,
+    color: '#636366',
+    fontSize: 11,
   },
-  summaryCard: {
-    backgroundColor: '#111622',
-    marginHorizontal: 16,
-    marginTop: 14,
-    borderRadius: 14,
-    padding: 14,
+
+  // BALANCE CARD
+  balanceCard: {
+    backgroundColor: '#16161A',
+    borderRadius: 22,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#1E2638',
+    borderColor: '#222228',
+    marginBottom: 16,
   },
-  summaryRow: {
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  sumCol: {
-    flex: 1,
-  },
-  sumDivider: {
-    width: 1,
-    backgroundColor: '#1E2638',
-    marginHorizontal: 12,
-  },
-  sumLabel: {
-    fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 10,
-    marginBottom: 2,
-  },
-  sumGreen: {
-    fontFamily: fonts.displayBold,
-    color: '#10B981',
-    fontSize: 16,
-    marginBottom: 2,
-  },
-  sumRed: {
-    fontFamily: fonts.displayBold,
-    color: '#EF4444',
-    fontSize: 16,
-    marginBottom: 2,
-  },
-  sumSub: {
-    fontFamily: fonts.body,
-    color: '#94A3B8',
-    fontSize: 9.5,
-  },
-  netSurplusBar: {
+  balanceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#1A2130',
-    paddingTop: 8,
+    alignItems: 'flex-start',
+    marginBottom: 10,
   },
-  netSurplusLabel: {
-    fontFamily: fonts.bodyMedium,
-    color: '#94A3B8',
-    fontSize: 11,
-  },
-  netSurplusVal: {
+  balanceLabel: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 14,
+    color: '#8E8E93',
+    fontSize: 10.5,
+    letterSpacing: 0.8,
   },
-  filterBar: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginTop: 12,
-    backgroundColor: '#0E121B',
+  balanceSub: {
+    fontFamily: fonts.body,
+    color: '#636366',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  statusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 8,
-    padding: 3,
-    gap: 4,
   },
-  filterBtn: {
-    flex: 1,
-    paddingVertical: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 6,
+  statusPillGreen: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
   },
-  filterBtnActive: {
-    backgroundColor: '#1E2638',
+  statusPillAmber: {
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
   },
-  filterBtnText: {
-    fontFamily: fonts.bodyMedium,
-    color: '#64748B',
-    fontSize: 11,
-  },
-  filterBtnTextActive: {
+  statusPillText: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
+    fontSize: 10,
   },
-  listContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 40,
-    gap: 10,
+  statusPillTextGreen: {
+    color: '#10B981',
   },
-  txCard: {
-    backgroundColor: '#111622',
-    borderRadius: 12,
-    padding: 12,
+  statusPillTextAmber: {
+    color: '#F59E0B',
+  },
+  balanceValue: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 26,
+    letterSpacing: -0.6,
+  },
+
+  // FILTER ROW
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  filterPill: {
+    backgroundColor: '#16161A',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1E2638',
+    borderColor: '#222228',
+  },
+  filterPillActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+  },
+  filterPillText: {
+    fontFamily: fonts.displayBold,
+    color: '#8E8E93',
+    fontSize: 11.5,
+  },
+  filterPillTextActive: {
+    color: '#000000',
+  },
+
+  // TX CARDS
+  txCard: {
+    backgroundColor: '#16161A',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#222228',
+    marginBottom: 12,
   },
   txTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 10,
   },
-  txLeftGroup: {
+  txBadgeGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   txBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   txBadgeInflow: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
   },
   txBadgeOutflow: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
   },
   txBadgeText: {
     fontFamily: fonts.displayBold,
-    fontSize: 9,
+    fontSize: 9.5,
     letterSpacing: 0.5,
   },
   txBadgeTextInflow: {
     color: '#10B981',
   },
   txBadgeTextOutflow: {
-    color: '#EF4444',
+    color: '#F59E0B',
   },
   txRefText: {
-    fontFamily: fonts.mono,
-    color: '#64748B',
-    fontSize: 10,
+    fontFamily: fonts.body,
+    color: '#636366',
+    fontSize: 10.5,
+  },
+  txAmount: {
+    fontFamily: fonts.displayBold,
+    fontSize: 16,
+    letterSpacing: -0.3,
   },
   txAmountGreen: {
-    fontFamily: fonts.displayBold,
     color: '#10B981',
-    fontSize: 14,
   },
-  txAmountRed: {
-    fontFamily: fonts.displayBold,
-    color: '#EF4444',
-    fontSize: 14,
+  txAmountAmber: {
+    color: '#F59E0B',
   },
   txNoteText: {
-    fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 12.5,
-    marginBottom: 6,
+    fontFamily: fonts.bodyMedium,
+    color: '#FFFFFF',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 12,
   },
   txFooterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#1A2130',
-    paddingTop: 6,
+    borderTopColor: '#1F1F24',
+    paddingTop: 10,
   },
   txRecipientText: {
     fontFamily: fonts.body,
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 11,
+    flex: 1,
+    marginRight: 8,
   },
   txDateText: {
     fontFamily: fonts.body,
-    color: '#64748B',
+    color: '#636366',
     fontSize: 10.5,
   },
 
-  // Modal
+  // FLOATING BOTTOM BAR
+  floatingBottomBar: {
+    position: 'absolute',
+    bottom: 24,
+    left: 18,
+    right: 18,
+    backgroundColor: '#16161A',
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#262630',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  floatingLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  floatingTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 13,
+  },
+  floatingSubtitle: {
+    fontFamily: fonts.body,
+    color: '#8E8E93',
+    fontSize: 10.5,
+    marginTop: 2,
+  },
+  floatingAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
+    gap: 6,
+  },
+  floatingAddBtnText: {
+    fontFamily: fonts.displayBold,
+    color: '#000000',
+    fontSize: 12,
+  },
+
+  // MODAL STYLING
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.82)',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -560,118 +724,122 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 390,
-    backgroundColor: '#0E121B',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: '#16161A',
+    borderRadius: 26,
+    padding: 22,
     borderWidth: 1,
-    borderColor: '#242F44',
+    borderColor: '#262632',
   },
   modalTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   modalIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#222228',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseBtn: {
     width: 34,
     height: 34,
-    borderRadius: 8,
-    backgroundColor: '#1E2638',
+    borderRadius: 17,
+    backgroundColor: '#222228',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalTitle: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 16,
+    color: '#FFFFFF',
+    fontSize: 17,
+    letterSpacing: -0.2,
     marginBottom: 4,
   },
   modalDesc: {
     fontFamily: fonts.body,
-    color: '#64748B',
-    fontSize: 11.5,
-    lineHeight: 16,
-    marginBottom: 14,
+    color: '#8E8E93',
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 16,
   },
   inputLabel: {
-    fontFamily: fonts.bodyMedium,
-    color: '#94A3B8',
-    fontSize: 11,
-    marginBottom: 5,
-    marginTop: 8,
+    fontFamily: fonts.displayBold,
+    color: '#8E8E93',
+    fontSize: 10.5,
+    letterSpacing: 0.4,
+    marginBottom: 6,
+    marginTop: 10,
   },
   typeSelectorRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   typePill: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    backgroundColor: '#151C2C',
-    borderRadius: 6,
+    paddingVertical: 9,
+    backgroundColor: '#1C1C22',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#28354D',
+    borderColor: '#262630',
   },
-  typePillInflowActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderColor: '#10B981',
-  },
-  typePillOutflowActive: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    borderColor: '#EF4444',
+  typePillActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
   },
   typePillText: {
     fontFamily: fonts.displayBold,
-    color: '#64748B',
-    fontSize: 10.5,
+    color: '#8E8E93',
+    fontSize: 11,
   },
-  typePillTextInflow: {
-    color: '#10B981',
-  },
-  typePillTextOutflow: {
-    color: '#EF4444',
+  typePillTextActive: {
+    color: '#000000',
   },
   textInput: {
-    backgroundColor: '#151C2C',
-    borderRadius: 8,
+    backgroundColor: '#0C0C0E',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#28354D',
-    color: '#F8FAFC',
+    borderColor: '#262632',
+    color: '#FFFFFF',
     fontFamily: fonts.body,
-    fontSize: 13,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    fontSize: 13.5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 10,
-    marginTop: 18,
+    marginTop: 20,
   },
   cancelBtn: {
-    paddingVertical: 9,
-    paddingHorizontal: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
   },
   cancelBtnText: {
     fontFamily: fonts.bodyMedium,
-    color: '#94A3B8',
-    fontSize: 12.5,
+    color: '#8E8E93',
+    fontSize: 13,
   },
   confirmBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 5,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    gap: 6,
   },
   confirmBtnText: {
     fontFamily: fonts.displayBold,
-    color: '#0B0E14',
-    fontSize: 12.5,
+    color: '#000000',
+    fontSize: 13,
   },
 });

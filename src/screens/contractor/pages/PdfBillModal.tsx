@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   Modal,
   Alert,
 } from 'react-native';
@@ -17,6 +16,7 @@ import {
   ShieldCheckIcon,
   FileTextIcon,
 } from '../../../components/ContractorIcons';
+import { SpringPressable } from '../../../components/AnimatedComponents';
 
 interface PdfBillModalProps {
   visible: boolean;
@@ -72,24 +72,35 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
     <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
         <View style={styles.sheetContainer}>
+          {/* TOP DRAG NOTCH */}
+          <View style={styles.notchContainer}>
+            <View style={styles.dragNotch} />
+          </View>
+
           {/* TOP ACTIONS BAR */}
           <View style={styles.topActionsBar}>
-            <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
-              <CloseIcon size={16} color="#94A3B8" />
-              <Text style={styles.closeBtnText}>Close</Text>
-            </Pressable>
+            <SpringPressable
+              onPress={onClose}
+              style={styles.circleHeaderBtn}
+              scaleTo={0.92}
+              hitSlop={8}
+            >
+              <CloseIcon size={16} color="#8E8E93" />
+            </SpringPressable>
 
             <View style={styles.modalHeaderTitleGroup}>
-              <FileTextIcon size={15} color="#F8FAFC" />
+              <FileTextIcon size={16} color="#FFFFFF" />
               <Text style={styles.sheetHeaderTitle}>Running Account Bill</Text>
             </View>
 
-            <View style={styles.headerRightActions}>
-              <Pressable onPress={handleExportPdf} style={styles.exportBtn}>
-                <DownloadIcon size={14} color="#0B0E14" />
-                <Text style={styles.exportBtnText}>PDF</Text>
-              </Pressable>
-            </View>
+            <SpringPressable
+              onPress={handleExportPdf}
+              style={styles.circleExportBtn}
+              scaleTo={0.92}
+              hitSlop={8}
+            >
+              <DownloadIcon size={16} color="#000000" />
+            </SpringPressable>
           </View>
 
           {/* OFFICIAL PDF DOCUMENT PREVIEW */}
@@ -108,14 +119,14 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
                   </View>
                 </View>
                 <Text style={styles.brandTagline}>ENTERPRISE INFRASTRUCTURE & CONSTRUCTION</Text>
-                <Text style={styles.licenseText}>License: Class-1 Prime Contractor • GSTIN: 27AABCS1429E1Z8</Text>
+                <Text style={styles.licenseText}>Class-1 Prime Contractor • GSTIN: 27AABCS1429E1Z8</Text>
               </View>
 
               <View style={styles.invoiceMetaRight}>
                 <View style={styles.docBadge}>
                   <Text style={styles.docBadgeText}>OFFICIAL RA BILL</Text>
                 </View>
-                <Text style={styles.invNumber}>Bill No: {invoiceNo}</Text>
+                <Text style={styles.invNumber}>No: {invoiceNo}</Text>
                 <Text style={styles.invDate}>Date: {todayDate}</Text>
               </View>
             </View>
@@ -145,12 +156,12 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
             <View style={styles.table}>
               <View style={styles.thRow}>
                 <Text style={[styles.thCell, { flex: 0.6 }]}>#</Text>
-                <Text style={[styles.thCell, { flex: 3 }]}>Scope Item Description</Text>
+                <Text style={[styles.thCell, { flex: 2.8 }]}>Scope Item</Text>
                 <Text style={[styles.thCell, { flex: 1, textAlign: 'center' }]}>Unit</Text>
-                <Text style={[styles.thCell, { flex: 1.2, textAlign: 'right' }]}>Contract</Text>
-                <Text style={[styles.thCell, { flex: 1.2, textAlign: 'right' }]}>Executed</Text>
-                <Text style={[styles.thCell, { flex: 1.2, textAlign: 'right' }]}>Rate (₹)</Text>
-                <Text style={[styles.thCell, { flex: 1.6, textAlign: 'right' }]}>Amount (₹)</Text>
+                <Text style={[styles.thCell, { flex: 1.2, textAlign: 'right' }]}>Scope</Text>
+                <Text style={[styles.thCell, { flex: 1.2, textAlign: 'right' }]}>Done</Text>
+                <Text style={[styles.thCell, { flex: 1.2, textAlign: 'right' }]}>Rate</Text>
+                <Text style={[styles.thCell, { flex: 1.6, textAlign: 'right' }]}>Amount</Text>
               </View>
 
               {project.scopeItems.map((item, idx) => {
@@ -158,7 +169,7 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
                 return (
                   <View key={item.id} style={styles.tdRow}>
                     <Text style={[styles.tdCell, { flex: 0.6 }]}>{idx + 1}</Text>
-                    <Text style={[styles.tdCellBold, { flex: 3 }]}>{item.name}</Text>
+                    <Text style={[styles.tdCellBold, { flex: 2.8 }]}>{item.name}</Text>
                     <Text style={[styles.tdCell, { flex: 1, textAlign: 'center' }]}>
                       {item.unit.toUpperCase()}
                     </Text>
@@ -169,10 +180,10 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
                       {item.completedQuantity.toLocaleString('en-IN')}
                     </Text>
                     <Text style={[styles.tdCell, { flex: 1.2, textAlign: 'right' }]}>
-                      {item.ratePerUnit}
+                      ₹{item.ratePerUnit}
                     </Text>
                     <Text style={[styles.tdCellTotal, { flex: 1.6, textAlign: 'right' }]}>
-                      {itemDoneVal.toLocaleString('en-IN')}
+                      ₹{itemDoneVal.toLocaleString('en-IN')}
                     </Text>
                   </View>
                 );
@@ -182,11 +193,11 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
             {/* BILL TOTALS SUMMARY */}
             <View style={styles.totalsBox}>
               <View style={styles.totalLine}>
-                <Text style={styles.totalLineLabel}>Gross Cumulative Work Executed to Date:</Text>
+                <Text style={styles.totalLineLabel}>Gross Cumulative Work Executed:</Text>
                 <Text style={styles.totalLineVal}>₹{totalCompletedValue.toLocaleString('en-IN')}</Text>
               </View>
               <View style={styles.totalLine}>
-                <Text style={styles.totalLineLabel}>Less: Prior Running Account Collections Received:</Text>
+                <Text style={styles.totalLineLabel}>Less: Prior Running Account Receipts:</Text>
                 <Text style={styles.totalLineValGreen}>
                   -₹{totalReceivedFromClient.toLocaleString('en-IN')}
                 </Text>
@@ -214,13 +225,17 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
               </Text>
             </View>
 
-            {/* ACTION DISPATCH BUTTONS */}
-            <View style={styles.dispatchActionsRow}>
-              <Pressable style={styles.dispatchBtn} onPress={handleShareClient}>
-                <ShareIcon size={15} color="#0B0E14" />
-                <Text style={styles.dispatchBtnText}>Dispatch to Client ({project.clientName})</Text>
-              </Pressable>
-            </View>
+            {/* ACTION DISPATCH BUTTON */}
+            <SpringPressable
+              style={styles.dispatchBtn}
+              onPress={handleShareClient}
+              scaleTo={0.96}
+            >
+              <ShareIcon size={16} color="#000000" />
+              <Text style={styles.dispatchBtnText}>
+                Dispatch to Client ({project.clientName})
+              </Text>
+            </SpringPressable>
           </ScrollView>
         </View>
       </View>
@@ -231,116 +246,114 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
 const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: 'rgba(0, 0, 0, 0.88)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {
     height: '92%',
-    backgroundColor: '#0E121B',
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    backgroundColor: '#16161A',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#1E2638',
+    borderColor: '#262632',
+  },
+  notchContainer: {
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  dragNotch: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#33333E',
   },
   topActionsBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E2638',
-    backgroundColor: '#0E121B',
+    borderBottomColor: '#222228',
+    backgroundColor: '#16161A',
   },
-  closeBtn: {
-    flexDirection: 'row',
+  circleHeaderBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#222228',
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
+    justifyContent: 'center',
   },
-  closeBtnText: {
-    fontFamily: fonts.bodyMedium,
-    color: '#94A3B8',
-    fontSize: 12.5,
+  circleExportBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalHeaderTitleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   sheetHeaderTitle: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 14,
+    color: '#FFFFFF',
+    fontSize: 15,
   },
-  headerRightActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  exportBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    gap: 4,
-  },
-  exportBtnText: {
-    fontFamily: fonts.displayBold,
-    color: '#0B0E14',
-    fontSize: 11.5,
-  },
+
   pdfPaperScrollView: {
     flex: 1,
-    backgroundColor: '#0B0E14',
+    backgroundColor: '#000000',
   },
   pdfPaperContent: {
-    padding: 16,
+    padding: 18,
     paddingBottom: 40,
   },
   letterhead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   brandTitle: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 18,
     letterSpacing: 1.5,
   },
   primePill: {
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-    paddingHorizontal: 5,
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 3,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderColor: 'rgba(56, 189, 248, 0.3)',
   },
   primePillText: {
     fontFamily: fonts.displayBold,
     color: '#38BDF8',
-    fontSize: 8,
+    fontSize: 8.5,
   },
   brandTagline: {
     fontFamily: fonts.displayBold,
-    color: '#38BDF8',
+    color: '#8E8E93',
     fontSize: 8.5,
     letterSpacing: 0.6,
-    marginTop: 2,
+    marginTop: 4,
   },
   licenseText: {
     fontFamily: fonts.body,
-    color: '#64748B',
+    color: '#636366',
     fontSize: 9.5,
     marginTop: 2,
   },
@@ -348,43 +361,43 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   docBadge: {
-    backgroundColor: '#1E2638',
+    backgroundColor: '#222228',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 4,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#2D384E',
+    borderColor: '#2D2D36',
     marginBottom: 4,
   },
   docBadgeText: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 9,
     letterSpacing: 0.5,
   },
   invNumber: {
     fontFamily: fonts.mono,
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 10,
   },
   invDate: {
     fontFamily: fonts.body,
-    color: '#64748B',
+    color: '#636366',
     fontSize: 10,
   },
   docDivider: {
     height: 1,
-    backgroundColor: '#1E2638',
-    marginVertical: 12,
+    backgroundColor: '#222228',
+    marginVertical: 14,
   },
   particularsGrid: {
     flexDirection: 'row',
-    backgroundColor: '#111622',
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: '#16161A',
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#1E2638',
-    marginBottom: 14,
+    borderColor: '#222228',
+    marginBottom: 16,
     gap: 12,
   },
   partCol: {
@@ -392,73 +405,73 @@ const styles = StyleSheet.create({
   },
   partHeader: {
     fontFamily: fonts.displayBold,
-    color: '#64748B',
+    color: '#636366',
     fontSize: 9,
     letterSpacing: 0.6,
-    marginBottom: 3,
+    marginBottom: 4,
   },
   partClientName: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 13,
     marginBottom: 2,
   },
   partProjectName: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 13,
     marginBottom: 2,
   },
   partText: {
     fontFamily: fonts.body,
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 10.5,
     lineHeight: 14,
   },
   tableTitle: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
-    fontSize: 11,
-    letterSpacing: 0.5,
-    marginBottom: 8,
+    color: '#8E8E93',
+    fontSize: 10.5,
+    letterSpacing: 0.6,
+    marginBottom: 10,
   },
   table: {
-    backgroundColor: '#111622',
-    borderRadius: 10,
+    backgroundColor: '#16161A',
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#1E2638',
+    borderColor: '#222228',
     overflow: 'hidden',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   thRow: {
     flexDirection: 'row',
-    backgroundColor: '#161D2C',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    backgroundColor: '#1F1F26',
+    paddingVertical: 9,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E2638',
+    borderBottomColor: '#222228',
   },
   thCell: {
     fontFamily: fonts.displayBold,
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 9.5,
   },
   tdRow: {
     flexDirection: 'row',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#161D2C',
+    borderBottomColor: '#1F1F24',
     alignItems: 'center',
   },
   tdCell: {
     fontFamily: fonts.body,
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 10,
   },
   tdCellBold: {
     fontFamily: fonts.bodyMedium,
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 10.5,
   },
   tdCellDone: {
@@ -468,16 +481,16 @@ const styles = StyleSheet.create({
   },
   tdCellTotal: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 10.5,
   },
   totalsBox: {
-    backgroundColor: '#111622',
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: '#16161A',
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#1E2638',
-    marginBottom: 14,
+    borderColor: '#222228',
+    marginBottom: 16,
   },
   totalLine: {
     flexDirection: 'row',
@@ -486,12 +499,12 @@ const styles = StyleSheet.create({
   },
   totalLineLabel: {
     fontFamily: fonts.body,
-    color: '#94A3B8',
+    color: '#8E8E93',
     fontSize: 11,
   },
   totalLineVal: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 12,
   },
   totalLineValGreen: {
@@ -501,8 +514,8 @@ const styles = StyleSheet.create({
   },
   totalLineDivider: {
     height: 1,
-    backgroundColor: '#1E2638',
-    marginVertical: 8,
+    backgroundColor: '#222228',
+    marginVertical: 10,
   },
   grandTotalLine: {
     flexDirection: 'row',
@@ -511,27 +524,27 @@ const styles = StyleSheet.create({
   },
   grandTotalLabel: {
     fontFamily: fonts.displayBold,
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 11.5,
     letterSpacing: 0.5,
   },
   grandTotalVal: {
     fontFamily: fonts.displayBold,
-    color: '#38BDF8',
-    fontSize: 16,
+    color: '#FFFFFF',
+    fontSize: 18,
   },
   verificationStampBox: {
-    backgroundColor: '#0E121B',
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: '#16161A',
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#1E2638',
-    marginBottom: 16,
+    borderColor: '#222228',
+    marginBottom: 18,
   },
   stampHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     marginBottom: 4,
   },
   stampTitle: {
@@ -542,25 +555,22 @@ const styles = StyleSheet.create({
   },
   stampDesc: {
     fontFamily: fonts.body,
-    color: '#64748B',
+    color: '#636366',
     fontSize: 10,
     lineHeight: 14,
-  },
-  dispatchActionsRow: {
-    gap: 10,
   },
   dispatchBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingVertical: 14,
     gap: 8,
   },
   dispatchBtnText: {
     fontFamily: fonts.displayBold,
-    color: '#0B0E14',
-    fontSize: 12.5,
+    color: '#000000',
+    fontSize: 13,
   },
 });
