@@ -51,6 +51,8 @@ export const colors = {
 export const fonts = {
   display: 'SpaceGrotesk_600SemiBold',
   displayBold: 'SpaceGrotesk_700Bold',
+  heading: 'SpaceGrotesk_700Bold',
   body: 'IBMPlexSans_400Regular',
   bodyMedium: 'IBMPlexSans_500Medium',
+  mono: 'IBMPlexSans_500Medium',
 };

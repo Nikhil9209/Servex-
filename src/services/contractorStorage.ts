@@ -223,6 +223,33 @@ export const INITIAL_CONTRACTOR_PROJECTS: ContractorProjectDetail[] = [
         referenceNo: 'UPI-WAGE-9954',
       },
     ],
+    chatState: {
+      workerMessagingAllowed: false,
+      messages: [
+        {
+          id: 'msg-1',
+          senderRole: 'client',
+          senderName: 'Vikramaditya Singhania',
+          content: 'Good morning team. How is the master bedroom Italian marble progress coming along today?',
+          timestamp: '09:15 AM',
+        },
+        {
+          id: 'msg-2',
+          senderRole: 'contractor',
+          senderName: 'Apex Contractors (You)',
+          content: 'Good morning sir! Rameshwar and crew have laid 150 sqft already. Skirting will be completed by 4 PM. We will verify and generate the daily bill this evening.',
+          timestamp: '09:22 AM',
+        },
+        {
+          id: 'msg-3',
+          senderRole: 'contractor',
+          senderName: 'Apex Contractors (You)',
+          content: '🔒 Worker messaging authority is currently restricted by contractor.',
+          timestamp: '09:23 AM',
+          isAuthorityAction: true,
+        },
+      ],
+    },
   },
   {
     id: 'proj-2',
@@ -307,5 +334,32 @@ export const INITIAL_CONTRACTOR_PROJECTS: ContractorProjectDetail[] = [
         referenceNo: 'NEFT-CORP-4482',
       },
     ],
+    chatState: {
+      workerMessagingAllowed: true,
+      messages: [
+        {
+          id: 'msg-201',
+          senderRole: 'contractor',
+          senderName: 'Apex Contractors (You)',
+          content: 'All workers are verified on site for HVAC partition fitout. Deepak, please share acoustic framing status.',
+          timestamp: '09:00 AM',
+        },
+        {
+          id: 'msg-202',
+          senderRole: 'contractor',
+          senderName: 'Apex Contractors (You)',
+          content: '🔓 Contractor granted messaging authority to workers for technical updates.',
+          timestamp: '09:01 AM',
+          isAuthorityAction: true,
+        },
+        {
+          id: 'msg-203',
+          senderRole: 'worker',
+          senderName: 'Deepak Varma (Carpenter)',
+          content: 'Sir, framing grid is ready for inspection. 12 acoustic panels installed on north wall.',
+          timestamp: '09:30 AM',
+        },
+      ],
+    },
   },
 ];

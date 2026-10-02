@@ -317,6 +317,22 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
                   </View>
                 </View>
 
+                <View style={styles.cardChatRow}>
+                  <View
+                    style={[
+                      styles.chatStatusPill,
+                      proj.chatState?.workerMessagingAllowed
+                        ? styles.chatStatusPillAllowed
+                        : styles.chatStatusPillLocked,
+                    ]}
+                  >
+                    <Text style={styles.chatStatusPillText}>
+                      💬 {proj.chatState?.messages.length || 0} messages •{' '}
+                      {proj.chatState?.workerMessagingAllowed ? 'Workers Allowed 🔓' : 'Workers Locked 🔒'}
+                    </Text>
+                  </View>
+                </View>
+
                 <View style={styles.cardActionRow}>
                   <Text style={styles.actionPrompt}>Open Project Workspace ➔</Text>
                 </View>
@@ -766,6 +782,30 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#10B981',
     borderRadius: 2,
+  },
+  cardChatRow: {
+    marginBottom: 10,
+  },
+  chatStatusPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  chatStatusPillAllowed: {
+    backgroundColor: '#0F241E',
+    borderColor: '#10B981',
+  },
+  chatStatusPillLocked: {
+    backgroundColor: '#22190E',
+    borderColor: '#D97706',
+  },
+  chatStatusPillText: {
+    fontFamily: fonts.mono,
+    fontSize: 10.5,
+    color: '#E2E8F0',
+    fontWeight: '600',
   },
   cardActionRow: {
     alignItems: 'flex-end',

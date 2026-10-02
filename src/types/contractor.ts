@@ -61,6 +61,22 @@ export interface ClientTransaction {
   referenceNo: string;
 }
 
+export type ChatSenderRole = 'contractor' | 'client' | 'worker';
+
+export interface ProjectChatMessage {
+  id: string;
+  senderRole: ChatSenderRole;
+  senderName: string;
+  content: string;
+  timestamp: string;
+  isAuthorityAction?: boolean;
+}
+
+export interface ProjectChatState {
+  workerMessagingAllowed: boolean;
+  messages: ProjectChatMessage[];
+}
+
 export interface ContractorProjectDetail {
   id: string;
   clientCode: string;
@@ -75,4 +91,5 @@ export interface ContractorProjectDetail {
   todayAttendance: AttendanceEntry[];
   dailyReports: DailyWorkReport[];
   transactions: ClientTransaction[];
+  chatState?: ProjectChatState;
 }

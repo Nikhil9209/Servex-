@@ -14,6 +14,7 @@ import {
   AttendanceEntry,
   DailyWorkReport,
   ClientTransaction,
+  ProjectChatState,
 } from '../../../types/contractor';
 import { MapPinIcon, CrewIcon } from '../../../components/ContractorIcons';
 import { ScopeRequirementsScreen } from './ScopeRequirementsScreen';
@@ -21,6 +22,7 @@ import { WorkerAttendanceScreen } from './WorkerAttendanceScreen';
 import { DailyWorkVerificationScreen } from './DailyWorkVerificationScreen';
 import { FinancialLedgerScreen } from './FinancialLedgerScreen';
 import { PdfBillModal } from './PdfBillModal';
+import { ProjectChatScreen } from './ProjectChatScreen';
 
 interface ProjectWorkspaceScreenProps {
   project: ContractorProjectDetail;
@@ -28,7 +30,7 @@ interface ProjectWorkspaceScreenProps {
   onUpdateProject: (updated: ContractorProjectDetail) => void;
 }
 
-type SubScreenType = 'overview' | 'scope' | 'attendance' | 'daily_verification' | 'ledger';
+type SubScreenType = 'overview' | 'scope' | 'attendance' | 'daily_verification' | 'ledger' | 'chat';
 
 export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
   project,
@@ -135,6 +137,14 @@ export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
     onUpdateProject(updated);
   };
 
+  const handleUpdateChatState = (updatedChatState: ProjectChatState) => {
+    const updated: ContractorProjectDetail = {
+      ...project,
+      chatState: updatedChatState,
+    };
+    onUpdateProject(updated);
+  };
+
   // Sub-screens routing
   if (subScreen === 'scope') {
     return (
@@ -173,6 +183,16 @@ export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
         project={project}
         onBack={() => setSubScreen('overview')}
         onAddTransaction={handleAddTransaction}
+      />
+    );
+  }
+
+  if (subScreen === 'chat') {
+    return (
+      <ProjectChatScreen
+        project={project}
+        onBack={() => setSubScreen('overview')}
+        onUpdateChatState={handleUpdateChatState}
       />
     );
   }
@@ -328,6 +348,37 @@ export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
               <Text style={styles.moduleTitle}>Financial Ledger</Text>
               <Text style={styles.moduleDesc}>
                 Track client payments received vs. wages paid to your workers
+              </Text>
+            </View>
+            <Text style={styles.moduleChevron}>›</Text>
+          </Pressable>
+
+          {/* 5. Site Tri-Party Chat */}
+          <Pressable
+            style={styles.moduleCard}
+            onPress={() => setSubScreen('chat')}
+          >
+            <View style={[styles.moduleIconBox, styles.chatModuleIconBox]}>
+              <Text style={styles.moduleIcon}>💬</Text>
+            </View>
+            <View style={styles.moduleInfo}>
+              <View style={styles.moduleTitleRow}>
+                <Text style={styles.moduleTitle}>Site Tri-Party Chat</Text>
+                <View
+                  style={[
+                    styles.chatStatusTag,
+                    project.chatState?.workerMessagingAllowed
+                      ? styles.chatStatusTagAllowed
+                      : styles.chatStatusTagLocked,
+                  ]}
+                >
+                  <Text style={styles.chatStatusTagText}>
+                    {project.chatState?.workerMessagingAllowed ? 'Workers Allowed 🔓' : 'Workers Locked 🔒'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.moduleDesc}>
+                Direct chat with Client & Workers. Contractor controls worker messaging authority.
               </Text>
             </View>
             <Text style={styles.moduleChevron}>›</Text>
@@ -620,5 +671,35 @@ const styles = StyleSheet.create({
     color: '#71717A',
     fontSize: 20,
     paddingRight: 4,
+  },
+  chatModuleIconBox: {
+    backgroundColor: '#1E232F',
+    borderColor: '#30394D',
+  },
+  moduleTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 3,
+  },
+  chatStatusTag: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  chatStatusTagAllowed: {
+    backgroundColor: '#0F241E',
+    borderColor: '#10B981',
+  },
+  chatStatusTagLocked: {
+    backgroundColor: '#261C10',
+    borderColor: '#D97706',
+  },
+  chatStatusTagText: {
+    fontFamily: fonts.mono,
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
