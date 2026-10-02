@@ -85,7 +85,7 @@ export interface ContractorProjectDetail {
   clientPhone: string;
   siteAddress: string;
   startDate: string;
-  status: 'active' | 'completed';
+  status: 'active' | 'upcoming' | 'completed';
   scopeItems: ProjectScopeItem[];
   workers: WorkerRecord[];
   todayAttendance: AttendanceEntry[];

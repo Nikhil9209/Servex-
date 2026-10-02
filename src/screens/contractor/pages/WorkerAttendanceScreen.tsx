@@ -11,6 +11,15 @@ import {
 } from 'react-native';
 import { fonts } from '../../../theme/tokens';
 import { ContractorProjectDetail, WorkerRecord, AttendanceEntry } from '../../../types/contractor';
+import {
+  ArrowLeftIcon,
+  PlusIcon,
+  CloseIcon,
+  CrewIcon,
+  ShieldCheckIcon,
+  CameraIcon,
+  CheckIcon,
+} from '../../../components/ContractorIcons';
 
 interface WorkerAttendanceScreenProps {
   project: ContractorProjectDetail;
@@ -18,6 +27,14 @@ interface WorkerAttendanceScreenProps {
   onAddWorker: (newWorker: Omit<WorkerRecord, 'id'>) => void;
   onUpdateAttendance: (attendanceList: AttendanceEntry[]) => void;
 }
+
+const AVAILABLE_ROLES: WorkerRecord['role'][] = [
+  'Mason',
+  'Electrician',
+  'Helper',
+  'Carpenter',
+  'Painter',
+];
 
 export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
   project,
@@ -59,7 +76,9 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
       return {
         ...a,
         proofVerified: newProof,
-        proofNote: newProof ? 'Site arrival & on-time proof verified ✓' : 'Awaiting proof verification',
+        proofNote: newProof
+          ? 'Site arrival & on-time photo proof verified ✓'
+          : 'Awaiting proof verification',
       };
     });
     setAttendance(updated);
@@ -95,31 +114,35 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
       {/* HEADER */}
       <View style={styles.topHeader}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <Text style={styles.backBtnText}>‹ Back</Text>
+          <ArrowLeftIcon size={16} color="#94A3B8" />
+          <Text style={styles.backBtnText}>Workspace</Text>
         </Pressable>
+
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Daily Attendance & Wages</Text>
           <Text style={styles.headerSub}>{project.projectName}</Text>
         </View>
+
         <Pressable style={styles.addBtn} onPress={() => setShowAddWorkerModal(true)}>
-          <Text style={styles.addBtnText}>+ Worker</Text>
+          <PlusIcon size={14} color="#0B0E14" />
+          <Text style={styles.addBtnText}>Worker</Text>
         </Pressable>
       </View>
 
       {/* TODAY'S ATTENDANCE SUMMARY CARD */}
       <View style={styles.summaryCard}>
         <View style={styles.statBox}>
-          <Text style={styles.statNum}>{presentCount}</Text>
+          <Text style={[styles.statNum, { color: '#10B981' }]}>{presentCount}</Text>
           <Text style={styles.statLabel}>Present</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBox}>
-          <Text style={styles.statNum}>{halfDayCount}</Text>
+          <Text style={[styles.statNum, { color: '#F59E0B' }]}>{halfDayCount}</Text>
           <Text style={styles.statLabel}>Half-Day</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBox}>
-          <Text style={styles.statNum}>{absentCount}</Text>
+          <Text style={[styles.statNum, { color: '#EF4444' }]}>{absentCount}</Text>
           <Text style={styles.statLabel}>Absent</Text>
         </View>
         <View style={styles.statDivider} />
@@ -147,87 +170,120 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
                   </View>
                 </View>
                 <Text style={styles.workerWageRate}>
-                  Daily Rate: ₹{entry.dailyWage} / day
+                  Standard Rate: ₹{entry.dailyWage}/day • Check-in: {entry.checkInTime}
                 </Text>
               </View>
 
-              <View style={styles.wagePayableBox}>
-                <Text style={styles.wagePayableLabel}>Payable</Text>
-                <Text style={styles.wagePayableVal}>
-                  ₹{entry.wageCalculated.toLocaleString('en-IN')}
-                </Text>
+              <View style={styles.earnedBox}>
+                <Text style={styles.earnedVal}>₹{entry.wageCalculated}</Text>
+                <Text style={styles.earnedLabel}>Calculated</Text>
               </View>
             </View>
 
-            {/* ATTENDANCE TOGGLE BUTTONS */}
-            <View style={styles.statusButtonsRow}>
+            {/* STATUS SELECTOR (SEGMENTED TABS) */}
+            <View style={styles.statusRow}>
               <Pressable
-                style={[styles.statusBtn, entry.status === 'present' && styles.statusBtnPresent]}
+                style={[
+                  styles.statusTab,
+                  entry.status === 'present' ? styles.statusTabPresent : styles.statusTabInactive,
+                ]}
                 onPress={() => setStatus(entry.workerId, 'present')}
               >
                 <Text
                   style={[
-                    styles.statusBtnText,
-                    entry.status === 'present' && styles.statusBtnTextActive,
+                    styles.statusTabText,
+                    entry.status === 'present' ? styles.textPresent : styles.textInactive,
                   ]}
                 >
-                  ✓ Present (Full)
+                  Present (Full)
                 </Text>
               </Pressable>
 
               <Pressable
-                style={[styles.statusBtn, entry.status === 'half_day' && styles.statusBtnHalf]}
+                style={[
+                  styles.statusTab,
+                  entry.status === 'half_day' ? styles.statusTabHalf : styles.statusTabInactive,
+                ]}
                 onPress={() => setStatus(entry.workerId, 'half_day')}
               >
                 <Text
                   style={[
-                    styles.statusBtnText,
-                    entry.status === 'half_day' && styles.statusBtnTextActive,
+                    styles.statusTabText,
+                    entry.status === 'half_day' ? styles.textHalf : styles.textInactive,
                   ]}
                 >
-                  ½ Half-Day
+                  Half-Day
                 </Text>
               </Pressable>
 
               <Pressable
-                style={[styles.statusBtn, entry.status === 'absent' && styles.statusBtnAbsent]}
+                style={[
+                  styles.statusTab,
+                  entry.status === 'absent' ? styles.statusTabAbsent : styles.statusTabInactive,
+                ]}
                 onPress={() => setStatus(entry.workerId, 'absent')}
               >
                 <Text
                   style={[
-                    styles.statusBtnText,
-                    entry.status === 'absent' && styles.statusBtnTextActive,
+                    styles.statusTabText,
+                    entry.status === 'absent' ? styles.textAbsent : styles.textInactive,
                   ]}
                 >
-                  ✕ Absent
+                  Absent
                 </Text>
               </Pressable>
             </View>
 
-            {/* ON-TIME PROOF VERIFICATION */}
-            {entry.status !== 'absent' && (
-              <Pressable
-                style={[styles.proofRow, entry.proofVerified && styles.proofRowVerified]}
-                onPress={() => toggleProof(entry.workerId)}
+            {/* PROOF VERIFICATION TOGGLE */}
+            <Pressable
+              style={[
+                styles.proofToggleRow,
+                entry.proofVerified ? styles.proofVerifiedBg : styles.proofPendingBg,
+              ]}
+              onPress={() => toggleProof(entry.workerId)}
+            >
+              <View style={styles.proofLeftCol}>
+                <View style={styles.proofIconBox}>
+                  {entry.proofVerified ? (
+                    <ShieldCheckIcon size={14} color="#10B981" />
+                  ) : (
+                    <CameraIcon size={14} color="#F59E0B" />
+                  )}
+                </View>
+                <View>
+                  <Text
+                    style={[
+                      styles.proofStatusTitle,
+                      entry.proofVerified ? styles.proofTextGreen : styles.proofTextAmber,
+                    ]}
+                  >
+                    {entry.proofVerified ? 'Site Photo Verified' : 'Awaiting Photo Proof'}
+                  </Text>
+                  <Text style={styles.proofNoteText}>{entry.proofNote}</Text>
+                </View>
+              </View>
+
+              <View
+                style={[
+                  styles.verifyActionPill,
+                  entry.proofVerified ? styles.verifyActionDone : styles.verifyActionPending,
+                ]}
               >
-                <View style={[styles.proofCheckbox, entry.proofVerified && styles.proofCheckboxDone]}>
-                  {entry.proofVerified && <Text style={styles.proofCheckSymbol}>✓</Text>}
-                </View>
-                <View style={styles.proofContent}>
-                  <Text style={[styles.proofTitle, entry.proofVerified && styles.proofTitleDone]}>
-                    {entry.proofVerified ? 'On-Time Proof Verified ✓' : 'Verify On-Time Arrival Proof'}
-                  </Text>
-                  <Text style={styles.proofSub}>
-                    Check-in: {entry.checkInTime} • {entry.proofNote}
-                  </Text>
-                </View>
-              </Pressable>
-            )}
+                <Text
+                  style={[
+                    styles.verifyActionText,
+                    entry.proofVerified ? styles.verifyTextDone : styles.verifyTextPending,
+                  ]}
+                >
+                  {entry.proofVerified ? 'Verified' : 'Verify'}
+                </Text>
+              </View>
+            </Pressable>
           </View>
         ))}
       </ScrollView>
 
-      {/* MODAL TO ADD NEW WORKER */}
+      {/* ADD WORKER MODAL */}
       <Modal
         visible={showAddWorkerModal}
         transparent={true}
@@ -236,47 +292,54 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Project Worker</Text>
+            <View style={styles.modalTopRow}>
+              <View style={styles.modalIconBox}>
+                <CrewIcon size={18} color="#10B981" />
+              </View>
+              <Pressable onPress={() => setShowAddWorkerModal(false)} hitSlop={8}>
+                <CloseIcon size={18} color="#94A3B8" />
+              </Pressable>
+            </View>
+
+            <Text style={styles.modalTitle}>Enroll New Worker</Text>
             <Text style={styles.modalDesc}>
-              Enroll a new skilled tradesman or helper to this project roster.
+              Add a new crew member to this site roster with daily wage and trade category.
             </Text>
 
             <Text style={styles.inputLabel}>Worker Full Name</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. Rameshwar Yadav"
-              placeholderTextColor="#71717A"
+              placeholderTextColor="#64748B"
               value={newWorkerName}
               onChangeText={setNewWorkerName}
             />
 
-            <Text style={styles.inputLabel}>Trade / Specialization</Text>
-            <View style={styles.roleGrid}>
-              {(['Mason', 'Electrician', 'Painter', 'Carpenter', 'Plumber', 'Helper'] as WorkerRecord['role'][]).map(
-                (r) => (
-                  <Pressable
-                    key={r}
-                    style={[styles.roleBtn, newWorkerRole === r && styles.roleBtnActive]}
-                    onPress={() => setNewWorkerRole(r)}
+            <Text style={styles.inputLabel}>Trade Category</Text>
+            <View style={styles.rolePickerRow}>
+              {AVAILABLE_ROLES.map((r) => (
+                <Pressable
+                  key={r}
+                  style={[styles.rolePill, newWorkerRole === r && styles.rolePillActive]}
+                  onPress={() => setNewWorkerRole(r)}
+                >
+                  <Text
+                    style={[
+                      styles.rolePillText,
+                      newWorkerRole === r && styles.rolePillTextActive,
+                    ]}
                   >
-                    <Text
-                      style={[
-                        styles.roleBtnText,
-                        newWorkerRole === r && styles.roleBtnTextActive,
-                      ]}
-                    >
-                      {r}
-                    </Text>
-                  </Pressable>
-                )
-              )}
+                    {r}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
 
-            <Text style={styles.inputLabel}>Agreed Daily Wage Rate (₹ / Day)</Text>
+            <Text style={styles.inputLabel}>Daily Wage Rate (₹)</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. 950"
-              placeholderTextColor="#71717A"
+              placeholderTextColor="#64748B"
               keyboardType="numeric"
               value={newWorkerWage}
               onChangeText={setNewWorkerWage}
@@ -285,22 +348,20 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
             <Text style={styles.inputLabel}>Phone Number</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="e.g. +91 98200 12345"
-              placeholderTextColor="#71717A"
+              placeholder="e.g. +91 98111 22334"
+              placeholderTextColor="#64748B"
               keyboardType="phone-pad"
               value={newWorkerPhone}
               onChangeText={setNewWorkerPhone}
             />
 
             <View style={styles.modalActions}>
-              <Pressable
-                style={styles.cancelBtn}
-                onPress={() => setShowAddWorkerModal(false)}
-              >
+              <Pressable style={styles.cancelBtn} onPress={() => setShowAddWorkerModal(false)}>
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </Pressable>
-              <Pressable style={styles.saveBtn} onPress={handleSaveWorker}>
-                <Text style={styles.saveBtnText}>Enroll Worker</Text>
+              <Pressable style={styles.confirmBtn} onPress={handleSaveWorker}>
+                <CheckIcon size={14} color="#0B0E14" />
+                <Text style={styles.confirmBtnText}>Enroll Worker</Text>
               </Pressable>
             </View>
           </View>
@@ -313,61 +374,68 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#0B0E14',
   },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#161920',
+    borderBottomColor: '#1E2638',
+    backgroundColor: '#0E121B',
   },
   backBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
   },
   backBtnText: {
-    fontFamily: fonts.bodyMedium,
-    color: '#A1A1AA',
-    fontSize: 14,
+    fontFamily: fonts.displayBold,
+    color: '#94A3B8',
+    fontSize: 12.5,
   },
   headerCenter: {
     alignItems: 'center',
+    flex: 1,
+    paddingHorizontal: 8,
   },
   headerTitle: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 15,
+    color: '#F8FAFC',
+    fontSize: 14.5,
   },
   headerSub: {
     fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 11,
-    marginTop: 2,
+    color: '#64748B',
+    fontSize: 10.5,
+    marginTop: 1,
   },
   addBtn: {
-    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    paddingHorizontal: 12,
     borderRadius: 7,
+    gap: 4,
   },
   addBtnText: {
     fontFamily: fonts.displayBold,
-    color: '#000000',
-    fontSize: 12,
+    color: '#0B0E14',
+    fontSize: 11.5,
   },
   summaryCard: {
     flexDirection: 'row',
-    backgroundColor: '#111317',
+    backgroundColor: '#111622',
     marginHorizontal: 16,
     marginTop: 14,
-    marginBottom: 10,
     borderRadius: 12,
-    paddingVertical: 12,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#20242D',
+    borderColor: '#1E2638',
   },
   statBox: {
     flex: 1,
@@ -375,64 +443,62 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    backgroundColor: '#20242D',
+    backgroundColor: '#1E2638',
   },
   statNum: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 15,
     marginBottom: 2,
   },
   statNumGreen: {
     fontFamily: fonts.displayBold,
     color: '#10B981',
-    fontSize: 16,
+    fontSize: 14,
     marginBottom: 2,
   },
   statLabel: {
     fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 10.5,
+    color: '#64748B',
+    fontSize: 9.5,
   },
   listContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 28,
+    paddingTop: 14,
+    paddingBottom: 40,
     gap: 12,
   },
   sectionHeaderTitle: {
     fontFamily: fonts.displayBold,
-    color: '#A1A1AA',
-    fontSize: 12,
-    letterSpacing: 0.5,
-    marginVertical: 4,
+    color: '#F8FAFC',
+    fontSize: 13,
   },
   workerCard: {
-    backgroundColor: '#111317',
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: '#111622',
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#20242D',
+    borderColor: '#1E2638',
   },
   workerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 10,
   },
   workerAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: '#1C2028',
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    backgroundColor: '#1E2638',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
     borderWidth: 1,
-    borderColor: '#2A303C',
+    borderColor: '#2D384E',
   },
   avatarInitial: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: '#F8FAFC',
+    fontSize: 15,
   },
   workerInfo: {
     flex: 1,
@@ -440,225 +506,269 @@ const styles = StyleSheet.create({
   workerNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    marginBottom: 2,
   },
   workerNameText: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: '#F8FAFC',
+    fontSize: 13.5,
   },
   roleBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: 6,
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,
   },
   roleBadgeText: {
-    fontFamily: fonts.displayBold,
-    color: '#D4D4D8',
+    fontFamily: fonts.bodyMedium,
+    color: '#38BDF8',
     fontSize: 9,
-    letterSpacing: 0.5,
   },
   workerWageRate: {
     fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 11.5,
-    marginTop: 2,
+    color: '#64748B',
+    fontSize: 10.5,
   },
-  wagePayableBox: {
+  earnedBox: {
     alignItems: 'flex-end',
   },
-  wagePayableLabel: {
+  earnedVal: {
+    fontFamily: fonts.displayBold,
+    color: '#F8FAFC',
+    fontSize: 14,
+  },
+  earnedLabel: {
     fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 10,
+    color: '#64748B',
+    fontSize: 9.5,
   },
-  wagePayableVal: {
-    fontFamily: fonts.displayBold,
-    color: '#10B981',
-    fontSize: 15,
-  },
-  statusButtonsRow: {
+  statusRow: {
     flexDirection: 'row',
-    gap: 6,
-    marginBottom: 10,
-  },
-  statusBtn: {
-    flex: 1,
-    paddingVertical: 7,
-    alignItems: 'center',
-    borderRadius: 6,
-    backgroundColor: '#161920',
-    borderWidth: 1,
-    borderColor: '#232730',
-  },
-  statusBtnPresent: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    borderColor: 'rgba(16, 185, 129, 0.4)',
-  },
-  statusBtnHalf: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    borderColor: 'rgba(245, 158, 11, 0.4)',
-  },
-  statusBtnAbsent: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderColor: 'rgba(239, 68, 68, 0.4)',
-  },
-  statusBtnText: {
-    fontFamily: fonts.bodyMedium,
-    color: '#71717A',
-    fontSize: 11,
-  },
-  statusBtnTextActive: {
-    color: '#FFFFFF',
-    fontFamily: fonts.displayBold,
-  },
-  proofRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0C0D11',
+    backgroundColor: '#0E121B',
     borderRadius: 8,
-    padding: 8,
-    gap: 8,
+    padding: 3,
+    marginBottom: 10,
+    gap: 3,
+  },
+  statusTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 7,
+    borderRadius: 6,
+  },
+  statusTabPresent: {
+    backgroundColor: '#064E3B',
+  },
+  statusTabHalf: {
+    backgroundColor: '#78350F',
+  },
+  statusTabAbsent: {
+    backgroundColor: '#7F1D1D',
+  },
+  statusTabInactive: {
+    backgroundColor: 'transparent',
+  },
+  statusTabText: {
+    fontFamily: fonts.displayBold,
+    fontSize: 10.5,
+  },
+  textPresent: {
+    color: '#34D399',
+  },
+  textHalf: {
+    color: '#FBBF24',
+  },
+  textAbsent: {
+    color: '#F87171',
+  },
+  textInactive: {
+    color: '#64748B',
+  },
+  proofToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#1D222B',
   },
-  proofRowVerified: {
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+  proofVerifiedBg: {
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
   },
-  proofCheckbox: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: '#3F4450',
+  proofPendingBg: {
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderColor: 'rgba(245, 158, 11, 0.25)',
+  },
+  proofLeftCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  proofIconBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#1E2638',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  proofCheckboxDone: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+  proofStatusTitle: {
+    fontFamily: fonts.displayBold,
+    fontSize: 11,
   },
-  proofCheckSymbol: {
-    color: '#000000',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  proofContent: {
-    flex: 1,
-  },
-  proofTitle: {
-    fontFamily: fonts.bodyMedium,
-    color: '#A1A1AA',
-    fontSize: 11.5,
-  },
-  proofTitleDone: {
+  proofTextGreen: {
     color: '#10B981',
   },
-  proofSub: {
-    fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 10,
-    marginTop: 1,
+  proofTextAmber: {
+    color: '#F59E0B',
   },
+  proofNoteText: {
+    fontFamily: fonts.body,
+    color: '#64748B',
+    fontSize: 10,
+  },
+  verifyActionPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  verifyActionDone: {
+    backgroundColor: '#10B981',
+  },
+  verifyActionPending: {
+    backgroundColor: '#1E2638',
+  },
+  verifyActionText: {
+    fontFamily: fonts.displayBold,
+    fontSize: 9.5,
+  },
+  verifyTextDone: {
+    color: '#0B0E14',
+  },
+  verifyTextPending: {
+    color: '#94A3B8',
+  },
+
+  // Modal
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.82)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalContent: {
     width: '100%',
-    maxWidth: 380,
-    backgroundColor: '#0F1116',
+    maxWidth: 390,
+    backgroundColor: '#0E121B',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#242833',
+    borderColor: '#242F44',
+  },
+  modalTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: '#1E2638',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalTitle: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 17,
+    color: '#F8FAFC',
+    fontSize: 16,
     marginBottom: 4,
   },
   modalDesc: {
     fontFamily: fonts.body,
-    color: '#8B8F95',
-    fontSize: 12.5,
-    lineHeight: 17,
-    marginBottom: 16,
+    color: '#64748B',
+    fontSize: 11.5,
+    lineHeight: 16,
+    marginBottom: 14,
   },
   inputLabel: {
     fontFamily: fonts.bodyMedium,
-    color: '#A1A1AA',
-    fontSize: 11.5,
-    marginBottom: 6,
+    color: '#94A3B8',
+    fontSize: 11,
+    marginBottom: 5,
     marginTop: 8,
   },
   textInput: {
-    backgroundColor: '#161920',
+    backgroundColor: '#151C2C',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#232730',
-    color: '#FFFFFF',
+    borderColor: '#28354D',
+    color: '#F8FAFC',
     fontFamily: fonts.body,
-    fontSize: 13.5,
+    fontSize: 13,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 9,
   },
-  roleGrid: {
+  rolePickerRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
+    marginBottom: 4,
   },
-  roleBtn: {
+  rolePill: {
     paddingHorizontal: 10,
     paddingVertical: 6,
+    backgroundColor: '#151C2C',
     borderRadius: 6,
-    backgroundColor: '#161920',
     borderWidth: 1,
-    borderColor: '#232730',
+    borderColor: '#28354D',
   },
-  roleBtnActive: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#FFFFFF',
+  rolePillActive: {
+    backgroundColor: '#1E2638',
+    borderColor: '#10B981',
   },
-  roleBtnText: {
-    fontFamily: fonts.body,
-    color: '#A1A1AA',
-    fontSize: 11.5,
-  },
-  roleBtnTextActive: {
-    color: '#000000',
+  rolePillText: {
     fontFamily: fonts.displayBold,
+    color: '#64748B',
+    fontSize: 10.5,
+  },
+  rolePillTextActive: {
+    color: '#10B981',
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 10,
-    marginTop: 20,
+    marginTop: 18,
   },
   cancelBtn: {
-    paddingVertical: 10,
+    paddingVertical: 9,
     paddingHorizontal: 14,
   },
   cancelBtnText: {
     fontFamily: fonts.bodyMedium,
-    color: '#A1A1AA',
-    fontSize: 13,
+    color: '#94A3B8',
+    fontSize: 12.5,
   },
-  saveBtn: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
+  confirmBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 9,
+    paddingHorizontal: 16,
     borderRadius: 8,
+    gap: 5,
   },
-  saveBtnText: {
+  confirmBtnText: {
     fontFamily: fonts.displayBold,
-    color: '#000000',
-    fontSize: 13,
+    color: '#0B0E14',
+    fontSize: 12.5,
   },
 });

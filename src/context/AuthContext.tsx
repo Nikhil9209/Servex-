@@ -56,6 +56,7 @@ interface AuthContextType {
   skipOtpVerification: () => Promise<void>;
   resendOtpCode: () => Promise<void>;
   selectAccountRole: (role: UserRole) => Promise<void>;
+  switchUserRole: (newRole: UserRole) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -463,6 +464,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [pendingRegistration]
   );
 
+  // Switch User Role (Client <-> Contractor)
+  const switchUserRole = useCallback(
+    async (newRole: UserRole) => {
+      if (!user) return;
+      setIsLoading(true);
+      try {
+        const updatedUser: User = { ...user, role: newRole };
+        const session = await StorageService.getSession();
+        if (session) {
+          session.user = updatedUser;
+          await StorageService.saveSession(session);
+        }
+        const registeredUsers = await StorageService.getRegisteredUsers();
+        const idx = registeredUsers.findIndex(
+          (u) => u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase()
+        );
+        if (idx >= 0) {
+          registeredUsers[idx].role = newRole;
+          await StorageService.saveRegisteredUsers(registeredUsers);
+        }
+        setUser(updatedUser);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [user]
+  );
+
   // Logout
   const logout = useCallback(async () => {
     setIsLoading(true);
@@ -500,6 +529,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     skipOtpVerification,
     resendOtpCode,
     selectAccountRole,
+    switchUserRole,
     logout,
   };
 

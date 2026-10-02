@@ -17,6 +17,13 @@ import {
   ProjectChatState,
   ChatSenderRole,
 } from '../../../types/contractor';
+import {
+  ArrowLeftIcon,
+  LockIcon,
+  UnlockIcon,
+  SendIcon,
+  ShieldCheckIcon,
+} from '../../../components/ContractorIcons';
 
 interface ProjectChatScreenProps {
   project: ContractorProjectDetail;
@@ -49,10 +56,10 @@ function createChatMessage(
 }
 
 const DEFAULT_QUICK_PROMPTS = [
-  '📸 Site progress photo attached',
-  '📦 Material shipment received on site',
-  '📋 Work ready for contractor inspection',
-  '⏳ Shift completed, awaiting daily verification',
+  'Site progress photo logged',
+  'Material shipment received on site',
+  'Trade ready for contractor inspection',
+  'Daily shift completed, awaiting sign-off',
 ];
 
 export const ProjectChatScreen: React.FC<ProjectChatScreenProps> = ({
@@ -79,10 +86,10 @@ export const ProjectChatScreen: React.FC<ProjectChatScreenProps> = ({
   const handleToggleWorkerAuthority = () => {
     const newAllowed = !chatState.workerMessagingAllowed;
     const actionNotice = newAllowed
-      ? '🔓 Contractor granted messaging authority to workers. Workers can now post messages.'
-      : '🔒 Contractor restricted worker messaging authority. Worker text box locked.';
+      ? 'Contractor granted messaging authority to workers. Site crew can now post updates.'
+      : 'Contractor restricted worker messaging authority. Worker channel locked.';
 
-    const systemMsg = createChatMessage('contractor', 'Apex Contractors (Lead)', actionNotice, true);
+    const systemMsg = createChatMessage('contractor', 'Prime Contractor Lead', actionNotice, true);
 
     const updatedState: ProjectChatState = {
       workerMessagingAllowed: newAllowed,
@@ -93,29 +100,26 @@ export const ProjectChatScreen: React.FC<ProjectChatScreenProps> = ({
     scrollToBottom();
 
     Alert.alert(
-      newAllowed ? 'Worker Authority Granted ✓' : 'Worker Authority Restricted 🔒',
+      newAllowed ? 'Worker Authority Granted' : 'Worker Authority Restricted',
       newAllowed
-        ? 'Workers on this site can now send messages and site updates in this group.'
-        : 'Workers can no longer send messages in this group without your authority.'
+        ? 'Workers assigned to this site can now send messages and progress photos.'
+        : 'Workers can no longer post messages in this channel without lead authority.'
     );
   };
 
-  // Attempting to send message
   const handleSendMessage = (textToSend?: string) => {
     const text = (textToSend !== undefined ? textToSend : inputText).trim();
     if (!text) return;
 
-    // Check authority rule: without contractor authority, worker cannot send any msg
     if (activePersona === 'worker' && !chatState.workerMessagingAllowed) {
       Alert.alert(
-        'Authority Required 🔒',
-        'Without Contractor Authority, workers cannot send messages in this group. Please contact your contractor to enable messaging authority.',
-        [{ text: 'Understand' }]
+        'Authority Required',
+        'Worker messaging is restricted by the Prime Contractor on this site. Request contractor authority to post.'
       );
       return;
     }
 
-    let senderName = 'Apex Contractors (You)';
+    let senderName = 'Prime Contractor (Lead)';
     if (activePersona === 'client') {
       senderName = `${project.clientName} (Client)`;
     } else if (activePersona === 'worker') {
@@ -145,268 +149,205 @@ export const ProjectChatScreen: React.FC<ProjectChatScreenProps> = ({
       {/* TOP HEADER */}
       <View style={styles.topHeader}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <Text style={styles.backBtnText}>‹ Back</Text>
+          <ArrowLeftIcon size={16} color="#94A3B8" />
+          <Text style={styles.backBtnText}>Workspace</Text>
         </Pressable>
+
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Site Tri-Party Chat</Text>
-          <Text style={styles.headerSub}>Client • Contractor • Worker</Text>
-        </View>
-        <View style={styles.headerRightPlaceholder} />
-      </View>
-
-      {/* CONTRACTOR AUTHORITY STATUS BANNER */}
-      <View
-        style={[
-          styles.authorityBanner,
-          chatState.workerMessagingAllowed
-            ? styles.authorityBannerAllowed
-            : styles.authorityBannerRestricted,
-        ]}
-      >
-        <View style={styles.authorityLeft}>
-          <View
-            style={[
-              styles.authorityDot,
-              chatState.workerMessagingAllowed
-                ? styles.authorityDotGreen
-                : styles.authorityDotGold,
-            ]}
-          />
-          <View>
-            <Text style={styles.authorityHeading}>
-              {chatState.workerMessagingAllowed
-                ? 'WORKER AUTHORITY: GRANTED'
-                : 'WORKER AUTHORITY: RESTRICTED'}
-            </Text>
-            <Text style={styles.authorityDescription}>
-              {chatState.workerMessagingAllowed
-                ? 'Workers are authorized by Contractor to post in this channel.'
-                : 'Workers cannot send messages without Contractor authority.'}
-            </Text>
-          </View>
-        </View>
-
-        {activePersona === 'contractor' && (
-          <Pressable
-            style={[
-              styles.toggleAuthorityBtn,
-              chatState.workerMessagingAllowed
-                ? styles.toggleAuthorityBtnRevoke
-                : styles.toggleAuthorityBtnGrant,
-            ]}
-            onPress={handleToggleWorkerAuthority}
-          >
-            <Text style={styles.toggleAuthorityBtnText}>
-              {chatState.workerMessagingAllowed ? 'Revoke 🔒' : 'Grant 🔓'}
-            </Text>
-          </Pressable>
-        )}
-      </View>
-
-      {/* INTERACTIVE PERSPECTIVE / ROLE SWITCHER */}
-      <View style={styles.perspectiveBar}>
-        <Text style={styles.perspectiveLabel}>VIEWING & POSTING AS:</Text>
-        <View style={styles.personaTabsRow}>
-          <Pressable
-            style={[
-              styles.personaTab,
-              activePersona === 'contractor' && styles.personaTabActiveContractor,
-            ]}
-            onPress={() => setActivePersona('contractor')}
-          >
-            <Text
-              style={[
-                styles.personaTabText,
-                activePersona === 'contractor' && styles.personaTabTextActive,
-              ]}
-            >
-              👔 Contractor
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[
-              styles.personaTab,
-              activePersona === 'client' && styles.personaTabActiveClient,
-            ]}
-            onPress={() => setActivePersona('client')}
-          >
-            <Text
-              style={[
-                styles.personaTabText,
-                activePersona === 'client' && styles.personaTabTextActive,
-              ]}
-            >
-              🏛️ Client
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[
-              styles.personaTab,
-              activePersona === 'worker' && styles.personaTabActiveWorker,
-            ]}
-            onPress={() => setActivePersona('worker')}
-          >
-            <Text
-              style={[
-                styles.personaTabText,
-                activePersona === 'worker' && styles.personaTabTextActive,
-              ]}
-            >
-              👷 Worker {isWorkerLocked ? '🔒' : '✓'}
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* CHAT MESSAGES STREAM */}
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
-        showsVerticalScrollIndicator={false}
-        onContentSizeChange={scrollToBottom}
-      >
-        <View style={styles.channelMetaCard}>
-          <Text style={styles.channelMetaProject}>{project.projectName}</Text>
-          <Text style={styles.channelMetaCode}>Site Code: {project.clientCode}</Text>
-          <Text style={styles.channelMetaNotice}>
-            Official project channel connecting Client ({project.clientName}), Prime Contractor, and verified site workers.
+          <Text style={styles.headerSub}>
+            {project.clientCode} • {project.projectName}
           </Text>
         </View>
 
+        <View style={{ width: 40 }} />
+      </View>
+
+      {/* CONTRACTOR AUTHORITY CONTROL BANNER */}
+      <View style={styles.authorityBanner}>
+        <View style={styles.authorityInfoCol}>
+          <View style={styles.authorityTitleRow}>
+            <ShieldCheckIcon size={14} color="#38BDF8" />
+            <Text style={styles.authorityTitle}>Worker Messaging Authority</Text>
+          </View>
+          <Text style={styles.authorityDesc}>
+            {chatState.workerMessagingAllowed
+              ? 'Crew permitted to post shift logs & progress photos'
+              : 'Crew channel locked to read-only mode'}
+          </Text>
+        </View>
+
+        <Pressable
+          style={[
+            styles.authorityToggleBtn,
+            chatState.workerMessagingAllowed ? styles.authorityAllowed : styles.authorityLocked,
+          ]}
+          onPress={handleToggleWorkerAuthority}
+        >
+          {chatState.workerMessagingAllowed ? (
+            <UnlockIcon size={13} color="#10B981" />
+          ) : (
+            <LockIcon size={13} color="#F59E0B" />
+          )}
+          <Text
+            style={[
+              styles.authorityToggleText,
+              chatState.workerMessagingAllowed ? styles.textAllowed : styles.textLocked,
+            ]}
+          >
+            {chatState.workerMessagingAllowed ? 'PERMITTED' : 'LOCKED'}
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* SENDER PERSONA SWITCHER */}
+      <View style={styles.personaBar}>
+        <Text style={styles.personaLabel}>POSTING AS:</Text>
+
+        <Pressable
+          style={[
+            styles.personaPill,
+            activePersona === 'contractor' && styles.personaContractorActive,
+          ]}
+          onPress={() => setActivePersona('contractor')}
+        >
+          <Text
+            style={[
+              styles.personaPillText,
+              activePersona === 'contractor' && styles.personaContractorText,
+            ]}
+          >
+            Contractor (Lead)
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.personaPill, activePersona === 'client' && styles.personaClientActive]}
+          onPress={() => setActivePersona('client')}
+        >
+          <Text
+            style={[styles.personaPillText, activePersona === 'client' && styles.personaClientText]}
+          >
+            Client
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.personaPill, activePersona === 'worker' && styles.personaWorkerActive]}
+          onPress={() => setActivePersona('worker')}
+        >
+          <Text
+            style={[styles.personaPillText, activePersona === 'worker' && styles.personaWorkerText]}
+          >
+            Worker
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* CHAT MESSAGES SCROLL */}
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.messagesScroll}
+        contentContainerStyle={styles.messagesContent}
+        showsVerticalScrollIndicator={false}
+      >
         {chatState.messages.map((msg) => {
           if (msg.isAuthorityAction) {
             return (
-              <View key={msg.id} style={styles.authorityPillRow}>
-                <View style={styles.authorityPill}>
-                  <Text style={styles.authorityPillText}>{msg.content}</Text>
-                  <Text style={styles.authorityPillTime}>{msg.timestamp}</Text>
+              <View key={msg.id} style={styles.systemActionRow}>
+                <View style={styles.systemActionPill}>
+                  <ShieldCheckIcon size={12} color="#38BDF8" />
+                  <Text style={styles.systemActionText}>{msg.content}</Text>
                 </View>
               </View>
             );
           }
 
-          const isCurrentPerspective = msg.senderRole === activePersona;
+          const isMe = msg.senderRole === activePersona;
+          const isContractor = msg.senderRole === 'contractor';
+          const isClient = msg.senderRole === 'client';
 
           return (
             <View
               key={msg.id}
-              style={[
-                styles.messageRow,
-                isCurrentPerspective ? styles.messageRowRight : styles.messageRowLeft,
-              ]}
+              style={[styles.messageBubbleRow, isMe ? styles.rowRight : styles.rowLeft]}
             >
               <View
                 style={[
                   styles.messageBubble,
-                  msg.senderRole === 'contractor' && styles.bubbleContractor,
-                  msg.senderRole === 'client' && styles.bubbleClient,
-                  msg.senderRole === 'worker' && styles.bubbleWorker,
-                  isCurrentPerspective && styles.bubbleOwn,
+                  isContractor
+                    ? styles.bubbleContractor
+                    : isClient
+                    ? styles.bubbleClient
+                    : styles.bubbleWorker,
                 ]}
               >
-                {/* ROLE & NAME HEADER */}
-                <View style={styles.bubbleHeaderRow}>
-                  <View
+                <View style={styles.msgHeader}>
+                  <Text
                     style={[
-                      styles.roleTag,
-                      msg.senderRole === 'contractor' && styles.roleTagContractor,
-                      msg.senderRole === 'client' && styles.roleTagClient,
-                      msg.senderRole === 'worker' && styles.roleTagWorker,
+                      styles.senderName,
+                      isContractor
+                        ? styles.senderContractor
+                        : isClient
+                        ? styles.senderClient
+                        : styles.senderWorker,
                     ]}
                   >
-                    <Text style={styles.roleTagText}>
-                      {msg.senderRole === 'contractor'
-                        ? 'CONTRACTOR'
-                        : msg.senderRole === 'client'
-                        ? 'CLIENT'
-                        : 'WORKER'}
-                    </Text>
-                  </View>
-                  <Text style={styles.senderNameText} numberOfLines={1}>
                     {msg.senderName}
                   </Text>
-                </View>
-
-                {/* CONTENT */}
-                <Text style={styles.messageContentText}>{msg.content}</Text>
-
-                {/* FOOTER */}
-                <View style={styles.bubbleFooterRow}>
                   <Text style={styles.timestampText}>{msg.timestamp}</Text>
-                  <Text style={styles.checkmarksText}>✓✓</Text>
                 </View>
+
+                <Text style={styles.msgContent}>{msg.content}</Text>
               </View>
             </View>
           );
         })}
       </ScrollView>
 
-      {/* QUICK SUGGESTIONS (ONLY WHEN ACTIVE OR ALLOWED) */}
-      {!isWorkerLocked && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.quickPromptsRow}
-        >
-          {DEFAULT_QUICK_PROMPTS.map((prompt, index) => (
+      {/* QUICK PROMPT CHIPS */}
+      <View style={styles.quickPromptsRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.promptsScroll}>
+          {DEFAULT_QUICK_PROMPTS.map((prompt, idx) => (
             <Pressable
-              key={index}
-              style={styles.quickPromptChip}
+              key={idx}
+              style={styles.promptChip}
               onPress={() => handleSendMessage(prompt)}
             >
-              <Text style={styles.quickPromptText}>{prompt}</Text>
+              <Text style={styles.promptChipText}>{prompt}</Text>
             </Pressable>
           ))}
         </ScrollView>
-      )}
-
-      {/* LOCKED WORKER WARNING BANNER */}
-      {isWorkerLocked && (
-        <View style={styles.workerLockedWarningBanner}>
-          <Text style={styles.workerLockedWarningTitle}>
-            🔒 Worker Text Box Locked
-          </Text>
-          <Text style={styles.workerLockedWarningSub}>
-            Without Contractor Authority, workers cannot send messages in this channel. Switch to &apos;Contractor&apos; above to grant authority.
-          </Text>
-        </View>
-      )}
+      </View>
 
       {/* INPUT BAR */}
-      <View style={styles.inputBar}>
-        <View style={styles.inputWrap}>
-          <TextInput
-            style={[styles.textInput, isWorkerLocked && styles.textInputDisabled]}
-            placeholder={
-              isWorkerLocked
-                ? '🔒 Worker chat locked (Requires Contractor Authority)'
-                : `Message as ${activePersona}...`
-            }
-            placeholderTextColor="#64748B"
-            value={inputText}
-            onChangeText={setInputText}
-            editable={!isWorkerLocked}
-            multiline={true}
-          />
-        </View>
-
-        <Pressable
-          style={[
-            styles.sendBtn,
-            isWorkerLocked
-              ? styles.sendBtnDisabled
-              : inputText.trim()
-              ? styles.sendBtnActive
-              : styles.sendBtnIdle,
-          ]}
-          onPress={() => handleSendMessage()}
-          disabled={isWorkerLocked}
-        >
-          <Text style={styles.sendBtnIcon}>{isWorkerLocked ? '🔒' : '➤'}</Text>
-        </Pressable>
+      <View style={styles.inputContainer}>
+        {isWorkerLocked ? (
+          <View style={styles.lockedInputBanner}>
+            <LockIcon size={14} color="#F59E0B" />
+            <Text style={styles.lockedInputText}>
+              Worker messaging restricted. Enable authority above to post.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.textInput}
+              placeholder={`Message as ${activePersona}...`}
+              placeholderTextColor="#64748B"
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+            />
+            <Pressable
+              style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
+              onPress={() => handleSendMessage()}
+              disabled={!inputText.trim()}
+            >
+              <SendIcon size={14} color="#0B0E14" />
+            </Pressable>
+          </View>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -415,428 +356,315 @@ export const ProjectChatScreen: React.FC<ProjectChatScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#0B0E14',
   },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 12,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1A1D24',
-    backgroundColor: '#0A0C0E',
+    borderBottomColor: '#1E2638',
+    backgroundColor: '#0E121B',
   },
   backBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: '#161920',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#242832',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
   },
   backBtnText: {
-    color: '#FFFFFF',
-    fontFamily: fonts.mono,
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fonts.displayBold,
+    color: '#94A3B8',
+    fontSize: 12.5,
   },
   headerCenter: {
     alignItems: 'center',
+    flex: 1,
   },
   headerTitle: {
-    color: '#FFFFFF',
-    fontFamily: fonts.heading,
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontFamily: fonts.displayBold,
+    color: '#F8FAFC',
+    fontSize: 14.5,
   },
   headerSub: {
-    color: '#94A3B8',
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    marginTop: 2,
+    fontFamily: fonts.body,
+    color: '#64748B',
+    fontSize: 10.5,
+    marginTop: 1,
   },
-  headerRightPlaceholder: {
-    width: 50,
-  },
-
-  // Authority Status Banner
   authorityBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: '#111622',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderBottomWidth: 1,
+    borderBottomColor: '#1E2638',
   },
-  authorityBannerRestricted: {
-    backgroundColor: '#18140B',
-    borderBottomColor: '#2C2314',
+  authorityInfoCol: {
+    flex: 1,
+    marginRight: 12,
   },
-  authorityBannerAllowed: {
-    backgroundColor: '#0B1713',
-    borderBottomColor: '#142E24',
-  },
-  authorityLeft: {
+  authorityTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
+    gap: 6,
+    marginBottom: 2,
   },
-  authorityDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 10,
-  },
-  authorityDotGold: {
-    backgroundColor: '#F59E0B',
-  },
-  authorityDotGreen: {
-    backgroundColor: '#10B981',
-  },
-  authorityHeading: {
-    color: '#FFFFFF',
-    fontFamily: fonts.heading,
+  authorityTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#F8FAFC',
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
   },
-  authorityDescription: {
-    color: '#94A3B8',
+  authorityDesc: {
     fontFamily: fonts.body,
-    fontSize: 11,
-    marginTop: 2,
+    color: '#64748B',
+    fontSize: 10.5,
   },
-  toggleAuthorityBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  authorityToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 6,
     borderWidth: 1,
+    gap: 5,
   },
-  toggleAuthorityBtnGrant: {
-    backgroundColor: '#10B981',
-    borderColor: '#059669',
+  authorityAllowed: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
   },
-  toggleAuthorityBtnRevoke: {
-    backgroundColor: '#261D11',
-    borderColor: '#F59E0B',
+  authorityLocked: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
   },
-  toggleAuthorityBtnText: {
-    color: '#FFFFFF',
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    fontWeight: '700',
+  authorityToggleText: {
+    fontFamily: fonts.displayBold,
+    fontSize: 9.5,
+    letterSpacing: 0.5,
   },
-
-  // Perspective Bar
-  perspectiveBar: {
-    backgroundColor: '#0E1116',
+  textAllowed: {
+    color: '#10B981',
+  },
+  textLocked: {
+    color: '#F59E0B',
+  },
+  personaBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0E121B',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#1C2028',
-  },
-  perspectiveLabel: {
-    color: '#64748B',
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginBottom: 6,
-  },
-  personaTabsRow: {
-    flexDirection: 'row',
+    borderBottomColor: '#1E2638',
     gap: 8,
   },
-  personaTab: {
-    flex: 1,
-    paddingVertical: 6,
+  personaLabel: {
+    fontFamily: fonts.displayBold,
+    color: '#64748B',
+    fontSize: 9.5,
+    letterSpacing: 0.6,
+  },
+  personaPill: {
     paddingHorizontal: 8,
-    borderRadius: 6,
-    backgroundColor: '#151820',
+    paddingVertical: 4,
+    borderRadius: 5,
+    backgroundColor: '#151C2C',
     borderWidth: 1,
-    borderColor: '#242935',
-    alignItems: 'center',
+    borderColor: '#28354D',
   },
-  personaTabActiveContractor: {
-    backgroundColor: '#221C11',
-    borderColor: '#D97706',
+  personaPillText: {
+    fontFamily: fonts.bodyMedium,
+    color: '#94A3B8',
+    fontSize: 10.5,
   },
-  personaTabActiveClient: {
-    backgroundColor: '#0F241E',
+  personaContractorActive: {
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderColor: '#38BDF8',
+  },
+  personaContractorText: {
+    color: '#38BDF8',
+    fontFamily: fonts.displayBold,
+  },
+  personaClientActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
     borderColor: '#10B981',
   },
-  personaTabActiveWorker: {
-    backgroundColor: '#1E232F',
-    borderColor: '#60A5FA',
+  personaClientText: {
+    color: '#10B981',
+    fontFamily: fonts.displayBold,
   },
-  personaTabText: {
-    color: '#94A3B8',
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    fontWeight: '600',
+  personaWorkerActive: {
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: '#F59E0B',
   },
-  personaTabTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+  personaWorkerText: {
+    color: '#F59E0B',
+    fontFamily: fonts.displayBold,
   },
-
-  // Messages Stream
-  messagesContainer: {
+  messagesScroll: {
     flex: 1,
   },
   messagesContent: {
-    padding: 14,
-    paddingBottom: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 10,
   },
-  channelMetaCard: {
-    backgroundColor: '#111317',
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#1E232B',
-    marginBottom: 16,
+  systemActionRow: {
     alignItems: 'center',
+    marginVertical: 4,
   },
-  channelMetaProject: {
-    color: '#FFFFFF',
-    fontFamily: fonts.heading,
-    fontSize: 13,
-    fontWeight: '700',
+  systemActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#111622',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#1E2638',
+    gap: 6,
+    maxWidth: '92%',
   },
-  channelMetaCode: {
-    color: '#F59E0B',
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  channelMetaNotice: {
-    color: '#94A3B8',
+  systemActionText: {
     fontFamily: fonts.body,
-    fontSize: 11,
-    textAlign: 'center',
-    marginTop: 6,
-    lineHeight: 16,
-  },
-
-  // Authority Action Centered Pill
-  authorityPillRow: {
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  authorityPill: {
-    backgroundColor: '#171A21',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#262D3B',
-    maxWidth: '90%',
-    alignItems: 'center',
-  },
-  authorityPillText: {
-    color: '#CBD5E1',
-    fontFamily: fonts.mono,
-    fontSize: 11,
+    color: '#94A3B8',
+    fontSize: 10.5,
     textAlign: 'center',
   },
-  authorityPillTime: {
-    color: '#64748B',
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    marginTop: 2,
-  },
-
-  // Message Bubbles
-  messageRow: {
-    marginBottom: 12,
+  messageBubbleRow: {
     flexDirection: 'row',
   },
-  messageRowLeft: {
-    justifyContent: 'flex-start',
-  },
-  messageRowRight: {
+  rowRight: {
     justifyContent: 'flex-end',
+  },
+  rowLeft: {
+    justifyContent: 'flex-start',
   },
   messageBubble: {
     maxWidth: '82%',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 10,
     borderWidth: 1,
   },
   bubbleContractor: {
-    backgroundColor: '#1A1813',
-    borderColor: '#3D3422',
+    backgroundColor: '#0F2942',
+    borderColor: '#1E4976',
   },
   bubbleClient: {
-    backgroundColor: '#0F1A17',
-    borderColor: '#1E3B33',
+    backgroundColor: '#0A3326',
+    borderColor: '#155E47',
   },
   bubbleWorker: {
-    backgroundColor: '#161922',
-    borderColor: '#282F40',
+    backgroundColor: '#2E2211',
+    borderColor: '#543D1D',
   },
-  bubbleOwn: {
-    borderWidth: 1.5,
-  },
-  bubbleHeaderRow: {
+  msgHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
-    gap: 6,
-  },
-  roleTag: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  roleTagContractor: {
-    backgroundColor: '#382D16',
-  },
-  roleTagClient: {
-    backgroundColor: '#143329',
-  },
-  roleTagWorker: {
-    backgroundColor: '#202636',
-  },
-  roleTagText: {
-    color: '#FFFFFF',
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-  },
-  senderNameText: {
-    color: '#94A3B8',
-    fontFamily: fonts.heading,
-    fontSize: 11,
-    fontWeight: '600',
-    flex: 1,
-  },
-  messageContentText: {
-    color: '#F1F5F9',
-    fontFamily: fonts.body,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  bubbleFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginTop: 4,
-    gap: 4,
-  },
-  timestampText: {
-    color: '#64748B',
-    fontFamily: fonts.mono,
-    fontSize: 10,
-  },
-  checkmarksText: {
-    color: '#10B981',
-    fontFamily: fonts.mono,
-    fontSize: 10,
-  },
-
-  // Quick Prompt Chips
-  quickPromptsRow: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 8,
-    backgroundColor: '#0A0C0E',
-    borderTopWidth: 1,
-    borderTopColor: '#171A21',
-  },
-  quickPromptChip: {
-    backgroundColor: '#14171E',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#232833',
-  },
-  quickPromptText: {
-    color: '#CBD5E1',
-    fontFamily: fonts.body,
-    fontSize: 11,
-  },
-
-  // Locked Banner
-  workerLockedWarningBanner: {
-    backgroundColor: '#1C150A',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#352712',
-  },
-  workerLockedWarningTitle: {
-    color: '#F59E0B',
-    fontFamily: fonts.heading,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  workerLockedWarningSub: {
-    color: '#94A3B8',
-    fontFamily: fonts.body,
-    fontSize: 10,
-    marginTop: 2,
-    lineHeight: 14,
-  },
-
-  // Input Bar
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#0E1116',
-    borderTopWidth: 1,
-    borderTopColor: '#1A1E27',
     gap: 10,
   },
-  inputWrap: {
-    flex: 1,
-    backgroundColor: '#161922',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#252B3A',
+  senderName: {
+    fontFamily: fonts.displayBold,
+    fontSize: 11,
+  },
+  senderContractor: {
+    color: '#38BDF8',
+  },
+  senderClient: {
+    color: '#34D399',
+  },
+  senderWorker: {
+    color: '#FBBF24',
+  },
+  timestampText: {
+    fontFamily: fonts.body,
+    color: '#64748B',
+    fontSize: 9.5,
+  },
+  msgContent: {
+    fontFamily: fonts.body,
+    color: '#F8FAFC',
+    fontSize: 12.5,
+    lineHeight: 17,
+  },
+  quickPromptsRow: {
+    backgroundColor: '#0E121B',
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#1E2638',
+  },
+  promptsScroll: {
     paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'ios' ? 8 : 4,
-    minHeight: 40,
-    justifyContent: 'center',
+    gap: 6,
+  },
+  promptChip: {
+    backgroundColor: '#151C2C',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#242F44',
+  },
+  promptChipText: {
+    fontFamily: fonts.body,
+    color: '#94A3B8',
+    fontSize: 11,
+  },
+  inputContainer: {
+    backgroundColor: '#0E121B',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#1E2638',
+  },
+  lockedInputBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#151C2C',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  lockedInputText: {
+    fontFamily: fonts.bodyMedium,
+    color: '#94A3B8',
+    fontSize: 11.5,
+    flex: 1,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   textInput: {
-    color: '#FFFFFF',
+    flex: 1,
+    backgroundColor: '#151C2C',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    color: '#F8FAFC',
     fontFamily: fonts.body,
     fontSize: 13,
-    maxHeight: 90,
-  },
-  textInputDisabled: {
-    color: '#64748B',
+    maxHeight: 80,
+    borderWidth: 1,
+    borderColor: '#28354D',
   },
   sendBtn: {
-    width: 42,
-    height: 42,
+    width: 36,
+    height: 36,
     borderRadius: 8,
+    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sendBtnActive: {
-    backgroundColor: '#10B981',
-  },
-  sendBtnIdle: {
-    backgroundColor: '#1E232E',
-  },
   sendBtnDisabled: {
-    backgroundColor: '#1A1813',
-    borderWidth: 1,
-    borderColor: '#3D3422',
-  },
-  sendBtnIcon: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+    opacity: 0.4,
   },
 });

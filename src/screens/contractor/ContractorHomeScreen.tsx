@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Pressable,
   TextInput,
   Modal,
@@ -13,27 +12,49 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { fonts } from '../../theme/tokens';
-import { User } from '../../types/auth';
+import { User, UserRole } from '../../types/auth';
 import { ContractorProjectDetail } from '../../types/contractor';
 import { INITIAL_CONTRACTOR_PROJECTS } from '../../services/contractorStorage';
-import { MapPinIcon, CrewIcon } from '../../components/ContractorIcons';
+import {
+  GridTabIcon,
+  ScheduleTabIcon,
+  BarChartTabIcon,
+  ChatTabIcon,
+  CloseIcon,
+  LinkIcon,
+  PlusIcon,
+  CheckIcon,
+} from '../../components/ContractorIcons';
+import {
+  BouncingTabIcon,
+  SpringPressable,
+} from '../../components/AnimatedComponents';
+import { HomeOverviewView } from './views/HomeOverviewView';
+import { JobsListView } from './views/JobsListView';
+import { ScheduleView } from './views/ScheduleView';
+import { ProfileSettingsView } from './views/ProfileSettingsView';
 import { ProjectWorkspaceScreen } from './pages/ProjectWorkspaceScreen';
 
 export interface ContractorHomeScreenProps {
   user: User;
   onLogout: () => void;
   onReplaySplash?: () => void;
+  onSwitchRole?: (role: UserRole) => void;
 }
+
+type TabType = 'home' | 'jobs' | 'schedule' | 'profile';
 
 export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
   user,
   onLogout,
   onReplaySplash,
+  onSwitchRole,
 }) => {
   const [projects, setProjects] = useState<ContractorProjectDetail[]>(INITIAL_CONTRACTOR_PROJECTS);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('home');
 
-  // Join Project Modal state
+  // Modals for Join & Create Project
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [clientCodeInput, setClientCodeInput] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -42,9 +63,7 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
   const [newClientPhone, setNewClientPhone] = useState('');
   const [newSiteAddress, setNewSiteAddress] = useState('');
 
-  const [isMobilized, setIsMobilized] = useState(true);
-
-  // If a project is selected, render the dedicated ProjectWorkspaceScreen!
+  // 1. IF A JOB IS SELECTED, OPEN THE DEDICATED JOB DETAILS / WORKSPACE SCREEN!
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
   if (selectedProject) {
     return (
@@ -66,11 +85,10 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
   const handleJoinByCode = () => {
     const code = clientCodeInput.trim().toUpperCase();
     if (!code) {
-      Alert.alert('Missing Code', 'Please enter the project code given by your client.');
+      Alert.alert('Missing Code', 'Please enter the client project code.');
       return;
     }
 
-    // Check if code already joined
     const exists = projects.find((p) => p.clientCode === code);
     if (exists) {
       Alert.alert('Project Linked', `Opening workspace for ${exists.projectName}.`);
@@ -80,7 +98,6 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
       return;
     }
 
-    // Create linked project with this client code
     const newLinkedProject: ContractorProjectDetail = {
       id: `proj-${Date.now()}`,
       clientCode: code,
@@ -111,12 +128,12 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
     setShowJoinModal(false);
     setClientCodeInput('');
     setSelectedProjectId(newLinkedProject.id);
-    Alert.alert('Connected ✓', `Successfully joined project with Client Code ${code}.`);
+    Alert.alert('Connected', `Successfully joined project with Client Code ${code}.`);
   };
 
   const handleCreateNewProject = () => {
     if (!newProjectName.trim() || !newClientName.trim()) {
-      Alert.alert('Missing Info', 'Please enter project name and client name.');
+      Alert.alert('Missing Information', 'Please enter project name and client name.');
       return;
     }
 
@@ -127,7 +144,7 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
       projectName: newProjectName.trim(),
       clientName: newClientName.trim(),
       clientPhone: newClientPhone.trim() || '+91 98200 00000',
-      siteAddress: newSiteAddress.trim() || 'Mumbai Metro Zone',
+      siteAddress: newSiteAddress.trim() || 'Metro Construction Zone',
       startDate: 'Today',
       status: 'active',
       scopeItems: [],
@@ -144,210 +161,114 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
     setNewClientPhone('');
     setNewSiteAddress('');
     setSelectedProjectId(createdProject.id);
-    Alert.alert('Project Created', `Project created with Client Code: ${generatedCode}. Share this code with your client.`);
+    Alert.alert('Job Created', `Client Code generated: ${generatedCode}. Share this with your client.`);
   };
-
-  const totalWorkersAllSites = projects.reduce((sum, p) => sum + p.workers.length, 0);
-  const totalCompletedValAll = projects.reduce(
-    (sum, p) =>
-      sum +
-      p.scopeItems.reduce((scSum, item) => scSum + item.completedQuantity * item.ratePerUnit, 0),
-    0
-  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
 
-      {/* TOP HEADER */}
-      <View style={styles.topHeader}>
-        <View style={styles.brandGroup}>
-          <Text style={styles.brandTitle}>SERVEX</Text>
-          <View style={styles.brandPill}>
-            <Text style={styles.brandPillText}>PRIME CONTRACTOR</Text>
-          </View>
-        </View>
+      {/* ACTIVE SCREEN CONTENT */}
+      <View style={styles.contentContainer}>
+        {activeTab === 'home' && (
+          <HomeOverviewView
+            user={user}
+            projects={projects}
+            onSelectProject={(id) => setSelectedProjectId(id)}
+            onOpenSchedule={() => setActiveTab('schedule')}
+            onOpenJobs={() => setActiveTab('jobs')}
+            onOpenNewJob={() => setShowCreateModal(true)}
+          />
+        )}
 
-        <View style={styles.headerRightRow}>
-          <Pressable
-            style={[styles.statusToggle, isMobilized ? styles.toggleOn : styles.toggleOff]}
-            onPress={() => setIsMobilized(!isMobilized)}
-          >
-            <View style={[styles.statusDot, isMobilized ? styles.dotOn : styles.dotOff]} />
-            <Text style={[styles.statusToggleText, isMobilized ? styles.textOn : styles.textOff]}>
-              {isMobilized ? 'MOBILIZED' : 'STANDBY'}
-            </Text>
-          </Pressable>
+        {activeTab === 'jobs' && (
+          <JobsListView
+            projects={projects}
+            onSelectProject={(id) => setSelectedProjectId(id)}
+            onOpenJoinModal={() => setShowJoinModal(true)}
+            onOpenCreateModal={() => setShowCreateModal(true)}
+          />
+        )}
 
-          <Pressable
-            style={styles.logoutIconBtn}
-            onPress={() => {
-              Alert.alert('Logout', 'Log out of Servex Contractor Suite?', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Logout', style: 'destructive', onPress: onLogout },
-              ]);
-            }}
-            hitSlop={8}
-          >
-            <Text style={styles.logoutIconText}>⏻</Text>
-          </Pressable>
-        </View>
+        {activeTab === 'schedule' && <ScheduleView />}
+
+        {activeTab === 'profile' && (
+          <ProfileSettingsView
+            user={user}
+            onLogout={onLogout}
+            onSwitchRole={onSwitchRole}
+            onReplaySplash={onReplaySplash}
+          />
+        )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* CONTRACTOR EXECUTIVE PROFILE */}
-        <View style={styles.firmCard}>
-          <View style={styles.firmAvatar}>
-            <Text style={styles.firmAvatarText}>
-              {user.name ? user.name.charAt(0).toUpperCase() : 'C'}
-            </Text>
-          </View>
-          <View style={styles.firmInfo}>
-            <Text style={styles.firmName} numberOfLines={1}>
-              {user.name ? `${user.name} Contracting & Infra` : 'Prime Contracting Group'}
-            </Text>
-            <Text style={styles.firmDetails}>
-              Class-1 Prime License • {user.email}
-            </Text>
-          </View>
-        </View>
-
-        {/* PRIMARY ACTIONS: JOIN BY CLIENT CODE & CREATE PROJECT */}
-        <View style={styles.actionsRow}>
-          <Pressable
-            style={styles.joinCodeBtn}
-            onPress={() => setShowJoinModal(true)}
+      {/* MINIMAL REFERENCE BOTTOM NAVIGATION (NO LABELS, CLEAN ICONS) */}
+      <View style={styles.bottomNav}>
+        <View style={styles.navIconsRow}>
+          <SpringPressable
+            style={styles.navItem}
+            onPress={() => setActiveTab('home')}
+            scaleTo={0.88}
+            hitSlop={10}
           >
-            <View style={styles.btnIconBox}>
-              <Text style={styles.btnIcon}>🔗</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.joinBtnTitle}>Join via Client Code</Text>
-              <Text style={styles.joinBtnSub}>Connect project using code given by client</Text>
-            </View>
-            <Text style={styles.actionArrow}>➔</Text>
-          </Pressable>
+            <BouncingTabIcon focused={activeTab === 'home'}>
+              <GridTabIcon
+                size={22}
+                color={activeTab === 'home' ? '#FFFFFF' : '#4E4E56'}
+                focused={activeTab === 'home'}
+              />
+            </BouncingTabIcon>
+          </SpringPressable>
 
-          <Pressable
-            style={styles.newProjectBtn}
-            onPress={() => setShowCreateModal(true)}
+          <SpringPressable
+            style={styles.navItem}
+            onPress={() => setActiveTab('schedule')}
+            scaleTo={0.88}
+            hitSlop={10}
           >
-            <Text style={styles.newProjectBtnText}>+ New Project</Text>
-          </Pressable>
+            <BouncingTabIcon focused={activeTab === 'schedule'}>
+              <ScheduleTabIcon
+                size={22}
+                color={activeTab === 'schedule' ? '#FFFFFF' : '#4E4E56'}
+                focused={activeTab === 'schedule'}
+              />
+            </BouncingTabIcon>
+          </SpringPressable>
+
+          <SpringPressable
+            style={styles.navItem}
+            onPress={() => setActiveTab('jobs')}
+            scaleTo={0.88}
+            hitSlop={10}
+          >
+            <BouncingTabIcon focused={activeTab === 'jobs'}>
+              <BarChartTabIcon
+                size={22}
+                color={activeTab === 'jobs' ? '#FFFFFF' : '#4E4E56'}
+                focused={activeTab === 'jobs'}
+              />
+            </BouncingTabIcon>
+          </SpringPressable>
+
+          <SpringPressable
+            style={styles.navItem}
+            onPress={() => setActiveTab('profile')}
+            scaleTo={0.88}
+            hitSlop={10}
+          >
+            <BouncingTabIcon focused={activeTab === 'profile'}>
+              <ChatTabIcon
+                size={22}
+                color={activeTab === 'profile' ? '#FFFFFF' : '#4E4E56'}
+                focused={activeTab === 'profile'}
+              />
+            </BouncingTabIcon>
+          </SpringPressable>
         </View>
 
-        {/* PORTFOLIO SNAPSHOT (HIGH-LEVEL & DE-CONGESTED) */}
-        <View style={styles.kpiGrid}>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Active Projects</Text>
-            <Text style={styles.kpiValue}>{projects.length}</Text>
-            <Text style={styles.kpiSub}>Sites in Execution</Text>
-          </View>
-
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Workforce</Text>
-            <Text style={styles.kpiValue}>{totalWorkersAllSites} Workers</Text>
-            <Text style={styles.kpiSub}>On Active Roster</Text>
-          </View>
-
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Cumulative Output</Text>
-            <Text style={styles.kpiValue}>
-              ₹{(totalCompletedValAll / 100000).toFixed(1)}L
-            </Text>
-            <Text style={styles.kpiSub}>Work Done to Date</Text>
-          </View>
-        </View>
-
-        {/* LINKED PROJECTS LIST */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeaderTitle}>Linked Projects ({projects.length})</Text>
-          <Text style={styles.sectionHeaderSub}>Select project to manage</Text>
-        </View>
-
-        <View style={styles.projectList}>
-          {projects.map((proj) => {
-            const completedVal = proj.scopeItems.reduce(
-              (sum, item) => sum + item.completedQuantity * item.ratePerUnit,
-              0
-            );
-            const totalVal = proj.scopeItems.reduce((sum, item) => sum + item.totalAmount, 0);
-            const progressPct = totalVal > 0 ? Math.round((completedVal / totalVal) * 100) : 0;
-
-            return (
-              <Pressable
-                key={proj.id}
-                style={styles.projectCard}
-                onPress={() => setSelectedProjectId(proj.id)}
-              >
-                <View style={styles.cardTopRow}>
-                  <View style={styles.codeTag}>
-                    <Text style={styles.codeTagText}>{proj.clientCode}</Text>
-                  </View>
-                  <Text style={styles.clientPhoneText}>Client: {proj.clientName}</Text>
-                </View>
-
-                <Text style={styles.projectTitleText}>{proj.projectName}</Text>
-
-                <View style={styles.addressRow}>
-                  <MapPinIcon size={12} color="#71717A" />
-                  <Text style={styles.addressText} numberOfLines={1}>
-                    {proj.siteAddress}
-                  </Text>
-                </View>
-
-                {/* WORKFORCE & PROGRESS BAR */}
-                <View style={styles.cardFooter}>
-                  <View style={styles.workersPill}>
-                    <CrewIcon size={13} color="#FFFFFF" />
-                    <Text style={styles.workersPillText}>
-                      {proj.workers.length} Workers Enrolled
-                    </Text>
-                  </View>
-
-                  <View style={styles.progressCol}>
-                    <Text style={styles.progressLabel}>
-                      {progressPct}% Executed • ₹{(completedVal / 1000).toFixed(0)}k Done
-                    </Text>
-                    <View style={styles.track}>
-                      <View
-                        style={[styles.trackFill, { width: `${Math.min(progressPct, 100)}%` }]}
-                      />
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.cardChatRow}>
-                  <View
-                    style={[
-                      styles.chatStatusPill,
-                      proj.chatState?.workerMessagingAllowed
-                        ? styles.chatStatusPillAllowed
-                        : styles.chatStatusPillLocked,
-                    ]}
-                  >
-                    <Text style={styles.chatStatusPillText}>
-                      💬 {proj.chatState?.messages.length || 0} messages •{' '}
-                      {proj.chatState?.workerMessagingAllowed ? 'Workers Allowed 🔓' : 'Workers Locked 🔒'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.cardActionRow}>
-                  <Text style={styles.actionPrompt}>Open Project Workspace ➔</Text>
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* SYSTEM ANIMATION REPLAY */}
-        {onReplaySplash && (
-          <Pressable style={styles.replayPill} onPress={onReplaySplash}>
-            <Text style={styles.replayPillText}>⚡ Replay Servex Logo Animation</Text>
-          </Pressable>
-        )}
-      </ScrollView>
+        {/* Minimal Home Indicator Bar */}
+        <View style={styles.homeIndicator} />
+      </View>
 
       {/* MODAL 1: JOIN BY CLIENT CODE */}
       <Modal
@@ -357,9 +278,18 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
         onRequestClose={() => setShowJoinModal(false)}
       >
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Join via Client Project Code</Text>
-            <Text style={styles.modalDesc}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalTopRow}>
+              <View style={styles.modalIconBox}>
+                <LinkIcon size={16} color="#1A73E8" />
+              </View>
+              <Pressable onPress={() => setShowJoinModal(false)} hitSlop={8}>
+                <CloseIcon size={16} color="#8E8E93" />
+              </Pressable>
+            </View>
+
+            <Text style={styles.modalTitle}>Join via Client Code</Text>
+            <Text style={styles.modalSub}>
               Enter the unique project code shared by your client to connect to their site workspace.
             </Text>
 
@@ -367,7 +297,7 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
             <TextInput
               style={styles.codeInput}
               placeholder="e.g. CLT-8842"
-              placeholderTextColor="#71717A"
+              placeholderTextColor="#686870"
               autoCapitalize="characters"
               value={clientCodeInput}
               onChangeText={setClientCodeInput}
@@ -378,7 +308,7 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </Pressable>
               <Pressable style={styles.confirmBtn} onPress={handleJoinByCode}>
-                <Text style={styles.confirmBtnText}>Connect & Open</Text>
+                <Text style={styles.confirmBtnText}>Connect Job</Text>
               </Pressable>
             </View>
           </View>
@@ -393,17 +323,26 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
         onRequestClose={() => setShowCreateModal(false)}
       >
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Start New Project</Text>
-            <Text style={styles.modalDesc}>
-              Create a new contracting project. A client code will be generated to share with your client.
+          <View style={styles.modalCard}>
+            <View style={styles.modalTopRow}>
+              <View style={styles.modalIconBox}>
+                <PlusIcon size={16} color="#1A73E8" />
+              </View>
+              <Pressable onPress={() => setShowCreateModal(false)} hitSlop={8}>
+                <CloseIcon size={16} color="#8E8E93" />
+              </Pressable>
+            </View>
+
+            <Text style={styles.modalTitle}>New Job Contract</Text>
+            <Text style={styles.modalSub}>
+              Register a new job site. A client code will be generated to share with your client.
             </Text>
 
-            <Text style={styles.inputLabel}>Project Name / Title</Text>
+            <Text style={styles.inputLabel}>Project / Site Title</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="e.g. Skyline Villa Full Interior & Electrical"
-              placeholderTextColor="#71717A"
+              placeholder="e.g. Skyline Penthouse Interior Fitout"
+              placeholderTextColor="#686870"
               value={newProjectName}
               onChangeText={setNewProjectName}
             />
@@ -411,8 +350,8 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
             <Text style={styles.inputLabel}>Client Name</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="e.g. Rajesh Khurana"
-              placeholderTextColor="#71717A"
+              placeholder="e.g. Vikram Singhania"
+              placeholderTextColor="#686870"
               value={newClientName}
               onChangeText={setNewClientName}
             />
@@ -421,7 +360,7 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
             <TextInput
               style={styles.textInput}
               placeholder="e.g. +91 98201 12345"
-              placeholderTextColor="#71717A"
+              placeholderTextColor="#686870"
               keyboardType="phone-pad"
               value={newClientPhone}
               onChangeText={setNewClientPhone}
@@ -430,8 +369,8 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
             <Text style={styles.inputLabel}>Site Address</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="e.g. 14th Floor, Oberoi Splendor, Andheri East"
-              placeholderTextColor="#71717A"
+              placeholder="e.g. Tower B, Worli Sea Face, Mumbai"
+              placeholderTextColor="#686870"
               value={newSiteAddress}
               onChangeText={setNewSiteAddress}
             />
@@ -441,7 +380,8 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </Pressable>
               <Pressable style={styles.confirmBtn} onPress={handleCreateNewProject}>
-                <Text style={styles.confirmBtnText}>Create Project</Text>
+                <CheckIcon size={13} color="#FFFFFF" />
+                <Text style={styles.confirmBtnText}>Create Job</Text>
               </Pressable>
             </View>
           </View>
@@ -457,437 +397,115 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     paddingTop: Platform.OS === 'android' ? 24 : 0,
   },
-  topHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#161920',
-  },
-  brandGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  brandTitle: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 16,
-    letterSpacing: 1.5,
-  },
-  brandPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  brandPillText: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 8.5,
-    letterSpacing: 0.6,
-  },
-  headerRightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  statusToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 6,
-  },
-  toggleOn: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderColor: 'rgba(16, 185, 129, 0.35)',
-  },
-  toggleOff: {
-    backgroundColor: 'rgba(113, 113, 122, 0.12)',
-    borderColor: 'rgba(113, 113, 122, 0.3)',
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  dotOn: {
-    backgroundColor: '#10B981',
-  },
-  dotOff: {
-    backgroundColor: '#71717A',
-  },
-  statusToggleText: {
-    fontFamily: fonts.displayBold,
-    fontSize: 9.5,
-    letterSpacing: 0.6,
-  },
-  textOn: {
-    color: '#10B981',
-  },
-  textOff: {
-    color: '#71717A',
-  },
-  logoutIconBtn: {
-    padding: 6,
-  },
-  logoutIconText: {
-    color: '#EF4444',
-    fontSize: 15,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 36,
-  },
-  firmCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#111317',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#20242D',
-    marginBottom: 14,
-  },
-  firmAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
-    backgroundColor: '#1C2028',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#2A303C',
-    marginRight: 12,
-  },
-  firmAvatarText: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 18,
-  },
-  firmInfo: {
+  contentContainer: {
     flex: 1,
   },
-  firmName: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 15,
-    marginBottom: 2,
-  },
-  firmDetails: {
-    fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 11.5,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 16,
-  },
-  joinCodeBtn: {
-    flex: 1.8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 10,
-  },
-  btnIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 7,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnIcon: {
-    fontSize: 15,
-  },
-  joinBtnTitle: {
-    fontFamily: fonts.displayBold,
-    color: '#000000',
-    fontSize: 12.5,
-  },
-  joinBtnSub: {
-    fontFamily: fonts.body,
-    color: '#475569',
-    fontSize: 10,
-  },
-  actionArrow: {
-    color: '#000000',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  newProjectBtn: {
-    flex: 1,
-    backgroundColor: '#161920',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#2A303C',
-    paddingVertical: 12,
-  },
-  newProjectBtnText: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 12.5,
-  },
-  kpiGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 18,
-  },
-  kpiCard: {
-    flex: 1,
-    backgroundColor: '#111317',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#20242D',
-  },
-  kpiLabel: {
-    fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 10.5,
-    marginBottom: 3,
-  },
-  kpiValue: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginBottom: 2,
-  },
-  kpiSub: {
-    fontFamily: fonts.body,
-    color: '#A1A1AA',
-    fontSize: 9.5,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  sectionHeaderTitle: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 14.5,
-  },
-  sectionHeaderSub: {
-    fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 11,
-  },
-  projectList: {
-    gap: 12,
-    marginBottom: 20,
-  },
-  projectCard: {
-    backgroundColor: '#111317',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#20242D',
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  codeTag: {
-    backgroundColor: '#1E232E',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 5,
-  },
-  codeTagText: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 10,
-    letterSpacing: 0.8,
-  },
-  clientPhoneText: {
-    fontFamily: fonts.body,
-    color: '#A1A1AA',
-    fontSize: 11.5,
-  },
-  projectTitleText: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 15.5,
-    marginBottom: 4,
-  },
-  addressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
-  },
-  addressText: {
-    fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 11,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 10,
+  bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#000000',
     borderTopWidth: 1,
-    borderTopColor: '#1A1E26',
-    marginBottom: 10,
+    borderTopColor: '#121216',
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 18 : 12,
   },
-  workersPill: {
+  navIconsRow: {
     flexDirection: 'row',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#171B24',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    gap: 6,
+    paddingHorizontal: 20,
   },
-  workersPillText: {
-    fontFamily: fonts.bodyMedium,
-    color: '#FFFFFF',
-    fontSize: 11,
-  },
-  progressCol: {
+  navItem: {
     flex: 1,
-    marginLeft: 14,
-  },
-  progressLabel: {
-    fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 10,
-    textAlign: 'right',
-    marginBottom: 3,
-  },
-  track: {
-    height: 4,
-    backgroundColor: '#1C2028',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  trackFill: {
-    height: '100%',
-    backgroundColor: '#10B981',
-    borderRadius: 2,
-  },
-  cardChatRow: {
-    marginBottom: 10,
-  },
-  chatStatusPill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  chatStatusPillAllowed: {
-    backgroundColor: '#0F241E',
-    borderColor: '#10B981',
-  },
-  chatStatusPillLocked: {
-    backgroundColor: '#22190E',
-    borderColor: '#D97706',
-  },
-  chatStatusPillText: {
-    fontFamily: fonts.mono,
-    fontSize: 10.5,
-    color: '#E2E8F0',
-    fontWeight: '600',
-  },
-  cardActionRow: {
-    alignItems: 'flex-end',
-  },
-  actionPrompt: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 11.5,
-    letterSpacing: 0.3,
-  },
-  replayPill: {
-    backgroundColor: '#12141A',
-    borderRadius: 10,
-    paddingVertical: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#20242D',
+    justifyContent: 'center',
+    paddingVertical: 4,
   },
-  replayPillText: {
-    fontFamily: fonts.bodyMedium,
-    color: '#71717A',
-    fontSize: 12,
+  homeIndicator: {
+    width: 134,
+    height: 4.5,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+    opacity: 0.85,
+    alignSelf: 'center',
+    marginTop: 14,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
-  modalContent: {
+  modalCard: {
     width: '100%',
-    maxWidth: 380,
-    backgroundColor: '#0F1116',
-    borderRadius: 16,
-    padding: 20,
+    maxWidth: 390,
+    backgroundColor: '#17171B',
+    borderRadius: 20,
+    padding: 22,
     borderWidth: 1,
-    borderColor: '#242833',
+    borderColor: '#23232A',
+  },
+  modalTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(26, 115, 232, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalTitle: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 18,
+    letterSpacing: -0.3,
     marginBottom: 4,
   },
-  modalDesc: {
+  modalSub: {
     fontFamily: fonts.body,
-    color: '#8B8F95',
+    color: '#8E8E93',
     fontSize: 12.5,
     lineHeight: 17,
     marginBottom: 16,
   },
   inputLabel: {
     fontFamily: fonts.bodyMedium,
-    color: '#A1A1AA',
+    color: '#E2E2E6',
     fontSize: 11.5,
-    marginBottom: 6,
+    marginBottom: 5,
     marginTop: 8,
   },
   codeInput: {
-    backgroundColor: '#161920',
-    borderRadius: 8,
+    backgroundColor: '#0F0F12',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#232730',
+    borderColor: '#23232A',
     color: '#FFFFFF',
     fontFamily: fonts.displayBold,
     fontSize: 16,
     letterSpacing: 2,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
     textAlign: 'center',
   },
   textInput: {
-    backgroundColor: '#161920',
-    borderRadius: 8,
+    backgroundColor: '#0F0F12',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#232730',
+    borderColor: '#23232A',
     color: '#FFFFFF',
     fontFamily: fonts.body,
-    fontSize: 13.5,
+    fontSize: 13,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 9,
   },
   modalActions: {
     flexDirection: 'row',
@@ -896,23 +514,26 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   cancelBtn: {
-    paddingVertical: 10,
+    paddingVertical: 9,
     paddingHorizontal: 14,
   },
   cancelBtnText: {
     fontFamily: fonts.bodyMedium,
-    color: '#A1A1AA',
+    color: '#8E8E93',
     fontSize: 13,
   },
   confirmBtn: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A73E8',
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    gap: 5,
   },
   confirmBtnText: {
     fontFamily: fonts.displayBold,
-    color: '#000000',
+    color: '#FFFFFF',
     fontSize: 13,
   },
 });

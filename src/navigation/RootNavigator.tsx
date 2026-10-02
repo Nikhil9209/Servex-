@@ -11,7 +11,7 @@ interface RootNavigatorProps {
 }
 
 export const RootNavigator: React.FC<RootNavigatorProps> = ({ onReplaySplash }) => {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, switchUserRole } = useAuth();
 
   // 1. Initial Authentication Check Loading Screen
   if (isLoading) {
@@ -33,6 +33,7 @@ export const RootNavigator: React.FC<RootNavigatorProps> = ({ onReplaySplash }) 
           user={user}
           onLogout={logout}
           onReplaySplash={onReplaySplash}
+          onSwitchRole={switchUserRole}
         />
       )}
     </View>

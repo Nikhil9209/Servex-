@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
+  Alert,
 } from 'react-native';
 import { fonts } from '../../../theme/tokens';
 import {
@@ -16,7 +16,25 @@ import {
   ClientTransaction,
   ProjectChatState,
 } from '../../../types/contractor';
-import { MapPinIcon, CrewIcon } from '../../../components/ContractorIcons';
+import {
+  MapPinIcon,
+  CrewIcon,
+  FileTextIcon,
+  RulerSquareIcon,
+  CheckCircleIcon,
+  CurrencyRupeeIcon,
+  ArrowLeftIcon,
+  PhoneIcon,
+  CopyIcon,
+  SlidersIcon,
+  ArrowUpIcon,
+} from '../../../components/ContractorIcons';
+import { FolderCard } from '../../../components/FolderCard';
+import {
+  FadeInSlide,
+  SpringPressable,
+  PulsingDot,
+} from '../../../components/AnimatedComponents';
 import { ScopeRequirementsScreen } from './ScopeRequirementsScreen';
 import { WorkerAttendanceScreen } from './WorkerAttendanceScreen';
 import { DailyWorkVerificationScreen } from './DailyWorkVerificationScreen';
@@ -51,11 +69,16 @@ export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
     .filter((t) => t.type === 'received_from_client')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalPaidToWorkers = project.transactions
-    .filter((t) => t.type === 'paid_to_worker')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const executionPct = totalScopeValue > 0 ? Math.round((totalCompletedValue / totalScopeValue) * 100) : 0;
+  const workersOnSiteToday = project.todayAttendance.filter((a) => a.status === 'present').length;
 
-  const balanceDue = totalCompletedValue - totalReceivedFromClient;
+  const handleCopyCode = () => {
+    Alert.alert('Client Code Copied', `Code ${project.clientCode} copied to clipboard.`);
+  };
+
+  const handleCallClient = () => {
+    Alert.alert('Call Client', `Dialing ${project.clientName} at ${project.clientPhone}...`);
+  };
 
   // Handlers for updating sub-components
   const handleAddScopeItem = (newItem: Omit<ProjectScopeItem, 'id' | 'completedQuantity'>) => {
@@ -105,7 +128,6 @@ export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
   };
 
   const handleSaveDailyReport = (report: DailyWorkReport) => {
-    // Update completed quantity on scope items according to today's report
     const updatedScope = project.scopeItems.map((item) => {
       const match = report.items.find((i) => i.scopeItemId === item.id);
       if (match) {
@@ -198,193 +220,223 @@ export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
   }
 
   return (
-    <View style={styles.container}>
-      {/* TOP HEADER */}
-      <View style={styles.topHeader}>
-        <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <Text style={styles.backBtnText}>‹ Back to Projects</Text>
-        </Pressable>
-        <View style={styles.clientCodeBadge}>
-          <Text style={styles.clientCodeText}>CODE: {project.clientCode}</Text>
-        </View>
-      </View>
+    <View style={styles.rootContainer}>
+      {/* 1. TOP HEADER WITH CIRCULAR CONTROLS */}
+      <FadeInSlide delay={40} distance={14}>
+        <View style={styles.topHeader}>
+          <SpringPressable
+            style={styles.circleHeaderBtn}
+            onPress={onBack}
+            scaleTo={0.92}
+            hitSlop={8}
+          >
+            <ArrowLeftIcon size={18} color="#FFFFFF" />
+          </SpringPressable>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* PROJECT PARTICULARS CARD */}
-        <View style={styles.projectHeroCard}>
-          <View style={styles.heroStatusRow}>
-            <View style={styles.activeTag}>
-              <View style={styles.greenPulse} />
-              <Text style={styles.activeTagText}>LINKED CLIENT PROJECT</Text>
-            </View>
-            <Text style={styles.startDateText}>Started: {project.startDate}</Text>
-          </View>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Site Workspace
+          </Text>
 
-          <Text style={styles.heroProjectTitle}>{project.projectName}</Text>
-          <Text style={styles.heroClientName}>Client: {project.clientName}</Text>
+          <View style={styles.headerRightControls}>
+            <SpringPressable
+              style={styles.clientCodeBadge}
+              onPress={handleCopyCode}
+              scaleTo={0.94}
+              hitSlop={6}
+            >
+              <Text style={styles.clientCodeText}>{project.clientCode}</Text>
+              <CopyIcon size={12} color="#FFFFFF" />
+            </SpringPressable>
 
-          <View style={styles.heroAddressRow}>
-            <MapPinIcon size={13} color="#71717A" />
-            <Text style={styles.heroAddressText} numberOfLines={1}>
-              {project.siteAddress}
-            </Text>
-          </View>
-
-          <View style={styles.workforceBar}>
-            <CrewIcon size={14} color="#FFFFFF" />
-            <Text style={styles.workforceText}>
-              {project.workers.length} Workers Enrolled • {project.todayAttendance.filter((a) => a.status === 'present').length} On Site Today
-            </Text>
-          </View>
-        </View>
-
-        {/* WORK COMPLETED & CASHFLOW SUMMARY */}
-        <View style={styles.kpiCard}>
-          <View style={styles.kpiRow}>
-            <View style={styles.kpiCol}>
-              <Text style={styles.kpiLabel}>Work Done Till Date</Text>
-              <Text style={styles.kpiVal}>₹{totalCompletedValue.toLocaleString('en-IN')}</Text>
-              <Text style={styles.kpiSub}>Scope: ₹{totalScopeValue.toLocaleString('en-IN')}</Text>
-            </View>
-            <View style={styles.kpiDivider} />
-            <View style={styles.kpiCol}>
-              <Text style={styles.kpiLabel}>Received from Client</Text>
-              <Text style={styles.kpiValGreen}>
-                ₹{totalReceivedFromClient.toLocaleString('en-IN')}
-              </Text>
-              <Text style={styles.kpiSub}>Paid to Workers: ₹{totalPaidToWorkers.toLocaleString('en-IN')}</Text>
-            </View>
-          </View>
-
-          <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>Current Balance Payable by Client:</Text>
-            <Text style={styles.balanceAmount}>
-              ₹{Math.max(0, balanceDue).toLocaleString('en-IN')}
-            </Text>
+            <SpringPressable
+              style={styles.circleHeaderBtn}
+              onPress={handleCallClient}
+              scaleTo={0.92}
+              hitSlop={8}
+            >
+              <PhoneIcon size={15} color="#FFFFFF" />
+            </SpringPressable>
           </View>
         </View>
+      </FadeInSlide>
 
-        {/* ONE-CLICK CREATE BILL PDF CTA */}
-        <Pressable
-          style={styles.oneClickPdfBtn}
-          onPress={() => setShowPdfModal(true)}
-        >
-          <View style={styles.oneClickPdfIconBox}>
-            <Text style={styles.oneClickPdfIcon}>📄</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.oneClickPdfTitle}>1-Click Generate Bill PDF</Text>
-            <Text style={styles.oneClickPdfSub}>
-              Itemized measurement sheet of all work done till date with unit rates
-            </Text>
-          </View>
-          <Text style={styles.oneClickPdfArrow}>➔</Text>
-        </Pressable>
-
-        {/* DEDICATED SEPARATE PAGES NAVIGATION */}
-        <Text style={styles.sectionHeaderTitle}>Project Management Modules</Text>
-
-        <View style={styles.modulesStack}>
-          {/* 1. Requirements & Scope of Work */}
-          <Pressable
-            style={styles.moduleCard}
-            onPress={() => setSubScreen('scope')}
-          >
-            <View style={styles.moduleIconBox}>
-              <Text style={styles.moduleIcon}>📐</Text>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 2. PROJECT HERO COCKPIT CARD */}
+        <FadeInSlide delay={100} distance={18}>
+          <View style={styles.projectHeroCard}>
+            <View style={styles.heroStatusRow}>
+              <View style={styles.statusTag}>
+                <PulsingDot size={6} color="#10B981" />
+                <Text style={styles.statusTagText}>ACTIVE SITE</Text>
+              </View>
+              <Text style={styles.startDateText}>Started {project.startDate}</Text>
             </View>
-            <View style={styles.moduleInfo}>
-              <Text style={styles.moduleTitle}>Requirements & Rates</Text>
-              <Text style={styles.moduleDesc}>
-                Add items, dimensions, and rates per sqft or rft ({project.scopeItems.length} items defined)
+
+            <Text style={styles.heroProjectTitle}>{project.projectName}</Text>
+
+            <View style={styles.clientInfoRow}>
+              <Text style={styles.clientNameText}>Client: {project.clientName}</Text>
+              <Text style={styles.clientPhoneText}>({project.clientPhone})</Text>
+            </View>
+
+            <View style={styles.addressRow}>
+              <MapPinIcon size={13} color="#7E7E86" />
+              <Text style={styles.addressText} numberOfLines={1}>
+                {project.siteAddress}
               </Text>
             </View>
-            <Text style={styles.moduleChevron}>›</Text>
-          </Pressable>
 
-          {/* 2. Workforce & Daily Attendance */}
-          <Pressable
-            style={styles.moduleCard}
-            onPress={() => setSubScreen('attendance')}
-          >
-            <View style={styles.moduleIconBox}>
-              <Text style={styles.moduleIcon}>👷‍♂️</Text>
-            </View>
-            <View style={styles.moduleInfo}>
-              <Text style={styles.moduleTitle}>Workers & Attendance</Text>
-              <Text style={styles.moduleDesc}>
-                Mark present/absent with on-time proof verification ({project.workers.length} crew members)
-              </Text>
-            </View>
-            <Text style={styles.moduleChevron}>›</Text>
-          </Pressable>
-
-          {/* 3. Daily Work Verification */}
-          <Pressable
-            style={styles.moduleCard}
-            onPress={() => setSubScreen('daily_verification')}
-          >
-            <View style={styles.moduleIconBox}>
-              <Text style={styles.moduleIcon}>✓</Text>
-            </View>
-            <View style={styles.moduleInfo}>
-              <Text style={styles.moduleTitle}>Daily Work Verification</Text>
-              <Text style={styles.moduleDesc}>
-                End-of-day site inspection and auto-generate today&apos;s daily bill
-              </Text>
-            </View>
-            <Text style={styles.moduleChevron}>›</Text>
-          </Pressable>
-
-          {/* 4. Financial Ledger */}
-          <Pressable
-            style={styles.moduleCard}
-            onPress={() => setSubScreen('ledger')}
-          >
-            <View style={styles.moduleIconBox}>
-              <Text style={styles.moduleIcon}>💰</Text>
-            </View>
-            <View style={styles.moduleInfo}>
-              <Text style={styles.moduleTitle}>Financial Ledger</Text>
-              <Text style={styles.moduleDesc}>
-                Track client payments received vs. wages paid to your workers
-              </Text>
-            </View>
-            <Text style={styles.moduleChevron}>›</Text>
-          </Pressable>
-
-          {/* 5. Site Tri-Party Chat */}
-          <Pressable
-            style={styles.moduleCard}
-            onPress={() => setSubScreen('chat')}
-          >
-            <View style={[styles.moduleIconBox, styles.chatModuleIconBox]}>
-              <Text style={styles.moduleIcon}>💬</Text>
-            </View>
-            <View style={styles.moduleInfo}>
-              <View style={styles.moduleTitleRow}>
-                <Text style={styles.moduleTitle}>Site Tri-Party Chat</Text>
+            {/* Progress Track */}
+            <View style={styles.progressContainer}>
+              <View style={styles.progressLabelRow}>
+                <Text style={styles.progressLabel}>Execution Progress</Text>
+                <Text style={styles.progressValue}>{executionPct}% Completed</Text>
+              </View>
+              <View style={styles.progressBar}>
                 <View
                   style={[
-                    styles.chatStatusTag,
-                    project.chatState?.workerMessagingAllowed
-                      ? styles.chatStatusTagAllowed
-                      : styles.chatStatusTagLocked,
+                    styles.progressFill,
+                    { width: `${Math.min(executionPct, 100)}%` },
                   ]}
-                >
-                  <Text style={styles.chatStatusTagText}>
-                    {project.chatState?.workerMessagingAllowed ? 'Workers Allowed 🔓' : 'Workers Locked 🔒'}
-                  </Text>
-                </View>
+                />
               </View>
-              <Text style={styles.moduleDesc}>
-                Direct chat with Client & Workers. Contractor controls worker messaging authority.
+            </View>
+          </View>
+        </FadeInSlide>
+
+        {/* 3. 2-COLUMN FINANCIAL KPI FOLDER CARDS (MATCHING REFERENCE) */}
+        <FadeInSlide delay={160} distance={20}>
+          <View style={styles.gridRow}>
+            <View style={styles.gridColumn}>
+              <FolderCard
+                title="Work Done"
+                subtitle={`₹${(totalCompletedValue / 100000).toFixed(1)}L (${executionPct}%)`}
+                icon={<RulerSquareIcon size={20} color="#7E7E86" />}
+                onPress={() => setSubScreen('scope')}
+              />
+            </View>
+
+            <View style={styles.gridColumn}>
+              <FolderCard
+                title="Cash Collected"
+                subtitle={`₹${(totalReceivedFromClient / 100000).toFixed(1)}L`}
+                icon={<CurrencyRupeeIcon size={20} color="#7E7E86" />}
+                onPress={() => setSubScreen('ledger')}
+              />
+            </View>
+          </View>
+        </FadeInSlide>
+
+        {/* 4. MIDDLE HORIZONTAL PILL CARD FOR RA BILL PDF (MATCHING REFERENCE) */}
+        <FadeInSlide delay={220} distance={20}>
+          <SpringPressable
+            style={styles.middlePillCard}
+            onPress={() => setShowPdfModal(true)}
+            scaleTo={0.97}
+          >
+            <View style={styles.middlePillLeft}>
+              <Text style={styles.middlePillTitle}>Generate RA Bill PDF</Text>
+              <Text style={styles.middlePillSubtitle}>
+                Itemized measurement invoice with digital seal
               </Text>
             </View>
-            <Text style={styles.moduleChevron}>›</Text>
-          </Pressable>
-        </View>
+
+            <View style={styles.middlePillRight}>
+              <View style={styles.countBadge}>
+                <FileTextIcon size={15} color="#FFFFFF" />
+              </View>
+              <View style={styles.middleIconWrapper}>
+                <SlidersIcon size={15} color="#5A5A64" />
+              </View>
+            </View>
+          </SpringPressable>
+        </FadeInSlide>
+
+        {/* 5. 2-COLUMN MANAGEMENT MODULES GRID (MATCHING REFERENCE) */}
+        <FadeInSlide delay={280} distance={20}>
+          <View style={styles.gridRow}>
+            <View style={styles.gridColumn}>
+              <FolderCard
+                title="Scope & Rates"
+                subtitle={`${project.scopeItems.length} items`}
+                icon={<RulerSquareIcon size={20} color="#7E7E86" />}
+                badgeCount={project.scopeItems.length}
+                onPress={() => setSubScreen('scope')}
+              />
+            </View>
+
+            <View style={styles.gridColumn}>
+              <FolderCard
+                title="Site Crew"
+                subtitle={`${workersOnSiteToday}/${project.workers.length} on site`}
+                icon={<CrewIcon size={20} color="#7E7E86" />}
+                badgeCount={workersOnSiteToday}
+                onPress={() => setSubScreen('attendance')}
+              />
+            </View>
+          </View>
+
+          <View style={styles.gridRow}>
+            <View style={styles.gridColumn}>
+              <FolderCard
+                title="Daily Logs"
+                subtitle={`${project.dailyReports.length} audits verified`}
+                icon={<CheckCircleIcon size={20} color="#7E7E86" />}
+                badgeCount={project.dailyReports.length}
+                onPress={() => setSubScreen('daily_verification')}
+              />
+            </View>
+
+            <View style={styles.gridColumn}>
+              <FolderCard
+                title="Site Ledger"
+                subtitle={`${project.transactions.length} records`}
+                icon={<CurrencyRupeeIcon size={20} color="#7E7E86" />}
+                badgeCount={project.transactions.length}
+                onPress={() => setSubScreen('ledger')}
+              />
+            </View>
+          </View>
+        </FadeInSlide>
       </ScrollView>
+
+      {/* 6. FLOATING BOTTOM SPOTLIGHT CARD FOR SITE TEAM CHAT (MATCHING REFERENCE) */}
+      <FadeInSlide delay={340} distance={30} style={styles.floatingCardWrapper}>
+        <SpringPressable
+          style={styles.floatingCard}
+          onPress={() => setSubScreen('chat')}
+          scaleTo={0.98}
+        >
+          {/* Top Drag Handle Notch Pill */}
+          <View style={styles.dragHandle} />
+
+          <View style={styles.floatingCardContent}>
+            <View style={styles.floatingCardTextCol}>
+              <Text style={styles.floatingCardMetric}>Site Team Feed</Text>
+              <View style={styles.statusSubRow}>
+                <PulsingDot size={6} color="#10B981" />
+                <Text style={styles.floatingCardSub} numberOfLines={1}>
+                  {project.chatState?.messages?.length || 0} messages · Live site chat
+                </Text>
+              </View>
+            </View>
+
+            {/* Circular Action Button with Arrow Up */}
+            <SpringPressable
+              style={styles.floatingActionCircle}
+              onPress={() => setSubScreen('chat')}
+              scaleTo={0.90}
+              hitSlop={6}
+            >
+              <ArrowUpIcon size={20} color="#FFFFFF" />
+            </SpringPressable>
+          </View>
+        </SpringPressable>
+      </FadeInSlide>
 
       {/* PDF BILL MODAL */}
       <PdfBillModal
@@ -397,6 +449,10 @@ export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  rootContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
   container: {
     flex: 1,
     backgroundColor: '#000000',
@@ -405,301 +461,287 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#161920',
+    borderBottomColor: '#121216',
+    backgroundColor: '#000000',
   },
-  backBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 6,
+  circleHeaderBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#1C1C22',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#24242C',
   },
-  backBtnText: {
-    fontFamily: fonts.bodyMedium,
-    color: '#A1A1AA',
-    fontSize: 13.5,
+  circleHeaderBtnPressed: {
+    backgroundColor: '#2A2A32',
+    transform: [{ scale: 0.95 }],
+  },
+  headerTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 18,
+    letterSpacing: -0.3,
+  },
+  headerRightControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   clientCodeBadge: {
-    backgroundColor: '#1E232E',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1C1C22',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#2A3240',
+    borderColor: '#24242C',
+    gap: 6,
   },
   clientCodeText: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 0.8,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 36,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 160,
   },
   projectHeroCard: {
-    backgroundColor: '#111317',
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: '#16161A',
+    borderRadius: 24,
+    padding: 22,
     borderWidth: 1,
-    borderColor: '#20242D',
+    borderColor: '#222228',
     marginBottom: 14,
   },
   heroStatusRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  activeTag: {
+  statusTag: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(16, 185, 129, 0.12)',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 6,
-    gap: 6,
+    gap: 5,
   },
-  greenPulse: {
+  statusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: '#10B981',
   },
-  activeTagText: {
+  statusTagText: {
     fontFamily: fonts.displayBold,
     color: '#10B981',
-    fontSize: 9.5,
+    fontSize: 10,
     letterSpacing: 0.6,
   },
   startDateText: {
     fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 11,
+    color: '#7E7E86',
+    fontSize: 12,
   },
   heroProjectTitle: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 18,
-    marginBottom: 3,
-  },
-  heroClientName: {
-    fontFamily: fonts.bodyMedium,
-    color: '#D4D4D8',
-    fontSize: 13,
+    fontSize: 22,
+    letterSpacing: -0.4,
     marginBottom: 6,
   },
-  heroAddressRow: {
+  clientInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  heroAddressText: {
+  clientNameText: {
+    fontFamily: fonts.bodyMedium,
+    color: '#E2E2E8',
+    fontSize: 13,
+  },
+  clientPhoneText: {
     fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 11.5,
+    color: '#7E7E86',
+    fontSize: 12,
   },
-  workforceBar: {
+  addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#161A22',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 7,
-    gap: 8,
+    gap: 6,
+    marginBottom: 16,
   },
-  workforceText: {
+  addressText: {
+    fontFamily: fonts.body,
+    color: '#7E7E86',
+    fontSize: 12.5,
+    flex: 1,
+  },
+  progressContainer: {
+    gap: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#222228',
+    paddingTop: 14,
+  },
+  progressLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  progressLabel: {
+    fontFamily: fonts.bodyMedium,
+    color: '#8E8E93',
+    fontSize: 12,
+  },
+  progressValue: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 11.5,
+    fontSize: 12.5,
   },
-  kpiCard: {
-    backgroundColor: '#111317',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#20242D',
+  progressBar: {
+    height: 6,
+    backgroundColor: '#202028',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 3,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    gap: 14,
     marginBottom: 14,
   },
-  kpiRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  kpiCol: {
+  gridColumn: {
     flex: 1,
   },
-  kpiDivider: {
-    width: 1,
-    backgroundColor: '#20242D',
-    marginHorizontal: 12,
-  },
-  kpiLabel: {
-    fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 10.5,
-    marginBottom: 3,
-  },
-  kpiVal: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginBottom: 2,
-  },
-  kpiValGreen: {
-    fontFamily: fonts.displayBold,
-    color: '#10B981',
-    fontSize: 16,
-    marginBottom: 2,
-  },
-  kpiSub: {
-    fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 10,
-  },
-  balanceRow: {
+  middlePillCard: {
+    backgroundColor: '#16161A',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#222228',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#1E232E',
-    paddingTop: 8,
+    marginBottom: 14,
   },
-  balanceLabel: {
-    fontFamily: fonts.bodyMedium,
-    color: '#A1A1AA',
-    fontSize: 11.5,
+  cardPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.99 }],
   },
-  balanceAmount: {
+  middlePillLeft: {
+    flex: 1,
+    gap: 3,
+  },
+  middlePillTitle: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 16.5,
+    letterSpacing: -0.2,
   },
-  oneClickPdfBtn: {
+  middlePillSubtitle: {
+    fontFamily: fonts.body,
+    color: '#7E7E86',
+    fontSize: 12.5,
+  },
+  middlePillRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 18,
-    gap: 12,
-    shadowColor: '#FFFFFF',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  oneClickPdfIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  oneClickPdfIcon: {
-    fontSize: 18,
-  },
-  oneClickPdfTitle: {
-    fontFamily: fonts.displayBold,
-    color: '#000000',
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  oneClickPdfSub: {
-    fontFamily: fonts.body,
-    color: '#475569',
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  oneClickPdfArrow: {
-    fontSize: 16,
-    color: '#000000',
-    fontWeight: 'bold',
-  },
-  sectionHeaderTitle: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 14,
-    marginBottom: 10,
-  },
-  modulesStack: {
     gap: 10,
   },
-  moduleCard: {
+  countBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#202026',
+    borderWidth: 1,
+    borderColor: '#2C2C34',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  middleIconWrapper: {
+    opacity: 0.7,
+  },
+  floatingCardWrapper: {
+    position: 'absolute',
+    bottom: 20,
+    left: 18,
+    right: 18,
+  },
+  floatingCard: {
+    backgroundColor: '#1F1F25',
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: '#2A2A34',
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    paddingBottom: 18,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  dragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#4C4C56',
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  floatingCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  floatingCardTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  floatingCardMetric: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 24,
+    letterSpacing: -0.4,
+  },
+  statusSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111317',
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#20242D',
-    gap: 12,
+    gap: 6,
+    marginTop: 2,
   },
-  moduleIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: '#1A1E26',
+  floatingCardSub: {
+    fontFamily: fonts.body,
+    color: '#8E8E93',
+    fontSize: 13,
+  },
+  floatingActionCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#34343E',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#242A36',
-  },
-  moduleIcon: {
-    fontSize: 17,
-  },
-  moduleInfo: {
-    flex: 1,
-  },
-  moduleTitle: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 13.5,
-    marginBottom: 2,
-  },
-  moduleDesc: {
-    fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  moduleChevron: {
-    fontFamily: fonts.displayBold,
-    color: '#71717A',
-    fontSize: 20,
-    paddingRight: 4,
-  },
-  chatModuleIconBox: {
-    backgroundColor: '#1E232F',
-    borderColor: '#30394D',
-  },
-  moduleTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 3,
-  },
-  chatStatusTag: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-  },
-  chatStatusTagAllowed: {
-    backgroundColor: '#0F241E',
-    borderColor: '#10B981',
-  },
-  chatStatusTagLocked: {
-    backgroundColor: '#261C10',
-    borderColor: '#D97706',
-  },
-  chatStatusTagText: {
-    fontFamily: fonts.mono,
-    fontSize: 9.5,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    borderColor: '#42424E',
   },
 });
+

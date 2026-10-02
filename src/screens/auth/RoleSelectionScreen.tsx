@@ -14,7 +14,7 @@ import { UserRole } from '../../types/auth';
 
 export const RoleSelectionScreen: React.FC = () => {
   const { selectAccountRole, authError } = useAuth();
-  const [selectedRole, setSelectedRole] = useState<UserRole>('client');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('contractor');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleContinue = async () => {
@@ -40,7 +40,7 @@ export const RoleSelectionScreen: React.FC = () => {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>How will you use Servex?</Text>
-            <Text style={styles.subtitle}>Choose your account type</Text>
+            <Text style={styles.subtitle}>Choose your account workspace</Text>
           </View>
 
           {/* Error Banner */}
@@ -53,7 +53,43 @@ export const RoleSelectionScreen: React.FC = () => {
 
           {/* Role Cards Grid */}
           <View style={styles.rolesGrid}>
-            {/* Card 1: CLIENT */}
+            {/* Card 1: CONTRACTOR (Primary / Recommended) */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.roleCard,
+                selectedRole === 'contractor' && styles.roleCardSelected,
+                pressed && styles.roleCardPressed,
+              ]}
+              onPress={() => setSelectedRole('contractor')}
+              disabled={isSubmitting}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: selectedRole === 'contractor' }}
+            >
+              <View style={styles.cardTopRow}>
+                <View style={styles.cardIconBox}>
+                  <Text style={styles.roleIcon}>🛠️</Text>
+                </View>
+                <View style={styles.recommendedBadge}>
+                  <Text style={styles.recommendedBadgeText}>RECOMMENDED</Text>
+                </View>
+              </View>
+              <View style={styles.roleHeaderRow}>
+                <Text style={styles.roleTitle}>CONTRACTOR</Text>
+                <View
+                  style={[
+                    styles.radioIndicator,
+                    selectedRole === 'contractor' && styles.radioIndicatorActive,
+                  ]}
+                >
+                  {selectedRole === 'contractor' && <View style={styles.radioDot} />}
+                </View>
+              </View>
+              <Text style={styles.roleDescription}>
+                Manage sites, join via client codes, record worker attendance, and bill clients.
+              </Text>
+            </Pressable>
+
+            {/* Card 2: CLIENT */}
             <Pressable
               style={({ pressed }) => [
                 styles.roleCard,
@@ -80,38 +116,7 @@ export const RoleSelectionScreen: React.FC = () => {
                 </View>
               </View>
               <Text style={styles.roleDescription}>
-                Find trusted professionals for your home and projects.
-              </Text>
-            </Pressable>
-
-            {/* Card 2: CONTRACTOR */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.roleCard,
-                selectedRole === 'contractor' && styles.roleCardSelected,
-                pressed && styles.roleCardPressed,
-              ]}
-              onPress={() => setSelectedRole('contractor')}
-              disabled={isSubmitting}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: selectedRole === 'contractor' }}
-            >
-              <View style={styles.cardIconBox}>
-                <Text style={styles.roleIcon}>🛠️</Text>
-              </View>
-              <View style={styles.roleHeaderRow}>
-                <Text style={styles.roleTitle}>CONTRACTOR</Text>
-                <View
-                  style={[
-                    styles.radioIndicator,
-                    selectedRole === 'contractor' && styles.radioIndicatorActive,
-                  ]}
-                >
-                  {selectedRole === 'contractor' && <View style={styles.radioDot} />}
-                </View>
-              </View>
-              <Text style={styles.roleDescription}>
-                Find jobs and manage your work with Servex.
+                Find trusted professionals and contractors for your home and renovation projects.
               </Text>
             </Pressable>
           </View>
@@ -126,12 +131,14 @@ export const RoleSelectionScreen: React.FC = () => {
             onPress={handleContinue}
             disabled={isSubmitting}
             accessibilityRole="button"
-            accessibilityLabel="CONTINUE"
+            accessibilityLabel={`CONTINUE AS ${selectedRole.toUpperCase()}`}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.continueButtonText}>CONTINUE</Text>
+              <Text style={styles.continueButtonText}>
+                CONTINUE AS {selectedRole.toUpperCase()} ➔
+              </Text>
             )}
           </Pressable>
         </View>
@@ -217,6 +224,12 @@ const styles = StyleSheet.create({
   roleCardPressed: {
     opacity: 0.85,
   },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
   cardIconBox: {
     width: 44,
     height: 44,
@@ -224,7 +237,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#191C24',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+  },
+  recommendedBadge: {
+    backgroundColor: 'rgba(26, 115, 232, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(26, 115, 232, 0.4)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  recommendedBadgeText: {
+    fontFamily: fonts.displayBold,
+    color: '#60A5FA',
+    fontSize: 9.5,
+    letterSpacing: 0.8,
   },
   roleIcon: {
     fontSize: 22,

@@ -151,8 +151,8 @@ export const AuthService = {
         (u.authProvider === 'google' && u.email.toLowerCase() === googleUser.email.toLowerCase())
     );
 
-    // Flow C: Existing Google user with verified phone & assigned role
-    if (existingAccount && existingAccount.isPhoneVerified && existingAccount.role) {
+    // Flow C: Existing Google user with assigned role (whether phone was verified or skipped for later)
+    if (existingAccount && existingAccount.role) {
       const session: AppAuthSession = {
         token: `srvx_sess_g_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         user: {
@@ -165,7 +165,7 @@ export const AuthService = {
           avatarUrl: googleUser.picture || existingAccount.avatarUrl,
           authProvider: 'google',
           createdAt: existingAccount.createdAt,
-          isPhoneVerified: true,
+          isPhoneVerified: Boolean(existingAccount.isPhoneVerified),
         },
         expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
       };

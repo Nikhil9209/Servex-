@@ -13,6 +13,7 @@ import { fonts } from '../../theme/tokens';
 import { User } from '../../types/auth';
 import { ServexLogo } from '../../components/ServexLogo';
 import { AuthService } from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
 
 interface ClientHomeScreenProps {
   user: User;
@@ -20,6 +21,7 @@ interface ClientHomeScreenProps {
 }
 
 export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogout }) => {
+  const { switchUserRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleLogoutPress = () => {
@@ -59,19 +61,61 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogo
             <Text style={styles.brandText}>SERVEX CLIENT • CONNECTED</Text>
           </View>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.logoutButton,
-              pressed && { opacity: 0.7 },
-            ]}
-            onPress={handleLogoutPress}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Logout"
-          >
-            <Text style={styles.logoutText}>Logout ➔</Text>
-          </Pressable>
+          <View style={styles.headerRightActions}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.contractorHeaderBtn,
+                pressed && { opacity: 0.8 },
+              ]}
+              onPress={() => switchUserRole('contractor')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Switch to Contractor Suite"
+            >
+              <Text style={styles.contractorHeaderBtnText}>Contractor Suite 🛠️</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.logoutButton,
+                pressed && { opacity: 0.7 },
+              ]}
+              onPress={handleLogoutPress}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Logout"
+            >
+              <Text style={styles.logoutText}>Logout ➔</Text>
+            </Pressable>
+          </View>
         </View>
+
+        {/* PROMINENT CONTRACTOR SUITE SWITCH BANNER */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.contractorSwitchCard,
+            pressed && styles.contractorSwitchCardPressed,
+          ]}
+          onPress={() => switchUserRole('contractor')}
+          accessibilityRole="button"
+          accessibilityLabel="Switch to Contractor Suite"
+        >
+          <View style={styles.switchIconBox}>
+            <Text style={styles.switchIcon}>🛠️</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={styles.switchTitleRow}>
+              <Text style={styles.switchTitle}>Contractor Workspace</Text>
+              <View style={styles.tapToOpenPill}>
+                <Text style={styles.tapToOpenText}>TAP TO ENTER</Text>
+              </View>
+            </View>
+            <Text style={styles.switchSubtitle}>
+              Manage sites, join via client code, workforce attendance, and generate bill PDFs.
+            </Text>
+          </View>
+          <Text style={styles.switchArrow}>➔</Text>
+        </Pressable>
 
         {/* User Welcome Card */}
         <View style={styles.userCard}>
@@ -84,12 +128,19 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogo
           <View style={styles.userInfo}>
             <View style={styles.roleBadgeRow}>
               <Text style={styles.userName}>{user.name}</Text>
-              <View style={styles.rolePill}>
-                <Text style={styles.roleText}>CLIENT</Text>
-              </View>
+              <Pressable
+                style={styles.rolePill}
+                onPress={() => switchUserRole('contractor')}
+                hitSlop={6}
+              >
+                <Text style={styles.roleText}>CLIENT • SWITCH TO CONTRACTOR ➔</Text>
+              </Pressable>
             </View>
             <Text style={styles.userContact}>{user.email}</Text>
-            <Text style={styles.userPhone}>Verified: {formattedPhone}</Text>
+            <Text style={styles.userPhone}>
+              {user.isPhoneVerified ? 'Verified: ' : 'Phone (Unverified): '}
+              {formattedPhone}
+            </Text>
           </View>
         </View>
 
@@ -222,6 +273,93 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     fontSize: 11.5,
     letterSpacing: 0.5,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  contractorHeaderBtn: {
+    backgroundColor: 'rgba(26, 115, 232, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(26, 115, 232, 0.4)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  contractorHeaderBtnText: {
+    fontFamily: fonts.displayBold,
+    color: '#60A5FA',
+    fontSize: 11.5,
+    letterSpacing: 0.4,
+  },
+  contractorSwitchCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#121722',
+    borderWidth: 1.5,
+    borderColor: '#1D4ED8',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+    gap: 12,
+    shadowColor: '#1A73E8',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  contractorSwitchCardPressed: {
+    backgroundColor: '#162033',
+    borderColor: '#2563EB',
+  },
+  switchIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchIcon: {
+    fontSize: 20,
+  },
+  switchTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
+  switchTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 14.5,
+  },
+  tapToOpenPill: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.35)',
+  },
+  tapToOpenText: {
+    fontFamily: fonts.displayBold,
+    color: '#10B981',
+    fontSize: 8.5,
+    letterSpacing: 0.6,
+  },
+  switchSubtitle: {
+    fontFamily: fonts.body,
+    color: '#94A3B8',
+    fontSize: 11.5,
+    lineHeight: 16,
+  },
+  switchArrow: {
+    fontFamily: fonts.displayBold,
+    color: '#60A5FA',
+    fontSize: 16,
+    paddingRight: 4,
   },
   userCard: {
     flexDirection: 'row',

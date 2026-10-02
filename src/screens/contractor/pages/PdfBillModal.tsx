@@ -10,6 +10,13 @@ import {
 } from 'react-native';
 import { fonts } from '../../../theme/tokens';
 import { ContractorProjectDetail } from '../../../types/contractor';
+import {
+  CloseIcon,
+  DownloadIcon,
+  ShareIcon,
+  ShieldCheckIcon,
+  FileTextIcon,
+} from '../../../components/ContractorIcons';
 
 interface PdfBillModalProps {
   visible: boolean;
@@ -31,7 +38,7 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
     .filter((t) => t.type === 'received_from_client')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const balanceDue = totalCompletedValue - totalReceivedFromClient;
+  const balanceDue = Math.max(0, totalCompletedValue - totalReceivedFromClient);
 
   const invoiceNo = useMemo(
     () => `SRX-${project.clientCode}-2026`,
@@ -49,15 +56,15 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
 
   const handleExportPdf = () => {
     Alert.alert(
-      'PDF Export Generated ✓',
-      `Official Measurement & RA Invoice Bill ${invoiceNo} generated.\n\nFile saved as:\n${project.projectName.replace(/\s+/g, '_')}_Bill_${todayDate}.pdf`
+      'PDF Document Exported',
+      `Official Running Account (RA) Bill ${invoiceNo} compiled.\n\nFile saved to device:\n${project.projectName.replace(/\s+/g, '_')}_RA_Bill_${todayDate}.pdf`
     );
   };
 
   const handleShareClient = () => {
     Alert.alert(
-      'Share Bill with Client',
-      `Direct dispatch to client ${project.clientName} (${project.clientPhone}) with itemized measurements and balance ₹${Math.max(0, balanceDue).toLocaleString('en-IN')}.`
+      'Dispatch to Client',
+      `Transmitting digital RA Bill to client ${project.clientName} (${project.clientPhone}). Outstanding Balance Due: ₹${balanceDue.toLocaleString('en-IN')}.`
     );
   };
 
@@ -68,14 +75,21 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
           {/* TOP ACTIONS BAR */}
           <View style={styles.topActionsBar}>
             <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
-              <Text style={styles.closeBtnText}>✕ Close</Text>
+              <CloseIcon size={16} color="#94A3B8" />
+              <Text style={styles.closeBtnText}>Close</Text>
             </Pressable>
 
-            <Text style={styles.sheetHeaderTitle}>Generated Bill PDF</Text>
+            <View style={styles.modalHeaderTitleGroup}>
+              <FileTextIcon size={15} color="#F8FAFC" />
+              <Text style={styles.sheetHeaderTitle}>Running Account Bill</Text>
+            </View>
 
-            <Pressable onPress={handleExportPdf} style={styles.exportBtn}>
-              <Text style={styles.exportBtnText}>📥 Export PDF</Text>
-            </Pressable>
+            <View style={styles.headerRightActions}>
+              <Pressable onPress={handleExportPdf} style={styles.exportBtn}>
+                <DownloadIcon size={14} color="#0B0E14" />
+                <Text style={styles.exportBtnText}>PDF</Text>
+              </Pressable>
+            </View>
           </View>
 
           {/* OFFICIAL PDF DOCUMENT PREVIEW */}
@@ -87,14 +101,19 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
             {/* DOCUMENT HEADER / LETTERHEAD */}
             <View style={styles.letterhead}>
               <View>
-                <Text style={styles.brandTitle}>SERVEX</Text>
-                <Text style={styles.brandTagline}>PRIME CONTRACTOR INFRASTRUCTURE</Text>
-                <Text style={styles.licenseText}>License: Class-1 Prime Contractor</Text>
+                <View style={styles.brandRow}>
+                  <Text style={styles.brandTitle}>SERVEX</Text>
+                  <View style={styles.primePill}>
+                    <Text style={styles.primePillText}>PRIME CONTRACTOR</Text>
+                  </View>
+                </View>
+                <Text style={styles.brandTagline}>ENTERPRISE INFRASTRUCTURE & CONSTRUCTION</Text>
+                <Text style={styles.licenseText}>License: Class-1 Prime Contractor • GSTIN: 27AABCS1429E1Z8</Text>
               </View>
 
               <View style={styles.invoiceMetaRight}>
                 <View style={styles.docBadge}>
-                  <Text style={styles.docBadgeText}>RUNNING ACCOUNT (RA) BILL</Text>
+                  <Text style={styles.docBadgeText}>OFFICIAL RA BILL</Text>
                 </View>
                 <Text style={styles.invNumber}>Bill No: {invoiceNo}</Text>
                 <Text style={styles.invDate}>Date: {todayDate}</Text>
@@ -108,12 +127,12 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
               <View style={styles.partCol}>
                 <Text style={styles.partHeader}>BILLED TO (CLIENT):</Text>
                 <Text style={styles.partClientName}>{project.clientName}</Text>
-                <Text style={styles.partText}>Client Project Code: {project.clientCode}</Text>
+                <Text style={styles.partText}>Project Code: {project.clientCode}</Text>
                 <Text style={styles.partText}>Phone: {project.clientPhone}</Text>
               </View>
 
               <View style={styles.partCol}>
-                <Text style={styles.partHeader}>JOB SITE & PROJECT:</Text>
+                <Text style={styles.partHeader}>SITE & WORKSPACE:</Text>
                 <Text style={styles.partProjectName}>{project.projectName}</Text>
                 <Text style={styles.partText}>{project.siteAddress}</Text>
                 <Text style={styles.partText}>Commenced: {project.startDate}</Text>
@@ -121,15 +140,15 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
             </View>
 
             {/* ITEMIZED MEASUREMENT SHEET TABLE */}
-            <Text style={styles.tableTitle}>MEASUREMENT SHEET OF WORK DONE TILL DATE</Text>
+            <Text style={styles.tableTitle}>ITEMIZED MEASUREMENT & PROGRESS VALUATION</Text>
 
             <View style={styles.table}>
               <View style={styles.thRow}>
-                <Text style={[styles.thCell, { flex: 0.5 }]}>#</Text>
-                <Text style={[styles.thCell, { flex: 3 }]}>Item & Description</Text>
+                <Text style={[styles.thCell, { flex: 0.6 }]}>#</Text>
+                <Text style={[styles.thCell, { flex: 3 }]}>Scope Item Description</Text>
                 <Text style={[styles.thCell, { flex: 1, textAlign: 'center' }]}>Unit</Text>
-                <Text style={[styles.thCell, { flex: 1.3, textAlign: 'right' }]}>Total Scope</Text>
-                <Text style={[styles.thCell, { flex: 1.4, textAlign: 'right' }]}>Work Done</Text>
+                <Text style={[styles.thCell, { flex: 1.2, textAlign: 'right' }]}>Contract</Text>
+                <Text style={[styles.thCell, { flex: 1.2, textAlign: 'right' }]}>Executed</Text>
                 <Text style={[styles.thCell, { flex: 1.2, textAlign: 'right' }]}>Rate (₹)</Text>
                 <Text style={[styles.thCell, { flex: 1.6, textAlign: 'right' }]}>Amount (₹)</Text>
               </View>
@@ -138,78 +157,71 @@ export const PdfBillModal: React.FC<PdfBillModalProps> = ({
                 const itemDoneVal = item.completedQuantity * item.ratePerUnit;
                 return (
                   <View key={item.id} style={styles.tdRow}>
-                    <Text style={[styles.tdCell, { flex: 0.5 }]}>{idx + 1}</Text>
+                    <Text style={[styles.tdCell, { flex: 0.6 }]}>{idx + 1}</Text>
                     <Text style={[styles.tdCellBold, { flex: 3 }]}>{item.name}</Text>
                     <Text style={[styles.tdCell, { flex: 1, textAlign: 'center' }]}>
-                      {item.unit}
+                      {item.unit.toUpperCase()}
                     </Text>
-                    <Text style={[styles.tdCell, { flex: 1.3, textAlign: 'right' }]}>
+                    <Text style={[styles.tdCell, { flex: 1.2, textAlign: 'right' }]}>
                       {item.quantity.toLocaleString('en-IN')}
                     </Text>
-                    <Text style={[styles.tdCellDone, { flex: 1.4, textAlign: 'right' }]}>
+                    <Text style={[styles.tdCellDone, { flex: 1.2, textAlign: 'right' }]}>
                       {item.completedQuantity.toLocaleString('en-IN')}
                     </Text>
                     <Text style={[styles.tdCell, { flex: 1.2, textAlign: 'right' }]}>
-                      ₹{item.ratePerUnit}
+                      {item.ratePerUnit}
                     </Text>
-                    <Text style={[styles.tdCellAmount, { flex: 1.6, textAlign: 'right' }]}>
-                      ₹{itemDoneVal.toLocaleString('en-IN')}
+                    <Text style={[styles.tdCellTotal, { flex: 1.6, textAlign: 'right' }]}>
+                      {itemDoneVal.toLocaleString('en-IN')}
                     </Text>
                   </View>
                 );
               })}
             </View>
 
-            {/* FINANCIAL SUMMARY RECONCILIATION */}
-            <View style={styles.calculationSection}>
-              <View style={styles.calcRow}>
-                <Text style={styles.calcLabel}>Gross Value of Work Done Till Date:</Text>
-                <Text style={styles.calcVal}>
-                  ₹{totalCompletedValue.toLocaleString('en-IN')}
-                </Text>
+            {/* BILL TOTALS SUMMARY */}
+            <View style={styles.totalsBox}>
+              <View style={styles.totalLine}>
+                <Text style={styles.totalLineLabel}>Gross Cumulative Work Executed to Date:</Text>
+                <Text style={styles.totalLineVal}>₹{totalCompletedValue.toLocaleString('en-IN')}</Text>
               </View>
-
-              <View style={styles.calcRow}>
-                <Text style={styles.calcLabel}>
-                  Less: Cumulative Advances & Payments Received:
-                </Text>
-                <Text style={styles.calcValDeduct}>
+              <View style={styles.totalLine}>
+                <Text style={styles.totalLineLabel}>Less: Prior Running Account Collections Received:</Text>
+                <Text style={styles.totalLineValGreen}>
                   -₹{totalReceivedFromClient.toLocaleString('en-IN')}
                 </Text>
               </View>
 
-              <View style={styles.calcDivider} />
+              <View style={styles.totalLineDivider} />
 
-              <View style={styles.calcGrandRow}>
-                <Text style={styles.grandLabel}>Net Balance Payable by Client:</Text>
-                <Text style={styles.grandVal}>
-                  ₹{Math.max(0, balanceDue).toLocaleString('en-IN')}
+              <View style={styles.grandTotalLine}>
+                <Text style={styles.grandTotalLabel}>NET CURRENT BALANCE PAYABLE:</Text>
+                <Text style={styles.grandTotalVal}>
+                  ₹{balanceDue.toLocaleString('en-IN')}
                 </Text>
               </View>
             </View>
 
-            {/* SIGNATURE BLOCKS */}
-            <View style={styles.signatureRow}>
-              <View style={styles.sigBox}>
-                <View style={styles.sigLine} />
-                <Text style={styles.sigTitle}>Authorized Contractor Signatory</Text>
-                <Text style={styles.sigSub}>Servex Prime Verification</Text>
+            {/* TAX COMPLIANCE & VERIFICATION STAMP */}
+            <View style={styles.verificationStampBox}>
+              <View style={styles.stampHeader}>
+                <ShieldCheckIcon size={16} color="#10B981" />
+                <Text style={styles.stampTitle}>DIGITALLY VERIFIED BILL • SERVEX PRIME</Text>
               </View>
+              <Text style={styles.stampDesc}>
+                This digital measurement valuation is generated from verified daily work inspection logs under
+                Class-1 Prime Contractor credentials.
+              </Text>
+            </View>
 
-              <View style={styles.sigBox}>
-                <View style={styles.sigLine} />
-                <Text style={styles.sigTitle}>Client / PMC Acceptance</Text>
-                <Text style={styles.sigSub}>{project.clientName}</Text>
-              </View>
+            {/* ACTION DISPATCH BUTTONS */}
+            <View style={styles.dispatchActionsRow}>
+              <Pressable style={styles.dispatchBtn} onPress={handleShareClient}>
+                <ShareIcon size={15} color="#0B0E14" />
+                <Text style={styles.dispatchBtnText}>Dispatch to Client ({project.clientName})</Text>
+              </Pressable>
             </View>
           </ScrollView>
-
-          {/* BOTTOM SHARE BAR */}
-          <View style={styles.bottomBar}>
-            <Pressable style={styles.shareBtn} onPress={handleShareClient}>
-              <Text style={styles.shareBtnText}>📱 Send PDF Bill to Client via WhatsApp</Text>
-            </Pressable>
-          </View>
         </View>
       </View>
     </Modal>
@@ -224,53 +236,70 @@ const styles = StyleSheet.create({
   },
   sheetContainer: {
     height: '92%',
-    backgroundColor: '#0A0C10',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: '#0E121B',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#1E2638',
   },
   topActionsBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1A1E26',
-    backgroundColor: '#0F1116',
+    borderBottomColor: '#1E2638',
+    backgroundColor: '#0E121B',
   },
   closeBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
   },
   closeBtnText: {
     fontFamily: fonts.bodyMedium,
-    color: '#A1A1AA',
-    fontSize: 13,
+    color: '#94A3B8',
+    fontSize: 12.5,
+  },
+  modalHeaderTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   sheetHeaderTitle: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 14.5,
+    color: '#F8FAFC',
+    fontSize: 14,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
   exportBtn: {
-    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 7,
+    borderRadius: 6,
+    gap: 4,
   },
   exportBtnText: {
     fontFamily: fonts.displayBold,
-    color: '#000000',
-    fontSize: 12,
+    color: '#0B0E14',
+    fontSize: 11.5,
   },
   pdfPaperScrollView: {
     flex: 1,
-    backgroundColor: '#0A0C10',
+    backgroundColor: '#0B0E14',
   },
   pdfPaperContent: {
-    padding: 18,
-    paddingBottom: 36,
+    padding: 16,
+    paddingBottom: 40,
   },
   letterhead: {
     flexDirection: 'row',
@@ -278,243 +307,260 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   brandTitle: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 20,
-    letterSpacing: 2,
-    marginBottom: 2,
+    color: '#F8FAFC',
+    fontSize: 18,
+    letterSpacing: 1.5,
+  },
+  primePill: {
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.25)',
+  },
+  primePillText: {
+    fontFamily: fonts.displayBold,
+    color: '#38BDF8',
+    fontSize: 8,
   },
   brandTagline: {
     fontFamily: fonts.displayBold,
-    color: '#D4D4D8',
-    fontSize: 9.5,
-    letterSpacing: 1,
-    marginBottom: 2,
+    color: '#38BDF8',
+    fontSize: 8.5,
+    letterSpacing: 0.6,
+    marginTop: 2,
   },
   licenseText: {
     fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 10.5,
+    color: '#64748B',
+    fontSize: 9.5,
+    marginTop: 2,
   },
   invoiceMetaRight: {
     alignItems: 'flex-end',
   },
   docBadge: {
-    backgroundColor: '#1C2028',
+    backgroundColor: '#1E2638',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 5,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#2D384E',
     marginBottom: 4,
   },
   docBadgeText: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
+    color: '#F8FAFC',
     fontSize: 9,
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
   invNumber: {
-    fontFamily: fonts.displayBold,
-    color: '#D4D4D8',
-    fontSize: 12,
+    fontFamily: fonts.mono,
+    color: '#94A3B8',
+    fontSize: 10,
   },
   invDate: {
     fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 11,
+    color: '#64748B',
+    fontSize: 10,
   },
   docDivider: {
     height: 1,
-    backgroundColor: '#20242D',
+    backgroundColor: '#1E2638',
     marginVertical: 12,
   },
   particularsGrid: {
     flexDirection: 'row',
-    backgroundColor: '#111317',
+    backgroundColor: '#111622',
     borderRadius: 10,
     padding: 12,
-    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#1E232E',
+    borderColor: '#1E2638',
+    marginBottom: 14,
+    gap: 12,
   },
   partCol: {
     flex: 1,
   },
   partHeader: {
     fontFamily: fonts.displayBold,
-    color: '#71717A',
-    fontSize: 9.5,
+    color: '#64748B',
+    fontSize: 9,
     letterSpacing: 0.6,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   partClientName: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
+    color: '#F8FAFC',
     fontSize: 13,
     marginBottom: 2,
   },
   partProjectName: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
+    color: '#F8FAFC',
     fontSize: 13,
     marginBottom: 2,
   },
   partText: {
     fontFamily: fonts.body,
-    color: '#A1A1AA',
-    fontSize: 11,
-    lineHeight: 15,
+    color: '#94A3B8',
+    fontSize: 10.5,
+    lineHeight: 14,
   },
   tableTitle: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 11.5,
-    letterSpacing: 0.8,
+    color: '#F8FAFC',
+    fontSize: 11,
+    letterSpacing: 0.5,
     marginBottom: 8,
   },
   table: {
-    backgroundColor: '#111317',
+    backgroundColor: '#111622',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#1E232E',
+    borderColor: '#1E2638',
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   thRow: {
     flexDirection: 'row',
-    backgroundColor: '#171B24',
-    paddingHorizontal: 10,
+    backgroundColor: '#161D2C',
     paddingVertical: 8,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#202530',
+    borderBottomColor: '#1E2638',
   },
   thCell: {
     fontFamily: fonts.displayBold,
-    color: '#A1A1AA',
+    color: '#94A3B8',
     fontSize: 9.5,
   },
   tdRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#171B22',
+    borderBottomColor: '#161D2C',
+    alignItems: 'center',
   },
   tdCell: {
     fontFamily: fonts.body,
-    color: '#A1A1AA',
-    fontSize: 10.5,
+    color: '#94A3B8',
+    fontSize: 10,
   },
   tdCellBold: {
     fontFamily: fonts.bodyMedium,
-    color: '#FFFFFF',
+    color: '#F8FAFC',
     fontSize: 10.5,
   },
   tdCellDone: {
     fontFamily: fonts.displayBold,
-    color: '#10B981',
+    color: '#38BDF8',
     fontSize: 10.5,
   },
-  tdCellAmount: {
+  tdCellTotal: {
     fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 11,
+    color: '#F8FAFC',
+    fontSize: 10.5,
   },
-  calculationSection: {
-    backgroundColor: '#111317',
+  totalsBox: {
+    backgroundColor: '#111622',
     borderRadius: 10,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#1E232E',
-    marginBottom: 20,
-    gap: 8,
+    borderColor: '#1E2638',
+    marginBottom: 14,
   },
-  calcRow: {
+  totalLine: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  calcLabel: {
-    fontFamily: fonts.body,
-    color: '#A1A1AA',
-    fontSize: 12,
-  },
-  calcVal: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 13,
-  },
-  calcValDeduct: {
-    fontFamily: fonts.displayBold,
-    color: '#EF4444',
-    fontSize: 13,
-  },
-  calcDivider: {
-    height: 1,
-    backgroundColor: '#202530',
-    marginVertical: 4,
-  },
-  calcGrandRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  grandLabel: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 13.5,
-  },
-  grandVal: {
-    fontFamily: fonts.displayBold,
-    color: '#10B981',
-    fontSize: 18,
-  },
-  signatureRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 18,
-    paddingHorizontal: 12,
-    marginBottom: 10,
-  },
-  sigBox: {
-    alignItems: 'center',
-    width: 140,
-  },
-  sigLine: {
-    width: '100%',
-    height: 1,
-    backgroundColor: '#3F4450',
     marginBottom: 6,
   },
-  sigTitle: {
-    fontFamily: fonts.displayBold,
-    color: '#D4D4D8',
-    fontSize: 10.5,
-    textAlign: 'center',
-  },
-  sigSub: {
+  totalLineLabel: {
     fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 9.5,
-    textAlign: 'center',
+    color: '#94A3B8',
+    fontSize: 11,
   },
-  bottomBar: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#1A1E26',
-    backgroundColor: '#0F1116',
+  totalLineVal: {
+    fontFamily: fonts.displayBold,
+    color: '#F8FAFC',
+    fontSize: 12,
   },
-  shareBtn: {
-    backgroundColor: '#FFFFFF',
+  totalLineValGreen: {
+    fontFamily: fonts.displayBold,
+    color: '#10B981',
+    fontSize: 12,
+  },
+  totalLineDivider: {
+    height: 1,
+    backgroundColor: '#1E2638',
+    marginVertical: 8,
+  },
+  grandTotalLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  grandTotalLabel: {
+    fontFamily: fonts.displayBold,
+    color: '#F8FAFC',
+    fontSize: 11.5,
+    letterSpacing: 0.5,
+  },
+  grandTotalVal: {
+    fontFamily: fonts.displayBold,
+    color: '#38BDF8',
+    fontSize: 16,
+  },
+  verificationStampBox: {
+    backgroundColor: '#0E121B',
     borderRadius: 10,
-    paddingVertical: 13,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#1E2638',
+    marginBottom: 16,
+  },
+  stampHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  stampTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#10B981',
+    fontSize: 10,
+    letterSpacing: 0.6,
+  },
+  stampDesc: {
+    fontFamily: fonts.body,
+    color: '#64748B',
+    fontSize: 10,
+    lineHeight: 14,
+  },
+  dispatchActionsRow: {
+    gap: 10,
+  },
+  dispatchBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingVertical: 12,
+    gap: 8,
   },
-  shareBtnText: {
+  dispatchBtnText: {
     fontFamily: fonts.displayBold,
-    color: '#000000',
-    fontSize: 13,
+    color: '#0B0E14',
+    fontSize: 12.5,
   },
 });

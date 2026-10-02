@@ -39,19 +39,21 @@ export const PhoneCollectionScreen: React.FC = () => {
     clearAuthError();
 
     const cleanPhone = phone.replace(/\D/g, '');
-    if (!cleanPhone) {
-      setLocalError('Please enter your phone number.');
-      return;
-    }
+    if (shouldVerify) {
+      if (!cleanPhone) {
+        setLocalError('Please enter your phone number.');
+        return;
+      }
 
-    if (
-      cleanPhone.length < selectedCountry.minLength ||
-      cleanPhone.length > selectedCountry.maxLength
-    ) {
-      setLocalError(
-        `Please enter a valid ${selectedCountry.minLength}-digit phone number for ${selectedCountry.name}.`
-      );
-      return;
+      if (
+        cleanPhone.length < selectedCountry.minLength ||
+        cleanPhone.length > selectedCountry.maxLength
+      ) {
+        setLocalError(
+          `Please enter a valid ${selectedCountry.minLength}-digit phone number for ${selectedCountry.name}.`
+        );
+        return;
+      }
     }
 
     setIsSubmitting(true);
