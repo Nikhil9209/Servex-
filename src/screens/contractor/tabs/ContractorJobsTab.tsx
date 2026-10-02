@@ -9,45 +9,38 @@ import {
   Alert,
 } from 'react-native';
 import { fonts } from '../../../theme/tokens';
-import { ContractorJob } from './ContractorDashboardTab';
-import { MapPinIcon, ClockIcon } from '../../../components/ContractorIcons';
+import { ContractorProject } from './ContractorDashboardTab';
+import { MapPinIcon, CrewIcon } from '../../../components/ContractorIcons';
 
 interface ContractorJobsTabProps {
-  jobs: ContractorJob[];
-  onToggleMilestone: (jobId: string, milestoneId: string) => void;
-  onCompleteJob: (jobId: string) => void;
+  projects: ContractorProject[];
+  onToggleMilestone: (projectId: string, milestoneId: string) => void;
+  onIssueBill: (projectId: string) => void;
 }
 
 export const ContractorJobsTab: React.FC<ContractorJobsTabProps> = ({
-  jobs,
+  projects,
   onToggleMilestone,
-  onCompleteJob,
+  onIssueBill,
 }) => {
-  const [activeSegment, setActiveSegment] = useState<'active' | 'scheduled' | 'completed'>(
-    'active'
-  );
+  const [activeSegment, setActiveSegment] = useState<'active' | 'tender' | 'completed'>('active');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredJobs = jobs.filter((j) => {
-    const matchesSegment =
-      activeSegment === 'active'
-        ? j.status === 'active'
-        : activeSegment === 'scheduled'
-        ? j.status === 'scheduled'
-        : j.status === 'completed';
-
+  const filteredProjects = projects.filter((p) => {
+    const matchesSegment = p.status === activeSegment;
     const matchesSearch =
       searchQuery.trim() === '' ||
-      j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      j.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      j.location.toLowerCase().includes(searchQuery.toLowerCase());
+      p.projectTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.clientDeveloper.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.siteLocation.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.crewLead.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesSegment && matchesSearch;
   });
 
-  const activeCount = jobs.filter((j) => j.status === 'active').length;
-  const scheduledCount = jobs.filter((j) => j.status === 'scheduled').length;
-  const completedCount = jobs.filter((j) => j.status === 'completed').length;
+  const activeCount = projects.filter((p) => p.status === 'active').length;
+  const tenderCount = projects.filter((p) => p.status === 'tender').length;
+  const completedCount = projects.filter((p) => p.status === 'completed').length;
 
   return (
     <View style={styles.container}>
@@ -63,32 +56,26 @@ export const ContractorJobsTab: React.FC<ContractorJobsTabProps> = ({
               activeSegment === 'active' && styles.segmentTextActive,
             ]}
           >
-            Active ({activeCount})
+            Active Contracts ({activeCount})
           </Text>
         </Pressable>
 
         <Pressable
-          style={[
-            styles.segmentBtn,
-            activeSegment === 'scheduled' && styles.segmentBtnActive,
-          ]}
-          onPress={() => setActiveSegment('scheduled')}
+          style={[styles.segmentBtn, activeSegment === 'tender' && styles.segmentBtnActive]}
+          onPress={() => setActiveSegment('tender')}
         >
           <Text
             style={[
               styles.segmentText,
-              activeSegment === 'scheduled' && styles.segmentTextActive,
+              activeSegment === 'tender' && styles.segmentTextActive,
             ]}
           >
-            Scheduled ({scheduledCount})
+            Tenders & Bids ({tenderCount})
           </Text>
         </Pressable>
 
         <Pressable
-          style={[
-            styles.segmentBtn,
-            activeSegment === 'completed' && styles.segmentBtnActive,
-          ]}
+          style={[styles.segmentBtn, activeSegment === 'completed' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('completed')}
         >
           <Text
@@ -107,7 +94,7 @@ export const ContractorJobsTab: React.FC<ContractorJobsTabProps> = ({
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
           style={styles.searchInput}
-          placeholder="Filter by title, client, or site..."
+          placeholder="Search contracts by project, developer, site, or foreman..."
           placeholderTextColor="#71717A"
           selectionColor="#FFFFFF"
           cursorColor="#FFFFFF"
@@ -121,179 +108,209 @@ export const ContractorJobsTab: React.FC<ContractorJobsTabProps> = ({
         )}
       </View>
 
-      {/* JOBS LIST */}
+      {/* CONTRACTS / PROJECTS LIST */}
       <ScrollView
         contentContainerStyle={styles.scrollList}
         showsVerticalScrollIndicator={false}
       >
-        {filteredJobs.length === 0 ? (
+        {filteredProjects.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📦</Text>
+            <Text style={styles.emptyIcon}>🏢</Text>
             <Text style={styles.emptyTitle}>
-              {searchQuery ? 'No matching jobs found' : `No ${activeSegment} jobs`}
+              {searchQuery ? 'No matching contracts found' : `No ${activeSegment} projects`}
             </Text>
             <Text style={styles.emptySub}>
               {searchQuery
-                ? 'Try searching with a different client name or address.'
-                : activeSegment === 'active'
-                ? 'Accept incoming job leads from your Dashboard to start a project.'
-                : 'All jobs will appear here as they are scheduled or completed.'}
+                ? 'Try searching with a different developer or project title.'
+                : activeSegment === 'tender'
+                ? 'Commercial RFPs and tenders from builders will appear here for bidding.'
+                : 'All contracts and submittals will appear here once mobilized.'}
             </Text>
           </View>
         ) : (
-          filteredJobs.map((job) => (
-            <View key={job.id} style={styles.jobCard}>
+          filteredProjects.map((project) => (
+            <View key={project.id} style={styles.projectCard}>
               <View style={styles.cardHeader}>
-                <View>
+                <View style={styles.headerLeft}>
                   <View style={styles.badgeRow}>
                     <View
                       style={[
                         styles.statusBadge,
-                        job.status === 'active'
+                        project.status === 'active'
                           ? styles.badgeActive
-                          : job.status === 'scheduled'
-                          ? styles.badgeScheduled
+                          : project.status === 'tender'
+                          ? styles.badgeTender
                           : styles.badgeCompleted,
                       ]}
                     >
                       <Text
                         style={[
                           styles.statusBadgeText,
-                          job.status === 'active'
+                          project.status === 'active'
                             ? styles.badgeTextActive
-                            : job.status === 'scheduled'
-                            ? styles.badgeTextScheduled
+                            : project.status === 'tender'
+                            ? styles.badgeTextTender
                             : styles.badgeTextCompleted,
                         ]}
                       >
-                        {job.status.toUpperCase()}
+                        {project.status === 'active'
+                          ? 'IN EXECUTION'
+                          : project.status === 'tender'
+                          ? 'OPEN TENDER BID'
+                          : 'COMMISSIONED & SETTLED'}
                       </Text>
                     </View>
-                    <Text style={styles.categoryText}>{job.category}</Text>
+                    <Text style={styles.clientTag}>
+                      Developer: {project.clientDeveloper}
+                    </Text>
                   </View>
-                  <Text style={styles.cardTitle}>{job.title}</Text>
-                  <Text style={styles.clientText}>Client: {job.clientName}</Text>
+                  <Text style={styles.projectTitleText}>{project.projectTitle}</Text>
                 </View>
 
-                <View style={styles.payoutBadge}>
-                  <Text style={styles.payoutLabel}>Total</Text>
-                  <Text style={styles.payoutVal}>₹{job.payout.toLocaleString('en-IN')}</Text>
-                </View>
-              </View>
-
-              <View style={styles.metaRow}>
-                <View style={styles.metaItem}>
-                  <MapPinIcon size={13} color="#71717A" />
-                  <Text style={styles.metaText} numberOfLines={1}>
-                    {job.location}
+                <View style={styles.contractValueBox}>
+                  <Text style={styles.valSubText}>Contract Value</Text>
+                  <Text style={styles.valPrimaryText}>
+                    ₹{(project.contractValue / 100000).toFixed(1)}L
                   </Text>
                 </View>
               </View>
 
-              <View style={styles.metaRow}>
-                <View style={styles.metaItem}>
-                  <ClockIcon size={13} color="#71717A" />
-                  <Text style={styles.metaText}>{job.scheduledTime}</Text>
+              {/* SITE LOCATION & WORKFORCE CREW ALLOCATION */}
+              <View style={styles.siteInfoRow}>
+                <View style={styles.siteItem}>
+                  <MapPinIcon size={13} color="#71717A" />
+                  <Text style={styles.siteText} numberOfLines={1}>
+                    {project.siteLocation}
+                  </Text>
                 </View>
               </View>
 
-              {/* ACTIVE PROGRESS & CHECKLIST */}
-              {job.status === 'active' && (
-                <View style={styles.activeDetails}>
-                  <View style={styles.progressBarBg}>
+              <View style={styles.crewAllocationRow}>
+                <View style={styles.crewBadge}>
+                  <CrewIcon size={13} color="#FFFFFF" />
+                  <Text style={styles.crewBadgeText}>
+                    {project.crewAssignedCount > 0
+                      ? `${project.crewAssignedCount} Field Workers`
+                      : '0 Workers Allocated'}
+                  </Text>
+                </View>
+                <Text style={styles.foremanBadgeText}>
+                  Foreman: {project.crewLead}
+                </Text>
+              </View>
+
+              {/* PROGRESS & STAGES */}
+              {project.status === 'active' && (
+                <View style={styles.executionDetails}>
+                  <View style={styles.progressTrack}>
                     <View
-                      style={[styles.progressBarFill, { width: `${job.progress}%` }]}
+                      style={[
+                        styles.progressFill,
+                        { width: `${project.progressPct}%` },
+                      ]}
                     />
                   </View>
-                  <Text style={styles.progressLabel}>{job.progress}% Milestones Completed</Text>
+                  <View style={styles.progressRow}>
+                    <Text style={styles.progressPercent}>
+                      {project.progressPct}% Complete
+                    </Text>
+                    <Text style={styles.progressBilled}>
+                      Progress Billed: ₹{(project.progressiveBilled / 100000).toFixed(1)}L
+                    </Text>
+                  </View>
 
-                  <View style={styles.checklist}>
-                    {job.milestones.map((m) => (
+                  {/* STAGE MILESTONES */}
+                  <View style={styles.milestonesBox}>
+                    {project.milestones.map((m) => (
                       <Pressable
                         key={m.id}
-                        style={styles.checkItem}
-                        onPress={() => onToggleMilestone(job.id, m.id)}
+                        style={styles.milestoneItem}
+                        onPress={() => onToggleMilestone(project.id, m.id)}
                       >
-                        <View style={[styles.checkbox, m.done && styles.checkboxDone]}>
-                          {m.done && <Text style={styles.checkmark}>✓</Text>}
+                        <View style={[styles.mCheck, m.completed && styles.mCheckDone]}>
+                          {m.completed && <Text style={styles.mCheckSymbol}>✓</Text>}
                         </View>
-                        <Text
-                          style={[styles.checkLabel, m.done && styles.checkLabelDone]}
-                        >
-                          {m.label}
-                        </Text>
+                        <View style={styles.mItemContent}>
+                          <Text
+                            style={[
+                              styles.mItemTitle,
+                              m.completed && styles.mItemTitleDone,
+                            ]}
+                          >
+                            {m.title}
+                          </Text>
+                          <Text style={styles.mItemStage}>
+                            Stage: {m.stage} • {m.certifiedByArchitect ? 'PMC Certified ✓' : 'Awaiting Sign-off'}
+                          </Text>
+                        </View>
                       </Pressable>
                     ))}
                   </View>
 
-                  <View style={styles.activeActions}>
+                  {/* CONTRACTOR CONTRACT ACTIONS */}
+                  <View style={styles.contractActionsRow}>
                     <Pressable
-                      style={styles.actionBtnOutline}
+                      style={styles.contractActionSecondary}
                       onPress={() =>
-                        Alert.alert('Calling Client', `Dialing ${job.clientPhone}`)
+                        Alert.alert(
+                          'Workforce Allocation',
+                          `Current deployment for ${project.projectTitle}:\n\n• Foreman: ${project.crewLead}\n• Tradesmen: 4 Electricians\n• Riggers & Laborers: 8 Workers\n\nReassign workers?`
+                        )
                       }
                     >
-                      <Text style={styles.actionBtnOutlineText}>📞 Call</Text>
+                      <Text style={styles.contractActionSecondaryText}>👷 Manage Crew</Text>
                     </Pressable>
 
                     <Pressable
-                      style={styles.actionBtnComplete}
-                      onPress={() => {
-                        Alert.alert(
-                          'Complete Project',
-                          `Mark "${job.title}" as completed and submit final invoice for ₹${job.payout.toLocaleString(
-                            'en-IN'
-                          )}?`,
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            {
-                              text: 'Submit Invoice',
-                              onPress: () => onCompleteJob(job.id),
-                            },
-                          ]
-                        );
-                      }}
+                      style={styles.contractActionPrimary}
+                      onPress={() => onIssueBill(project.id)}
                     >
-                      <Text style={styles.actionBtnCompleteText}>Finish Job ✓</Text>
+                      <Text style={styles.contractActionPrimaryText}>Issue RA Bill ➔</Text>
                     </Pressable>
                   </View>
                 </View>
               )}
 
-              {/* SCHEDULED ACTIONS */}
-              {job.status === 'scheduled' && (
-                <View style={styles.scheduledActions}>
-                  <Pressable
-                    style={styles.actionBtnOutline}
-                    onPress={() =>
-                      Alert.alert(
-                        'Site Directions',
-                        `Opening map navigation to: ${job.location}`
-                      )
-                    }
-                  >
-                    <Text style={styles.actionBtnOutlineText}>📍 Directions</Text>
-                  </Pressable>
+              {/* TENDER BID ACTIONS */}
+              {project.status === 'tender' && (
+                <View style={styles.tenderDetails}>
+                  <Text style={styles.tenderScopeText}>
+                    Scope: High-voltage panel installation, substation grounding, cable tray networks, and local utility compliance certification.
+                  </Text>
+                  <View style={styles.tenderActionsRow}>
+                    <Pressable
+                      style={styles.tenderBtnOutline}
+                      onPress={() =>
+                        Alert.alert(
+                          'Download CAD & Specs',
+                          `Architectural CAD & BOQ documents for ${project.projectTitle} downloaded to Contractor Drive.`
+                        )
+                      }
+                    >
+                      <Text style={styles.tenderBtnOutlineText}>📐 Review BOQ & Specs</Text>
+                    </Pressable>
 
-                  <Pressable
-                    style={styles.actionBtnSolid}
-                    onPress={() =>
-                      Alert.alert(
-                        'Arrival Confirmed',
-                        'Client notified that you are en route to the site.'
-                      )
-                    }
-                  >
-                    <Text style={styles.actionBtnSolidText}>I am En Route ➔</Text>
-                  </Pressable>
+                    <Pressable
+                      style={styles.tenderBtnSolid}
+                      onPress={() =>
+                        Alert.alert(
+                          'Submit Commercial Tender',
+                          `Submitting formal contractor bid for ₹${(project.contractValue / 100000).toFixed(1)} Lakhs to ${project.clientDeveloper}. Proceed?`
+                        )
+                      }
+                    >
+                      <Text style={styles.tenderBtnSolidText}>Submit Tender Bid ➔</Text>
+                    </Pressable>
+                  </View>
                 </View>
               )}
 
-              {/* COMPLETED DETAILS */}
-              {job.status === 'completed' && (
+              {/* COMPLETED SETTLEMENT */}
+              {project.status === 'completed' && (
                 <View style={styles.completedBanner}>
-                  <Text style={styles.completedText}>✓ Paid & Settled</Text>
-                  <Text style={styles.ratingText}>5.0 ★ Client Review</Text>
+                  <Text style={styles.completedBannerText}>
+                    ✓ Final Completion Handover Certified • 100% Retained Funds Released
+                  </Text>
                 </View>
               )}
             </View>
@@ -333,7 +350,7 @@ const styles = StyleSheet.create({
   segmentText: {
     fontFamily: fonts.bodyMedium,
     color: '#71717A',
-    fontSize: 12,
+    fontSize: 11,
   },
   segmentTextActive: {
     color: '#FFFFFF',
@@ -358,7 +375,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#FFFFFF',
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 12.5,
     paddingVertical: 10,
   },
   clearText: {
@@ -369,7 +386,7 @@ const styles = StyleSheet.create({
   scrollList: {
     paddingHorizontal: 20,
     paddingBottom: 28,
-    gap: 12,
+    gap: 14,
   },
   emptyState: {
     alignItems: 'center',
@@ -394,7 +411,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-  jobCard: {
+  projectCard: {
     backgroundColor: '#111317',
     borderRadius: 14,
     padding: 16,
@@ -406,6 +423,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 10,
+  },
+  headerLeft: {
+    flex: 1,
+    marginRight: 10,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -421,7 +442,7 @@ const styles = StyleSheet.create({
   badgeActive: {
     backgroundColor: 'rgba(16, 185, 129, 0.12)',
   },
-  badgeScheduled: {
+  badgeTender: {
     backgroundColor: 'rgba(245, 158, 11, 0.12)',
   },
   badgeCompleted: {
@@ -435,93 +456,122 @@ const styles = StyleSheet.create({
   badgeTextActive: {
     color: '#10B981',
   },
-  badgeTextScheduled: {
+  badgeTextTender: {
     color: '#F59E0B',
   },
   badgeTextCompleted: {
     color: '#A1A1AA',
   },
-  categoryText: {
-    fontFamily: fonts.body,
-    color: '#71717A',
+  clientTag: {
+    fontFamily: fonts.bodyMedium,
+    color: '#A1A1AA',
     fontSize: 11,
   },
-  cardTitle: {
+  projectTitleText: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 15,
-    marginBottom: 3,
+    fontSize: 15.5,
+    lineHeight: 20,
   },
-  clientText: {
-    fontFamily: fonts.body,
-    color: '#A1A1AA',
-    fontSize: 12,
-  },
-  payoutBadge: {
+  contractValueBox: {
     alignItems: 'flex-end',
   },
-  payoutLabel: {
+  valSubText: {
     fontFamily: fonts.body,
     color: '#71717A',
     fontSize: 10,
   },
-  payoutVal: {
+  valPrimaryText: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
     fontSize: 16,
   },
-  metaRow: {
+  siteInfoRow: {
     flexDirection: 'row',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  metaItem: {
+  siteItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  metaText: {
+  siteText: {
     fontFamily: fonts.body,
     color: '#A1A1AA',
     fontSize: 11.5,
   },
-  activeDetails: {
-    marginTop: 10,
+  crewAllocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#161A22',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 8,
+    marginBottom: 12,
+  },
+  crewBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  crewBadgeText: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 11.5,
+  },
+  foremanBadgeText: {
+    fontFamily: fonts.body,
+    color: '#A1A1AA',
+    fontSize: 11.5,
+  },
+  executionDetails: {
+    marginTop: 6,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#1E222A',
+    borderTopColor: '#1E232E',
   },
-  progressBarBg: {
+  progressTrack: {
     height: 5,
-    backgroundColor: '#1C2028',
+    backgroundColor: '#1E232E',
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 4,
   },
-  progressBarFill: {
+  progressFill: {
     height: '100%',
     backgroundColor: '#10B981',
     borderRadius: 3,
   },
-  progressLabel: {
+  progressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  progressPercent: {
+    fontFamily: fonts.displayBold,
+    color: '#10B981',
+    fontSize: 11,
+  },
+  progressBilled: {
     fontFamily: fonts.body,
     color: '#71717A',
     fontSize: 10.5,
-    textAlign: 'right',
-    marginBottom: 8,
   },
-  checklist: {
+  milestonesBox: {
     backgroundColor: '#0C0D11',
     borderRadius: 8,
     padding: 10,
-    gap: 7,
+    gap: 8,
     marginBottom: 12,
   },
-  checkItem: {
+  milestoneItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 8,
   },
-  checkbox: {
+  mCheck: {
     width: 16,
     height: 16,
     borderRadius: 4,
@@ -529,96 +579,121 @@ const styles = StyleSheet.create({
     borderColor: '#3F4450',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 1,
   },
-  checkboxDone: {
+  mCheckDone: {
     backgroundColor: '#10B981',
     borderColor: '#10B981',
   },
-  checkmark: {
+  mCheckSymbol: {
     color: '#000000',
     fontSize: 10,
     fontWeight: 'bold',
   },
-  checkLabel: {
-    fontFamily: fonts.body,
+  mItemContent: {
+    flex: 1,
+  },
+  mItemTitle: {
+    fontFamily: fonts.displayBold,
     color: '#D4D4D8',
     fontSize: 12,
   },
-  checkLabelDone: {
+  mItemTitleDone: {
     color: '#71717A',
-    textDecorationLine: 'line-through',
   },
-  activeActions: {
+  mItemStage: {
+    fontFamily: fonts.body,
+    color: '#71717A',
+    fontSize: 10.5,
+  },
+  contractActionsRow: {
     flexDirection: 'row',
     gap: 8,
   },
-  actionBtnOutline: {
+  contractActionSecondary: {
     flex: 1,
     paddingVertical: 9,
     borderRadius: 8,
-    backgroundColor: '#191C24',
+    backgroundColor: '#181C24',
     borderWidth: 1,
     borderColor: '#262C38',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionBtnOutlineText: {
+  contractActionSecondaryText: {
     fontFamily: fonts.bodyMedium,
     color: '#FFFFFF',
     fontSize: 12,
   },
-  actionBtnComplete: {
-    flex: 1.4,
+  contractActionPrimary: {
+    flex: 1.3,
     paddingVertical: 9,
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionBtnCompleteText: {
+  contractActionPrimaryText: {
     fontFamily: fonts.displayBold,
     color: '#000000',
     fontSize: 12,
   },
-  scheduledActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
+  tenderDetails: {
+    marginTop: 8,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#1E222A',
+    borderTopColor: '#1E232E',
   },
-  actionBtnSolid: {
-    flex: 1.4,
+  tenderScopeText: {
+    fontFamily: fonts.body,
+    color: '#A1A1AA',
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 10,
+  },
+  tenderActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tenderBtnOutline: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 8,
+    backgroundColor: '#181C24',
+    borderWidth: 1,
+    borderColor: '#262C38',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tenderBtnOutlineText: {
+    fontFamily: fonts.bodyMedium,
+    color: '#D4D4D8',
+    fontSize: 12,
+  },
+  tenderBtnSolid: {
+    flex: 1.2,
     paddingVertical: 9,
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionBtnSolidText: {
+  tenderBtnSolidText: {
     fontFamily: fonts.displayBold,
     color: '#000000',
     fontSize: 12,
   },
   completedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#0C0D11',
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
     marginTop: 10,
   },
-  completedText: {
+  completedBannerText: {
     fontFamily: fonts.displayBold,
     color: '#10B981',
     fontSize: 11.5,
-  },
-  ratingText: {
-    fontFamily: fonts.bodyMedium,
-    color: '#F59E0B',
-    fontSize: 11.5,
+    textAlign: 'center',
   },
 });

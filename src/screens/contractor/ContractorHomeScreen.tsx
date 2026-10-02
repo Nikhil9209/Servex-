@@ -9,7 +9,7 @@ import {
   EarningsTabIcon,
   ProfileTabIcon,
 } from '../../components/ContractorIcons';
-import { ContractorDashboardTab, ContractorJob } from './tabs/ContractorDashboardTab';
+import { ContractorDashboardTab, ContractorProject } from './tabs/ContractorDashboardTab';
 import { ContractorJobsTab } from './tabs/ContractorJobsTab';
 import { ContractorEarningsTab } from './tabs/ContractorEarningsTab';
 import { ContractorProfileTab } from './tabs/ContractorProfileTab';
@@ -22,101 +22,97 @@ export interface ContractorHomeScreenProps {
 
 type TabType = 'dashboard' | 'jobs' | 'earnings' | 'profile';
 
-const INITIAL_JOBS: ContractorJob[] = [
+const INITIAL_PROJECTS: ContractorProject[] = [
   {
-    id: 'job-1',
-    title: 'Commercial 3-Phase Distribution Panel Install',
-    clientName: 'Rohan Singhania',
-    clientPhone: '+91 98201 12345',
-    category: 'Electrical & Structural',
-    location: 'Bandra Kurla Complex, Tower B, Level 4',
-    distance: '3.2 km away',
-    payout: 6800,
-    scheduledTime: 'Today • In Progress',
+    id: 'proj-bkc',
+    clientDeveloper: 'Sunil Rao Commercial Towers',
+    projectTitle: 'BKC Commercial Tower 3-Phase HT Busbar & Substation',
+    contractValue: 2400000,
+    progressiveBilled: 1800000,
+    siteLocation: 'Bandra Kurla Complex, Tower B, Level 4',
+    crewLead: 'Suresh Nair (Foreman)',
+    crewAssignedCount: 12,
     status: 'active',
-    progress: 75,
+    progressPct: 75,
+    safetyScore: 100,
     milestones: [
-      { id: 'm1', label: 'Site Hazard & Arc Flash Assessment', done: true },
-      { id: 'm2', label: 'Main 3-Phase Busbar Isolation', done: true },
-      { id: 'm3', label: '415V Panel Termination & Gland Fitting', done: true },
-      { id: 'm4', label: 'Insulation Resistance & Megger Testing', done: false },
+      { id: 'm1', title: 'Site Hazard & Arc Flash Assessment', stage: 'Engineering', completed: true, certifiedByArchitect: true },
+      { id: 'm2', title: 'Main 3-Phase Busbar Isolation & Gland Fitting', stage: 'Civil & HT', completed: true, certifiedByArchitect: true },
+      { id: 'm3', title: '415V HT Panel Termination & Breakers', stage: 'Electrical', completed: true, certifiedByArchitect: true },
+      { id: 'm4', title: 'Insulation Resistance & Megger Testing', stage: 'Commissioning', completed: false, certifiedByArchitect: false },
     ],
   },
   {
-    id: 'job-2',
-    title: 'High-Rise Central HVAC Motor Rewind',
-    clientName: 'Priya Varma (Lodha Bellissimo)',
-    clientPhone: '+91 98202 23456',
-    category: 'HVAC & Climate',
-    location: 'Lower Parel, Mumbai',
-    distance: '5.8 km',
-    payout: 12500,
-    scheduledTime: 'Tomorrow, 09:30 AM',
-    status: 'scheduled',
-    progress: 0,
+    id: 'proj-lodha',
+    clientDeveloper: 'Lodha Developers Ltd.',
+    projectTitle: 'Lodha Bellissimo Central HVAC Telemetry & Chillers',
+    contractValue: 1850000,
+    progressiveBilled: 1250000,
+    siteLocation: 'Lower Parel Commercial Zone, Mumbai',
+    crewLead: 'Vikram Seth (Foreman)',
+    crewAssignedCount: 8,
+    status: 'active',
+    progressPct: 67,
+    safetyScore: 100,
     milestones: [
-      { id: 'm2-1', label: 'Motor Disconnect & Stator Pull', done: false },
-      { id: 'm2-2', label: 'Class H Copper Coil Winding', done: false },
-      { id: 'm2-3', label: 'Varnish Dip & Thermal Bake', done: false },
-      { id: 'm2-4', label: 'Dynamometer Load Test', done: false },
+      { id: 'l1', title: 'Chiller Plant Stator Pull & Rigging', stage: 'Mechanical', completed: true, certifiedByArchitect: true },
+      { id: 'l2', title: 'Copper Coil Rewind & Varnish Dip', stage: 'Electrical', completed: true, certifiedByArchitect: true },
+      { id: 'l3', title: 'BMS Telemetry & Variable Air Damper Sensor Calibration', stage: 'Automation', completed: false, certifiedByArchitect: false },
     ],
   },
   {
-    id: 'job-3',
-    title: 'Structural Conduit & Heavy Cable Tray Run',
-    clientName: 'Karan Johar Logistics Hub',
-    clientPhone: '+91 98203 34567',
-    category: 'Industrial Infrastructure',
-    location: 'Andheri East Industrial Zone',
-    distance: '8.1 km',
-    payout: 9200,
-    scheduledTime: 'Wed, 11:00 AM',
-    status: 'scheduled',
-    progress: 0,
+    id: 'proj-andheri',
+    clientDeveloper: 'Karan Johar Logistics Hub',
+    projectTitle: 'Industrial Armored Conduit & Heavy Cable Tray Network',
+    contractValue: 920000,
+    progressiveBilled: 790000,
+    siteLocation: 'Andheri East Industrial Zone, Sector 4',
+    crewLead: 'Pravin Jadhav (Foreman)',
+    crewAssignedCount: 8,
+    status: 'active',
+    progressPct: 85,
+    safetyScore: 100,
     milestones: [
-      { id: 'm3-1', label: 'Ceiling Anchor Hilti Pull Test', done: false },
-      { id: 'm3-2', label: 'Perforated Cable Tray Alignment', done: false },
-      { id: 'm3-3', label: 'Armored Cable Pull & Grounding', done: false },
+      { id: 'a1', title: 'Hilti Pull Testing on Overhead Trusses', stage: 'Structural', completed: true, certifiedByArchitect: true },
+      { id: 'a2', title: 'Perforated Heavy Tray Alignment', stage: 'Installation', completed: true, certifiedByArchitect: true },
+      { id: 'a3', title: 'Earthing Continuity & Final PMC Handover', stage: 'Testing', completed: false, certifiedByArchitect: false },
     ],
   },
   {
-    id: 'job-4',
-    title: 'Main Incomer Surge Protector Retrofit',
-    clientName: 'Dr. Alok Nath',
-    clientPhone: '+91 98204 45678',
-    category: 'Power Protection',
-    location: 'Colaba Causeway, Mumbai',
-    distance: '12 km',
-    payout: 4500,
-    scheduledTime: 'Completed Yesterday',
+    id: 'proj-godrej-tender',
+    clientDeveloper: 'Godrej Properties Ltd.',
+    projectTitle: 'Godrej Horizon Phase-2: HT Substation & Distribution Tender',
+    contractValue: 1850000,
+    progressiveBilled: 0,
+    siteLocation: 'Vikhroli West Commercial Site 4, Mumbai',
+    crewLead: 'Unassigned (Bidding Stage)',
+    crewAssignedCount: 0,
+    status: 'tender',
+    progressPct: 0,
+    safetyScore: 100,
+    milestones: [
+      { id: 'g1', title: 'BOQ Estimation & Substation Drawings', stage: 'Tender Prep', completed: false, certifiedByArchitect: false },
+      { id: 'g2', title: 'PMC Tender Bid Submission', stage: 'Bidding', completed: false, certifiedByArchitect: false },
+    ],
+  },
+  {
+    id: 'proj-colaba-done',
+    clientDeveloper: 'Dr. Alok Nath Healthcare Campus',
+    projectTitle: 'Main Incomer Surge Protector & Harmonic Filter Retrofit',
+    contractValue: 450000,
+    progressiveBilled: 450000,
+    siteLocation: 'Colaba Causeway, Mumbai',
+    crewLead: 'Suresh Nair',
+    crewAssignedCount: 4,
     status: 'completed',
-    progress: 100,
+    progressPct: 100,
+    safetyScore: 100,
     milestones: [
-      { id: 'm4-1', label: 'SPD Enclosure Mount', done: true },
-      { id: 'm4-2', label: 'Neutral-Earth Reference Bonding', done: true },
-      { id: 'm4-3', label: 'Live Transient Test', done: true },
+      { id: 'c1', title: 'SPD Enclosure Mount', stage: 'Installation', completed: true, certifiedByArchitect: true },
+      { id: 'c2', title: 'Transient Surge Calibration & Handover', stage: 'Commissioning', completed: true, certifiedByArchitect: true },
     ],
   },
 ];
-
-const INITIAL_INCOMING_LEAD: ContractorJob = {
-  id: 'lead-godrej',
-  title: 'Emergency Transformer Phase Imbalance',
-  clientName: 'Godrej Properties Site Office',
-  clientPhone: '+91 98205 56789',
-  category: 'Emergency Dispatch',
-  location: 'Vikhroli West, Industrial Site 4',
-  distance: '2.1 km away',
-  payout: 8500,
-  scheduledTime: 'Immediate Dispatch Needed',
-  status: 'lead',
-  progress: 0,
-  milestones: [
-    { id: 'l1', label: 'Emergency Site Entry & Lockout', done: false },
-    { id: 'l2', label: 'Thermal Imaging Inspection', done: false },
-    { id: 'l3', label: 'Phase Tap Changer Calibration', done: false },
-  ],
-};
 
 export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
   user,
@@ -124,68 +120,51 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
   onReplaySplash,
 }) => {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
-  const [isOnline, setIsOnline] = useState(true);
-  const [jobs, setJobs] = useState<ContractorJob[]>(INITIAL_JOBS);
-  const [incomingLead, setIncomingLead] = useState<ContractorJob | null>(INITIAL_INCOMING_LEAD);
+  const [isOperating, setIsOperating] = useState(true);
+  const [projects, setProjects] = useState<ContractorProject[]>(INITIAL_PROJECTS);
 
-  const activeJobs = jobs.filter((j) => j.status === 'active');
+  const activeProjects = projects.filter((p) => p.status === 'active');
 
-  const handleToggleOnline = () => {
-    setIsOnline((prev) => !prev);
+  const handleToggleOperating = () => {
+    setIsOperating((prev) => !prev);
   };
 
-  const handleAcceptLead = (jobId: string) => {
-    if (!incomingLead || incomingLead.id !== jobId) return;
-
-    const acceptedJob: ContractorJob = {
-      ...incomingLead,
-      status: 'active',
-      scheduledTime: 'Today • In Progress',
-      progress: 0,
-    };
-
-    setJobs((prev) => [acceptedJob, ...prev]);
-    setIncomingLead(null);
+  const handleTenderTapped = (_tenderId: string) => {
     setCurrentTab('jobs');
   };
 
-  const handleDeclineLead = (_jobId: string) => {
-    setIncomingLead(null);
-  };
+  const handleToggleMilestone = (projectId: string, milestoneId: string) => {
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== projectId) return proj;
 
-  const handleToggleMilestone = (jobId: string, milestoneId: string) => {
-    setJobs((prev) =>
-      prev.map((job) => {
-        if (job.id !== jobId) return job;
-
-        const updatedMilestones = job.milestones.map((m) =>
-          m.id === milestoneId ? { ...m, done: !m.done } : m
+        const updatedMilestones = proj.milestones.map((m) =>
+          m.id === milestoneId ? { ...m, completed: !m.completed } : m
         );
 
-        const doneCount = updatedMilestones.filter((m) => m.done).length;
+        const doneCount = updatedMilestones.filter((m) => m.completed).length;
         const newProgress = Math.round((doneCount / updatedMilestones.length) * 100);
 
         return {
-          ...job,
+          ...proj,
           milestones: updatedMilestones,
-          progress: newProgress,
+          progressPct: newProgress,
         };
       })
     );
   };
 
-  const handleCompleteJob = (jobId: string) => {
-    setJobs((prev) =>
-      prev.map((job) => {
-        if (job.id !== jobId) return job;
+  const handleIssueBill = (projectId: string) => {
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== projectId) return proj;
         return {
-          ...job,
-          status: 'completed',
-          progress: 100,
-          milestones: job.milestones.map((m) => ({ ...m, done: true })),
+          ...proj,
+          progressiveBilled: Math.min(proj.contractValue, proj.progressiveBilled + 300000),
         };
       })
     );
+    setCurrentTab('earnings');
   };
 
   return (
@@ -197,17 +176,17 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
         <View style={styles.brandTitleRow}>
           <Text style={styles.brandServex}>SERVEX</Text>
           <View style={styles.suiteTag}>
-            <Text style={styles.suiteTagText}>CONTRACTOR SUITE</Text>
+            <Text style={styles.suiteTagText}>PRIME CONTRACTOR SUITE</Text>
           </View>
         </View>
         <Text style={styles.activeTabTitle}>
           {currentTab === 'dashboard'
             ? 'Command Center'
             : currentTab === 'jobs'
-            ? 'Job Sites & Tasks'
+            ? 'Commercial Contracts'
             : currentTab === 'earnings'
-            ? 'Revenue & Payouts'
-            : 'Contractor Profile'}
+            ? 'RA Billing & Financials'
+            : 'Company & Workforce'}
         </Text>
       </View>
 
@@ -216,12 +195,10 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
         {currentTab === 'dashboard' && (
           <ContractorDashboardTab
             user={user}
-            isOnline={isOnline}
-            onToggleOnline={handleToggleOnline}
-            incomingLead={incomingLead}
-            onAcceptLead={handleAcceptLead}
-            onDeclineLead={handleDeclineLead}
-            activeJobs={activeJobs}
+            isOperating={isOperating}
+            onToggleOperating={handleToggleOperating}
+            tenderTapped={handleTenderTapped}
+            activeProjects={activeProjects}
             onToggleMilestone={handleToggleMilestone}
             onSelectTab={setCurrentTab}
           />
@@ -229,9 +206,9 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
 
         {currentTab === 'jobs' && (
           <ContractorJobsTab
-            jobs={jobs}
+            projects={projects}
             onToggleMilestone={handleToggleMilestone}
-            onCompleteJob={handleCompleteJob}
+            onIssueBill={handleIssueBill}
           />
         )}
 
@@ -270,12 +247,12 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
           </Text>
         </Pressable>
 
-        {/* Jobs Tab */}
+        {/* Commercial Contracts Tab */}
         <Pressable
           style={styles.tabItem}
           onPress={() => setCurrentTab('jobs')}
           accessibilityRole="button"
-          accessibilityLabel="Jobs"
+          accessibilityLabel="Contracts"
         >
           <View>
             <JobsTabIcon
@@ -283,9 +260,9 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
               color={currentTab === 'jobs' ? '#FFFFFF' : '#71717A'}
               focused={currentTab === 'jobs'}
             />
-            {activeJobs.length > 0 && (
+            {activeProjects.length > 0 && (
               <View style={styles.tabBadge}>
-                <Text style={styles.tabBadgeText}>{activeJobs.length}</Text>
+                <Text style={styles.tabBadgeText}>{activeProjects.length}</Text>
               </View>
             )}
           </View>
@@ -295,16 +272,16 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
               currentTab === 'jobs' && styles.tabLabelActive,
             ]}
           >
-            Jobs
+            Contracts
           </Text>
         </Pressable>
 
-        {/* Earnings Tab */}
+        {/* Financials Tab */}
         <Pressable
           style={styles.tabItem}
           onPress={() => setCurrentTab('earnings')}
           accessibilityRole="button"
-          accessibilityLabel="Earnings"
+          accessibilityLabel="Financials"
         >
           <EarningsTabIcon
             size={20}
@@ -317,16 +294,16 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
               currentTab === 'earnings' && styles.tabLabelActive,
             ]}
           >
-            Earnings
+            Financials
           </Text>
         </Pressable>
 
-        {/* Profile Tab */}
+        {/* Company & Workforce Tab */}
         <Pressable
           style={styles.tabItem}
           onPress={() => setCurrentTab('profile')}
           accessibilityRole="button"
-          accessibilityLabel="Profile"
+          accessibilityLabel="Company"
         >
           <ProfileTabIcon
             size={20}
@@ -339,7 +316,7 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
               currentTab === 'profile' && styles.tabLabelActive,
             ]}
           >
-            Profile
+            Company
           </Text>
         </Pressable>
       </View>
@@ -383,8 +360,8 @@ const styles = StyleSheet.create({
   },
   suiteTagText: {
     fontFamily: fonts.displayBold,
-    color: '#A1A1AA',
-    fontSize: 9,
+    color: '#FFFFFF',
+    fontSize: 8.5,
     letterSpacing: 0.8,
   },
   activeTabTitle: {

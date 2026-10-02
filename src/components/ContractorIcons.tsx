@@ -182,3 +182,45 @@ export const ChevronRightIcon: React.FC<{ size?: number; color?: string }> = ({
     />
   </Svg>
 );
+
+export const CrewIcon: React.FC<{ size?: number; color?: string }> = ({
+  size = 18,
+  color = '#A1A1AA',
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M17 21v-2a4 4 0 0 0-3-3.87"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M9 21v-2a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v2"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Circle cx="15" cy="7" r="4" stroke={color} strokeWidth={1.8} />
+    <Path
+      d="M7 21v-2a4 4 0 0 1 3-3.87"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Circle cx="8" cy="8" r="3" stroke={color} strokeWidth={1.8} />
+  </Svg>
+);
+
+export const BuildingIcon: React.FC<{ size?: number; color?: string }> = ({
+  size = 18,
+  color = '#A1A1AA',
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Rect x="4" y="2" width="16" height="20" rx="2" stroke={color} strokeWidth={1.8} />
+    <Path d="M9 22v-4h6v4" stroke={color} strokeWidth={1.8} />
+    <Path d="M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01" stroke={color} strokeWidth={2.5} strokeLinecap="round" />
+  </Svg>
+);

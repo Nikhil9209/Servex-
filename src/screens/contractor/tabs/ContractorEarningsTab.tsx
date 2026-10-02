@@ -10,82 +10,58 @@ import {
 import { fonts } from '../../../theme/tokens';
 
 export const ContractorEarningsTab: React.FC = () => {
-  const [balance, setBalance] = useState(42850);
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [totalSettled] = useState(3840000);
+  const [retentionHeld] = useState(291000);
 
-  const handleWithdraw = () => {
-    if (balance <= 0) {
-      Alert.alert('Insufficient Balance', 'You have no pending balance to withdraw.');
-      return;
-    }
-
+  const handleGenerateInvoice = () => {
     Alert.alert(
-      'Instant Bank Payout',
-      `Transfer ₹${balance.toLocaleString('en-IN')} to linked HDFC Bank A/C ending in ••4092 via IMPS?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm Transfer',
-          onPress: () => {
-            setIsWithdrawing(true);
-            setTimeout(() => {
-              setIsWithdrawing(false);
-              setBalance(0);
-              Alert.alert(
-                'Payout Dispatched ✓',
-                `₹${balance.toLocaleString(
-                  'en-IN'
-                )} has been transferred to your registered bank account. Reference ID: SRX${Date.now().toString().slice(-8)}`
-              );
-            }, 600);
-          },
-        },
-      ]
+      'Contractor Progressive RA Bill',
+      'Generate GST-compliant Running Account (RA) tax invoice for client approval?\n\nIncludes HSN/SAC codes, milestone certification, and 5% contractor retention deduction.'
     );
   };
 
-  const weeklyData = [
-    { day: 'Mon', amount: 3200, heightPct: 45 },
-    { day: 'Tue', amount: 5400, heightPct: 75 },
-    { day: 'Wed', amount: 2800, heightPct: 38 },
-    { day: 'Thu', amount: 6800, heightPct: 92 },
-    { day: 'Fri', amount: 4200, heightPct: 58 },
-    { day: 'Sat', amount: 8450, heightPct: 100, isToday: true },
-    { day: 'Sun', amount: 0, heightPct: 5 },
+  const projectRevenues = [
+    { name: 'BKC Commercial Tower', billed: '₹18.0L', contract: '₹24.0L', pct: 75 },
+    { name: 'Lodha Bellissimo HVAC', billed: '₹12.5L', contract: '₹18.5L', pct: 67 },
+    { name: 'Andheri Industrial Hub', billed: '₹7.9L', contract: '₹9.2L', pct: 85 },
   ];
 
-  const recentTransactions = [
+  const raInvoices = [
     {
-      id: 'tx-1',
-      title: 'Residential Circuit Overhaul',
-      client: 'Sunil Rao',
-      date: 'Today, 2:15 PM',
-      amount: 4500,
-      method: 'Servex Direct Pay',
+      id: 'RA-04',
+      client: 'Lodha Developers Ltd.',
+      project: 'Commercial HVAC Telemetry Phase-2',
+      date: '01 Oct 2026',
+      amount: 680000,
+      status: 'SETTLED',
+      method: 'RTGS Corporate',
     },
     {
-      id: 'tx-2',
-      title: 'Commercial HVAC Telemetry',
-      client: 'Omega Tech Park',
-      date: 'Yesterday',
-      amount: 6800,
-      method: 'IMPS Bank Transfer',
+      id: 'RA-03',
+      client: 'Sunil Rao Commercial Towers',
+      project: 'Main Incomer 3-Phase Busbar',
+      date: '24 Sep 2026',
+      amount: 850000,
+      status: 'SETTLED',
+      method: 'NEFT Corporate',
     },
     {
-      id: 'tx-3',
-      title: 'Distribution Box Rewiring',
-      client: 'Priya Sharma',
-      date: '28 Sep 2026',
-      amount: 3200,
-      method: 'UPI Instant',
+      id: 'RA-02',
+      client: 'Karan Johar Logistics Hub',
+      project: 'Industrial Cable Tray & Conduit',
+      date: '15 Sep 2026',
+      amount: 420000,
+      status: 'SETTLED',
+      method: 'Direct Bank Transfer',
     },
     {
-      id: 'tx-4',
-      title: 'Emergency Generator Interlock',
-      client: 'Apex Hospital',
-      date: '26 Sep 2026',
-      amount: 8200,
-      method: 'Servex Corporate',
+      id: 'RA-01',
+      client: 'Godrej Properties Ltd.',
+      project: 'Transformer Substation Initial Grounding',
+      date: '02 Sep 2026',
+      amount: 950000,
+      status: 'SETTLED',
+      method: 'Corporate Wire',
     },
   ];
 
@@ -95,109 +71,111 @@ export const ContractorEarningsTab: React.FC = () => {
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* TOTAL BALANCE CARD */}
-      <View style={styles.balanceCard}>
-        <View style={styles.balanceTopRow}>
-          <Text style={styles.balanceLabel}>AVAILABLE FOR PAYOUT</Text>
-          <View style={styles.autoPayoutPill}>
-            <View style={styles.greenPulse} />
-            <Text style={styles.autoPayoutText}>Auto Daily 8 PM</Text>
+      {/* FINANCIAL PORTFOLIO OVERVIEW CARD */}
+      <View style={styles.portfolioCard}>
+        <View style={styles.portfolioHeader}>
+          <Text style={styles.portfolioLabel}>CONTRACTOR BILLING & REVENUE</Text>
+          <View style={styles.statusPill}>
+            <View style={styles.greenDot} />
+            <Text style={styles.statusPillText}>FY 2026-27 Active</Text>
           </View>
         </View>
 
-        <Text style={styles.balanceAmount}>₹{balance.toLocaleString('en-IN')}</Text>
+        <Text style={styles.portfolioAmount}>
+          ₹{(totalSettled / 100000).toFixed(2)} Lakhs
+        </Text>
+        <Text style={styles.portfolioSub}>Progressive RA Billings Realized to Date</Text>
 
-        <View style={styles.balanceActions}>
-          <Pressable
-            style={[styles.withdrawBtn, balance === 0 && styles.withdrawBtnDisabled]}
-            onPress={handleWithdraw}
-            disabled={isWithdrawing || balance === 0}
-          >
-            <Text style={styles.withdrawBtnText}>
-              {balance === 0 ? 'All Funds Settled' : 'Instant Withdraw to Bank ➔'}
-            </Text>
+        <View style={styles.portfolioActionRow}>
+          <Pressable style={styles.generateBillBtn} onPress={handleGenerateInvoice}>
+            <Text style={styles.generateBillBtnText}>+ Generate GST RA Bill ➔</Text>
           </Pressable>
         </View>
 
-        <View style={styles.accountFooter}>
-          <Text style={styles.accountText}>Linked: HDFC Bank ••4092 (Verified ✓)</Text>
+        <View style={styles.retentionRow}>
+          <Text style={styles.retentionLabel}>Developer Retention Held (5%):</Text>
+          <Text style={styles.retentionValue}>
+            ₹{(retentionHeld / 100000).toFixed(2)} Lakhs (Release upon final PMC handover)
+          </Text>
         </View>
       </View>
 
-      {/* SUMMARY STATS GRID */}
-      <View style={styles.statsGrid}>
-        <View style={styles.statBox}>
-          <Text style={styles.statLabel}>This Week</Text>
-          <Text style={styles.statValue}>₹28,400</Text>
-          <Text style={styles.statSub}>+24% vs last week</Text>
+      {/* REVENUE VS OUTFLOW KPI CARDS */}
+      <View style={styles.kpiGrid}>
+        <View style={styles.kpiCard}>
+          <Text style={styles.kpiLabel}>Crew Wages Paid</Text>
+          <Text style={styles.kpiValue}>₹14.2L</Text>
+          <Text style={styles.kpiSub}>34 Workers Roster</Text>
         </View>
 
-        <View style={styles.statBox}>
-          <Text style={styles.statLabel}>This Month</Text>
-          <Text style={styles.statValue}>₹1,14,200</Text>
-          <Text style={styles.statSub}>Target ₹1,50,000</Text>
+        <View style={styles.kpiCard}>
+          <Text style={styles.kpiLabel}>Material Procurement</Text>
+          <Text style={styles.kpiValue}>₹11.8L</Text>
+          <Text style={styles.kpiSub}>Steel, Switchgear, Cables</Text>
+        </View>
+
+        <View style={styles.kpiCard}>
+          <Text style={styles.kpiLabel}>Net Margin</Text>
+          <Text style={styles.kpiValue}>28.5%</Text>
+          <Text style={styles.kpiSub}>After Labor & Materials</Text>
         </View>
       </View>
 
-      {/* 7-DAY REVENUE BAR CHART */}
-      <View style={styles.chartCard}>
-        <View style={styles.chartHeader}>
-          <Text style={styles.chartTitle}>7-Day Revenue</Text>
-          <Text style={styles.chartTotal}>₹30,850 total</Text>
-        </View>
-
-        <View style={styles.barChartWrapper}>
-          {weeklyData.map((item) => (
-            <View key={item.day} style={styles.barCol}>
-              <Text style={styles.barAmount}>
-                {item.amount > 0 ? `₹${(item.amount / 1000).toFixed(1)}k` : '—'}
-              </Text>
-              <View style={styles.barTrack}>
-                <View
-                  style={[
-                    styles.barFill,
-                    { height: `${item.heightPct}%` },
-                    item.isToday && styles.barFillToday,
-                  ]}
-                />
+      {/* CONTRACT-WISE REVENUE BREAKDOWN */}
+      <View style={styles.cardSection}>
+        <Text style={styles.sectionHeaderTitle}>Contract-Wise Progressive Billing</Text>
+        <View style={styles.contractList}>
+          {projectRevenues.map((item) => (
+            <View key={item.name} style={styles.contractProgressItem}>
+              <View style={styles.contractProgressTop}>
+                <Text style={styles.contractItemName}>{item.name}</Text>
+                <Text style={styles.contractItemAmounts}>
+                  {item.billed} / {item.contract}
+                </Text>
               </View>
-              <Text style={[styles.barDay, item.isToday && styles.barDayToday]}>
-                {item.day}
-              </Text>
+              <View style={styles.trackBg}>
+                <View style={[styles.trackFill, { width: `${item.pct}%` }]} />
+              </View>
+              <Text style={styles.contractItemPct}>{item.pct}% Progressive Billed</Text>
             </View>
           ))}
         </View>
       </View>
 
-      {/* RECENT SETTLED TRANSACTIONS */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Settlement Invoices</Text>
-        <Text style={styles.sectionSub}>Past 30 Days</Text>
-      </View>
+      {/* OFFICIAL CLIENT RUNNING ACCOUNT (RA) BILLS */}
+      <View style={styles.cardSection}>
+        <View style={styles.raHeaderRow}>
+          <Text style={styles.sectionHeaderTitle}>Running Account (RA) Invoices</Text>
+          <Text style={styles.raCountText}>All Settled ✓</Text>
+        </View>
 
-      <View style={styles.txList}>
-        {recentTransactions.map((tx) => (
-          <View key={tx.id} style={styles.txCard}>
-            <View style={styles.txLeft}>
-              <View style={styles.txIconPill}>
-                <Text style={styles.txIcon}>₹</Text>
+        <View style={styles.invoicesList}>
+          {raInvoices.map((inv) => (
+            <View key={inv.id} style={styles.invoiceItem}>
+              <View style={styles.invoiceLeft}>
+                <View style={styles.raIdBadge}>
+                  <Text style={styles.raIdText}>{inv.id}</Text>
+                </View>
+                <View style={styles.invInfo}>
+                  <Text style={styles.invClient}>{inv.client}</Text>
+                  <Text style={styles.invProject}>{inv.project}</Text>
+                  <Text style={styles.invDate}>
+                    {inv.date} • {inv.method}
+                  </Text>
+                </View>
               </View>
-              <View>
-                <Text style={styles.txTitle}>{tx.title}</Text>
-                <Text style={styles.txMeta}>
-                  {tx.client} • {tx.date}
+
+              <View style={styles.invoiceRight}>
+                <Text style={styles.invAmount}>
+                  ₹{(inv.amount / 100000).toFixed(2)}L
                 </Text>
+                <View style={styles.settledBadge}>
+                  <Text style={styles.settledBadgeText}>PAID</Text>
+                </View>
               </View>
             </View>
-
-            <View style={styles.txRight}>
-              <Text style={styles.txAmount}>+₹{tx.amount.toLocaleString('en-IN')}</Text>
-              <View style={styles.paidPill}>
-                <Text style={styles.paidText}>PAID</Text>
-              </View>
-            </View>
-          </View>
-        ))}
+          ))}
+        </View>
       </View>
     </ScrollView>
   );
@@ -213,7 +191,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 28,
   },
-  balanceCard: {
+  portfolioCard: {
     backgroundColor: '#111317',
     borderRadius: 16,
     padding: 20,
@@ -221,19 +199,19 @@ const styles = StyleSheet.create({
     borderColor: '#20242D',
     marginBottom: 16,
   },
-  balanceTopRow: {
+  portfolioHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  balanceLabel: {
+  portfolioLabel: {
     fontFamily: fonts.bodyMedium,
     color: '#71717A',
     fontSize: 10.5,
     letterSpacing: 1,
   },
-  autoPayoutPill: {
+  statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -242,88 +220,93 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     gap: 6,
   },
-  greenPulse: {
+  greenDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: '#10B981',
   },
-  autoPayoutText: {
+  statusPillText: {
     fontFamily: fonts.body,
     color: '#10B981',
     fontSize: 10,
   },
-  balanceAmount: {
+  portfolioAmount: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
     fontSize: 32,
     letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  portfolioSub: {
+    fontFamily: fonts.body,
+    color: '#A1A1AA',
+    fontSize: 12,
     marginBottom: 16,
   },
-  balanceActions: {
-    marginBottom: 12,
+  portfolioActionRow: {
+    marginBottom: 14,
   },
-  withdrawBtn: {
+  generateBillBtn: {
     backgroundColor: '#FFFFFF',
     paddingVertical: 13,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#FFFFFF',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  withdrawBtnDisabled: {
-    backgroundColor: '#1F242D',
-  },
-  withdrawBtnText: {
+  generateBillBtnText: {
     fontFamily: fonts.displayBold,
     color: '#000000',
     fontSize: 13.5,
     letterSpacing: 0.4,
   },
-  accountFooter: {
+  retentionRow: {
     borderTopWidth: 1,
     borderTopColor: '#1C2028',
     paddingTop: 10,
   },
-  accountText: {
+  retentionLabel: {
     fontFamily: fonts.body,
     color: '#71717A',
     fontSize: 11,
   },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
+  retentionValue: {
+    fontFamily: fonts.bodyMedium,
+    color: '#A1A1AA',
+    fontSize: 11.5,
+    marginTop: 2,
   },
-  statBox: {
+  kpiGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 18,
+  },
+  kpiCard: {
     flex: 1,
     backgroundColor: '#111317',
     borderRadius: 12,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#20242D',
   },
-  statLabel: {
+  kpiLabel: {
     fontFamily: fonts.body,
     color: '#A1A1AA',
-    fontSize: 11.5,
+    fontSize: 11,
     marginBottom: 4,
   },
-  statValue: {
+  kpiValue: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 17,
     marginBottom: 2,
   },
-  statSub: {
+  kpiSub: {
     fontFamily: fonts.body,
     color: '#71717A',
-    fontSize: 10.5,
+    fontSize: 9.5,
   },
-  chartCard: {
+  cardSection: {
     backgroundColor: '#111317',
     borderRadius: 14,
     padding: 16,
@@ -331,142 +314,126 @@ const styles = StyleSheet.create({
     borderColor: '#20242D',
     marginBottom: 18,
   },
-  chartHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  chartTitle: {
+  sectionHeaderTitle: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 14.5,
+    marginBottom: 12,
   },
-  chartTotal: {
+  contractList: {
+    gap: 12,
+  },
+  contractProgressItem: {
+    gap: 4,
+  },
+  contractProgressTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  contractItemName: {
+    fontFamily: fonts.displayBold,
+    color: '#D4D4D8',
+    fontSize: 12.5,
+  },
+  contractItemAmounts: {
     fontFamily: fonts.bodyMedium,
     color: '#A1A1AA',
-    fontSize: 12,
-  },
-  barChartWrapper: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    height: 120,
-    paddingTop: 14,
-  },
-  barCol: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  barAmount: {
-    fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 9,
-    marginBottom: 4,
-  },
-  barTrack: {
-    width: 14,
-    height: 70,
-    backgroundColor: '#181C24',
-    borderRadius: 7,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-  },
-  barFill: {
-    width: '100%',
-    backgroundColor: '#52525B',
-    borderRadius: 7,
-  },
-  barFillToday: {
-    backgroundColor: '#FFFFFF',
-  },
-  barDay: {
-    fontFamily: fonts.body,
-    color: '#71717A',
-    fontSize: 10.5,
-    marginTop: 6,
-  },
-  barDayToday: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    marginTop: 4,
-  },
-  sectionTitle: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 15,
-  },
-  sectionSub: {
-    fontFamily: fonts.body,
-    color: '#71717A',
     fontSize: 11.5,
   },
-  txList: {
+  trackBg: {
+    height: 6,
+    backgroundColor: '#1C2028',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  trackFill: {
+    height: '100%',
+    backgroundColor: '#10B981',
+    borderRadius: 3,
+  },
+  contractItemPct: {
+    fontFamily: fonts.body,
+    color: '#71717A',
+    fontSize: 10,
+    textAlign: 'right',
+  },
+  raHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  raCountText: {
+    fontFamily: fonts.bodyMedium,
+    color: '#10B981',
+    fontSize: 11.5,
+  },
+  invoicesList: {
     gap: 10,
   },
-  txCard: {
+  invoiceItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#111317',
-    padding: 14,
-    borderRadius: 12,
+    backgroundColor: '#0C0D11',
+    padding: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#20242D',
+    borderColor: '#1C2028',
   },
-  txLeft: {
+  invoiceLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     flex: 1,
-    marginRight: 10,
+    marginRight: 8,
   },
-  txIconPill: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    backgroundColor: '#1A1E26',
-    alignItems: 'center',
-    justifyContent: 'center',
+  raIdBadge: {
+    backgroundColor: '#1E232E',
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  txIcon: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontFamily: fonts.displayBold,
-  },
-  txTitle: {
+  raIdText: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 13,
-    marginBottom: 2,
-  },
-  txMeta: {
-    fontFamily: fonts.body,
-    color: '#71717A',
     fontSize: 11,
   },
-  txRight: {
+  invInfo: {
+    flex: 1,
+  },
+  invClient: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 12.5,
+  },
+  invProject: {
+    fontFamily: fonts.body,
+    color: '#A1A1AA',
+    fontSize: 11,
+  },
+  invDate: {
+    fontFamily: fonts.body,
+    color: '#71717A',
+    fontSize: 10,
+  },
+  invoiceRight: {
     alignItems: 'flex-end',
   },
-  txAmount: {
+  invAmount: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
     fontSize: 14,
     marginBottom: 2,
   },
-  paidPill: {
+  settledBadge: {
     backgroundColor: 'rgba(16, 185, 129, 0.12)',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
   },
-  paidText: {
+  settledBadgeText: {
     fontFamily: fonts.displayBold,
     color: '#10B981',
     fontSize: 9,

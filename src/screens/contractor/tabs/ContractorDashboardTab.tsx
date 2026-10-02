@@ -9,50 +9,54 @@ import {
 } from 'react-native';
 import { fonts } from '../../../theme/tokens';
 import { User } from '../../../types/auth';
-import { MapPinIcon, ClockIcon } from '../../../components/ContractorIcons';
+import { MapPinIcon, CrewIcon, BuildingIcon } from '../../../components/ContractorIcons';
 
-export interface ContractorJob {
+export interface ContractorProject {
   id: string;
-  clientName: string;
-  clientPhone: string;
-  title: string;
-  category: string;
-  location: string;
-  distance: string;
-  payout: number;
-  scheduledTime: string;
-  status: 'lead' | 'active' | 'scheduled' | 'completed';
-  progress: number;
-  milestones: { id: string; label: string; done: boolean }[];
+  clientDeveloper: string;
+  projectTitle: string;
+  contractValue: number;
+  progressiveBilled: number;
+  siteLocation: string;
+  crewLead: string;
+  crewAssignedCount: number;
+  status: 'active' | 'tender' | 'completed';
+  progressPct: number;
+  safetyScore: number;
+  milestones: {
+    id: string;
+    title: string;
+    stage: string;
+    completed: boolean;
+    certifiedByArchitect: boolean;
+  }[];
 }
 
 interface ContractorDashboardTabProps {
   user: User;
-  isOnline: boolean;
-  onToggleOnline: () => void;
-  incomingLead: ContractorJob | null;
-  onAcceptLead: (jobId: string) => void;
-  onDeclineLead: (jobId: string) => void;
-  activeJobs: ContractorJob[];
-  onToggleMilestone: (jobId: string, milestoneId: string) => void;
+  isOperating: boolean;
+  onToggleOperating: () => void;
+  tenderTapped: (tenderId: string) => void;
+  activeProjects: ContractorProject[];
+  onToggleMilestone: (projectId: string, milestoneId: string) => void;
   onSelectTab: (tab: 'dashboard' | 'jobs' | 'earnings' | 'profile') => void;
 }
 
 export const ContractorDashboardTab: React.FC<ContractorDashboardTabProps> = ({
   user,
-  isOnline,
-  onToggleOnline,
-  incomingLead,
-  onAcceptLead,
-  onDeclineLead,
-  activeJobs,
+  isOperating,
+  onToggleOperating,
+  tenderTapped,
+  activeProjects,
   onToggleMilestone,
   onSelectTab,
 }) => {
-  const primaryActiveJob = activeJobs[0];
+  const primaryProject = activeProjects[0];
+  const totalCrewDeployed = activeProjects.reduce((sum, p) => sum + p.crewAssignedCount, 0);
+  const totalContractPortfolio = activeProjects.reduce((sum, p) => sum + p.contractValue, 0);
 
-  const handleQuickAction = (action: string) => {
-    Alert.alert(action, `Opened ${action} module for active projects.`);
+  const handleContractorTool = (tool: string) => {
+    Alert.alert(`Servex Prime Tool: ${tool}`, `Launching ${tool} module for authorized general contractors.`);
   };
 
   return (
@@ -61,7 +65,7 @@ export const ContractorDashboardTab: React.FC<ContractorDashboardTabProps> = ({
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* TOP CONTRACTOR STATUS BAR */}
+      {/* PRIME CONTRACTOR FIRM STATUS BAR */}
       <View style={styles.statusBar}>
         <View style={styles.contractorBadgeGroup}>
           <View style={styles.avatarPill}>
@@ -71,232 +75,266 @@ export const ContractorDashboardTab: React.FC<ContractorDashboardTabProps> = ({
           </View>
           <View>
             <Text style={styles.contractorName} numberOfLines={1}>
-              {user.name || 'Contractor Partner'}
+              {user.name ? `${user.name} Contracting & Infra` : 'Prime Contracting Group'}
             </Text>
             <View style={styles.tradeTagRow}>
               <View style={styles.tradeBadge}>
-                <Text style={styles.tradeBadgeText}>VERIFIED PRO</Text>
+                <Text style={styles.tradeBadgeText}>CLASS-1 PRIME CONTRACTOR</Text>
               </View>
-              <Text style={styles.zoneText}>• Metro Zone</Text>
+              <Text style={styles.zoneText}>• Metro Sector</Text>
             </View>
           </View>
         </View>
 
-        {/* Online / Offline Switch */}
+        {/* Operating / Mobilized Switch */}
         <Pressable
-          style={[styles.statusToggle, isOnline ? styles.toggleOnline : styles.toggleOffline]}
-          onPress={onToggleOnline}
+          style={[styles.statusToggle, isOperating ? styles.toggleOperating : styles.toggleStandby]}
+          onPress={onToggleOperating}
           accessibilityRole="switch"
-          accessibilityLabel={isOnline ? 'Online' : 'Offline'}
+          accessibilityLabel={isOperating ? 'Sites Mobilized' : 'Standby'}
         >
-          <View style={[styles.statusDot, isOnline ? styles.dotOnline : styles.dotOffline]} />
-          <Text style={[styles.statusText, isOnline ? styles.textOnline : styles.textOffline]}>
-            {isOnline ? 'ONLINE' : 'OFFLINE'}
+          <View style={[styles.statusDot, isOperating ? styles.dotOperating : styles.dotStandby]} />
+          <Text style={[styles.statusText, isOperating ? styles.textOperating : styles.textStandby]}>
+            {isOperating ? 'MOBILIZED' : 'STANDBY'}
           </Text>
         </Pressable>
       </View>
 
-      {/* METRICS ROW */}
+      {/* EXECUTIVE CONTRACTOR KPIS */}
       <View style={styles.metricsGrid}>
         <Pressable style={styles.metricCard} onPress={() => onSelectTab('earnings')}>
-          <Text style={styles.metricLabel}>Today&apos;s Payout</Text>
-          <Text style={styles.metricValue}>₹8,450</Text>
-          <Text style={styles.metricTrend}>+18% vs avg</Text>
+          <Text style={styles.metricLabel}>Active Portfolio</Text>
+          <Text style={styles.metricValue}>
+            ₹{(totalContractPortfolio / 100000).toFixed(1)}L
+          </Text>
+          <Text style={styles.metricTrend}>3 Active Sites</Text>
         </Pressable>
 
         <Pressable style={styles.metricCard} onPress={() => onSelectTab('jobs')}>
-          <Text style={styles.metricLabel}>Active Jobs</Text>
-          <Text style={styles.metricValue}>{activeJobs.length}</Text>
-          <Text style={styles.metricTrend}>2 scheduled</Text>
+          <Text style={styles.metricLabel}>Crew Deployed</Text>
+          <Text style={styles.metricValue}>{totalCrewDeployed} Workers</Text>
+          <Text style={styles.metricTrend}>Across 3 Foreman Teams</Text>
         </Pressable>
 
         <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Rating</Text>
-          <Text style={styles.metricValue}>4.9 ★</Text>
-          <Text style={styles.metricTrend}>86 verified reviews</Text>
+          <Text style={styles.metricLabel}>Safety Audit</Text>
+          <Text style={styles.metricValue}>100%</Text>
+          <Text style={styles.metricTrend}>Zero Site Incidents</Text>
         </View>
       </View>
 
-      {/* INCOMING CLIENT JOB LEAD ALERT */}
-      {incomingLead && isOnline && (
-        <View style={styles.leadContainer}>
-          <View style={styles.leadHeader}>
-            <View style={styles.leadBadge}>
-              <View style={styles.pulseDot} />
-              <Text style={styles.leadBadgeText}>NEW CLIENT REQUEST</Text>
-            </View>
-            <Text style={styles.leadTimer}>Expires in 4m</Text>
+      {/* COMMERCIAL PROJECT TENDER ALERT (HIGH-VALUE CONTRACT BIDDING) */}
+      <View style={styles.tenderContainer}>
+        <View style={styles.tenderHeader}>
+          <View style={styles.tenderBadge}>
+            <BuildingIcon size={12} color="#F59E0B" />
+            <Text style={styles.tenderBadgeText}>NEW COMMERCIAL TENDER RFP</Text>
           </View>
+          <Text style={styles.tenderCountdown}>Bidding closes in 48h</Text>
+        </View>
 
-          <Text style={styles.leadTitle}>{incomingLead.title}</Text>
-          <Text style={styles.leadClient}>Client: {incomingLead.clientName}</Text>
+        <Text style={styles.tenderTitle}>
+          Godrej Horizon Phase-2: HT Substation & 3-Phase Busbar Infrastructure
+        </Text>
+        <Text style={styles.tenderClient}>
+          Client Developer: Godrej Properties Ltd. • PMC: Larsen & Toubro
+        </Text>
 
-          <View style={styles.leadDetailsRow}>
-            <View style={styles.leadDetailItem}>
-              <MapPinIcon size={13} color="#A1A1AA" />
-              <Text style={styles.leadDetailText}>
-                {incomingLead.location} ({incomingLead.distance})
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.leadDetailsRow}>
-            <View style={styles.leadDetailItem}>
-              <ClockIcon size={13} color="#A1A1AA" />
-              <Text style={styles.leadDetailText}>{incomingLead.scheduledTime}</Text>
-            </View>
-          </View>
-
-          <View style={styles.leadFooter}>
-            <View>
-              <Text style={styles.payoutLabel}>Estimated Payout</Text>
-              <Text style={styles.payoutAmount}>₹{incomingLead.payout.toLocaleString('en-IN')}</Text>
-            </View>
-
-            <View style={styles.leadActions}>
-              <Pressable
-                style={styles.declineButton}
-                onPress={() => onDeclineLead(incomingLead.id)}
-              >
-                <Text style={styles.declineButtonText}>Decline</Text>
-              </Pressable>
-
-              <Pressable
-                style={styles.acceptButton}
-                onPress={() => onAcceptLead(incomingLead.id)}
-              >
-                <Text style={styles.acceptButtonText}>Accept Job</Text>
-              </Pressable>
-            </View>
+        <View style={styles.tenderMetaRow}>
+          <View style={styles.tenderMetaItem}>
+            <MapPinIcon size={13} color="#A1A1AA" />
+            <Text style={styles.tenderMetaText}>Vikhroli Commercial Zone, Mumbai</Text>
           </View>
         </View>
-      )}
 
-      {/* PRIMARY ACTIVE JOB CARD */}
+        <View style={styles.tenderFooter}>
+          <View>
+            <Text style={styles.tenderValLabel}>Contract Estimate</Text>
+            <Text style={styles.tenderValAmount}>₹18,50,000</Text>
+          </View>
+
+          <View style={styles.tenderActions}>
+            <Pressable
+              style={styles.reviewSpecsBtn}
+              onPress={() => tenderTapped('godrej-horizon')}
+            >
+              <Text style={styles.reviewSpecsBtnText}>Review BOQ & CAD</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.submitBidBtn}
+              onPress={() =>
+                Alert.alert(
+                  'Submit Contractor Tender',
+                  'Submit formal bid proposal for Godrej Horizon Phase-2 at ₹18,50,000?'
+                )
+              }
+            >
+              <Text style={styles.submitBidBtnText}>Submit Bid ➔</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+
+      {/* PRIMARY ACTIVE CONTRACT / SITE MANAGEMENT */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Current Job Site</Text>
+        <Text style={styles.sectionTitle}>Prime Project Execution</Text>
         <Pressable onPress={() => onSelectTab('jobs')}>
-          <Text style={styles.sectionAction}>View All ({activeJobs.length})</Text>
+          <Text style={styles.sectionAction}>All Contracts ({activeProjects.length}) ➔</Text>
         </Pressable>
       </View>
 
-      {primaryActiveJob ? (
-        <View style={styles.activeJobCard}>
-          <View style={styles.activeJobTop}>
+      {primaryProject && (
+        <View style={styles.activeProjectCard}>
+          <View style={styles.projectHeaderRow}>
             <View>
-              <View style={styles.activeJobTag}>
-                <Text style={styles.activeJobTagText}>IN PROGRESS</Text>
+              <View style={styles.statusPillActive}>
+                <Text style={styles.statusPillActiveText}>ACTIVE CONTRACT</Text>
               </View>
-              <Text style={styles.activeJobTitle}>{primaryActiveJob.title}</Text>
-              <Text style={styles.activeJobClient}>Client: {primaryActiveJob.clientName}</Text>
+              <Text style={styles.projectTitle}>{primaryProject.projectTitle}</Text>
+              <Text style={styles.developerText}>
+                Developer: {primaryProject.clientDeveloper}
+              </Text>
             </View>
-            <View style={styles.activeJobPayoutBox}>
-              <Text style={styles.activeJobPayoutLabel}>Fee</Text>
-              <Text style={styles.activeJobPayoutVal}>
-                ₹{primaryActiveJob.payout.toLocaleString('en-IN')}
+
+            <View style={styles.valBox}>
+              <Text style={styles.valBoxLabel}>Contract Value</Text>
+              <Text style={styles.valBoxAmount}>
+                ₹{(primaryProject.contractValue / 100000).toFixed(1)} Lakhs
               </Text>
             </View>
           </View>
 
-          <View style={styles.locationPill}>
-            <MapPinIcon size={12} color="#71717A" />
-            <Text style={styles.locationPillText} numberOfLines={1}>
-              {primaryActiveJob.location}
+          {/* SITE & WORKFORCE CREW BADGE */}
+          <View style={styles.crewDeploymentBar}>
+            <View style={styles.crewInfoItem}>
+              <CrewIcon size={14} color="#FFFFFF" />
+              <Text style={styles.crewInfoText}>
+                {primaryProject.crewAssignedCount} Workers On-Site
+              </Text>
+            </View>
+            <Text style={styles.crewDot}>•</Text>
+            <Text style={styles.foremanText}>
+              Site Supervisor: {primaryProject.crewLead}
             </Text>
           </View>
 
-          {/* Progress Bar */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBarBg}>
+          {/* PROGRESS BAR & MILESTONES */}
+          <View style={styles.progressSection}>
+            <View style={styles.progressBarTrack}>
               <View
-                style={[styles.progressBarFill, { width: `${primaryActiveJob.progress}%` }]}
+                style={[
+                  styles.progressBarFill,
+                  { width: `${primaryProject.progressPct}%` },
+                ]}
               />
             </View>
-            <Text style={styles.progressText}>{primaryActiveJob.progress}% Completed</Text>
+            <View style={styles.progressMeta}>
+              <Text style={styles.progressPercentText}>
+                {primaryProject.progressPct}% Milestones Handover
+              </Text>
+              <Text style={styles.billedText}>
+                Billed: ₹{(primaryProject.progressiveBilled / 100000).toFixed(1)}L / ₹
+                {(primaryProject.contractValue / 100000).toFixed(1)}L
+              </Text>
+            </View>
           </View>
 
-          {/* Interactive Checklist */}
-          <View style={styles.checklist}>
-            {primaryActiveJob.milestones.map((m) => (
+          {/* CONTRACTOR MILESTONES VERIFICATION */}
+          <View style={styles.milestoneList}>
+            {primaryProject.milestones.map((m) => (
               <Pressable
                 key={m.id}
-                style={styles.checklistItem}
-                onPress={() => onToggleMilestone(primaryActiveJob.id, m.id)}
+                style={styles.milestoneRow}
+                onPress={() => onToggleMilestone(primaryProject.id, m.id)}
               >
-                <View style={[styles.checkbox, m.done && styles.checkboxDone]}>
-                  {m.done && <Text style={styles.checkmark}>✓</Text>}
+                <View style={[styles.mCheckbox, m.completed && styles.mCheckboxDone]}>
+                  {m.completed && <Text style={styles.mCheckmark}>✓</Text>}
                 </View>
-                <Text style={[styles.checklistLabel, m.done && styles.checklistLabelDone]}>
-                  {m.label}
-                </Text>
+                <View style={styles.mTextGroup}>
+                  <Text style={[styles.mTitle, m.completed && styles.mTitleDone]}>
+                    {m.title}
+                  </Text>
+                  <Text style={styles.mStage}>
+                    Stage: {m.stage} • {m.certifiedByArchitect ? 'Certified by Architect ✓' : 'Pending Client PMC Sign-off'}
+                  </Text>
+                </View>
               </Pressable>
             ))}
           </View>
 
-          {/* Action Row */}
-          <View style={styles.jobActionsRow}>
+          {/* CONTRACTOR OPERATIONS BAR */}
+          <View style={styles.operationsActionRow}>
             <Pressable
-              style={styles.secondaryJobAction}
-              onPress={() => Alert.alert('Calling Client', `Dialing ${primaryActiveJob.clientPhone}`)}
-            >
-              <Text style={styles.secondaryJobActionText}>📞 Call Client</Text>
-            </Pressable>
-            <Pressable
-              style={styles.primaryJobAction}
+              style={styles.opBtnSecondary}
               onPress={() =>
                 Alert.alert(
-                  'Site Directions',
-                  `Opening map directions to: ${primaryActiveJob.location}`
+                  'Crew Roster',
+                  `Deploying / Reassigning ${primaryProject.crewAssignedCount} workers on site with Foreman ${primaryProject.crewLead}.`
                 )
               }
             >
-              <Text style={styles.primaryJobActionText}>📍 Navigate to Site</Text>
+              <Text style={styles.opBtnSecondaryText}>👷 Reassign Crew</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.opBtnSecondary}
+              onPress={() =>
+                Alert.alert(
+                  'Daily Safety Log',
+                  '12 worker helmet/harness audits logged today with zero OSHA non-compliance.'
+                )
+              }
+            >
+              <Text style={styles.opBtnSecondaryText}>📋 Safety Log</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.opBtnPrimary}
+              onPress={() =>
+                Alert.alert(
+                  'Issue Running Account (RA) Bill',
+                  `Generate next milestone progressive billing invoice for ₹4,50,000 to ${primaryProject.clientDeveloper}?`
+                )
+              }
+            >
+              <Text style={styles.opBtnPrimaryText}>Issue RA Bill ➔</Text>
             </Pressable>
           </View>
         </View>
-      ) : (
-        <View style={styles.noActiveJobCard}>
-          <Text style={styles.noActiveJobIcon}>☕</Text>
-          <Text style={styles.noActiveJobTitle}>No Active Site Right Now</Text>
-          <Text style={styles.noActiveJobDesc}>
-            {isOnline
-              ? 'You are online and ready to receive instant client booking leads in your service zone.'
-              : 'Toggle your status to ONLINE above to start receiving client dispatch requests.'}
-          </Text>
-        </View>
       )}
 
-      {/* QUICK WORKSPACE TOOLS */}
+      {/* CONTRACTOR MANAGEMENT MODULES */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Field Operations</Text>
+        <Text style={styles.sectionTitle}>General Contractor Systems</Text>
       </View>
 
-      <View style={styles.toolsRow}>
+      <View style={styles.modulesGrid}>
         <Pressable
-          style={styles.toolCard}
-          onPress={() => handleQuickAction('Daily Site Log')}
+          style={styles.moduleBox}
+          onPress={() => handleContractorTool('Workforce & Labor Roster')}
         >
-          <Text style={styles.toolIcon}>📋</Text>
-          <Text style={styles.toolTitle}>Site Log</Text>
-          <Text style={styles.toolSub}>Record safety & crew</Text>
+          <Text style={styles.moduleIcon}>👷‍♂️</Text>
+          <Text style={styles.moduleName}>Crew Dispatch</Text>
+          <Text style={styles.moduleSub}>Assign workers to sites</Text>
         </Pressable>
 
         <Pressable
-          style={styles.toolCard}
-          onPress={() => handleQuickAction('Blueprint Telemetry')}
+          style={styles.moduleBox}
+          onPress={() => handleContractorTool('Bill of Quantities (BOQ)')}
         >
-          <Text style={styles.toolIcon}>📐</Text>
-          <Text style={styles.toolTitle}>Blueprints</Text>
-          <Text style={styles.toolSub}>5D specs & layers</Text>
+          <Text style={styles.moduleIcon}>📦</Text>
+          <Text style={styles.moduleName}>Material Orders</Text>
+          <Text style={styles.moduleSub}>Bulk steel, wire & cement</Text>
         </Pressable>
 
         <Pressable
-          style={styles.toolCard}
-          onPress={() => handleQuickAction('Smart Quote Generator')}
+          style={styles.moduleBox}
+          onPress={() => handleContractorTool('Structural CAD Telemetry')}
         >
-          <Text style={styles.toolIcon}>⚡</Text>
-          <Text style={styles.toolTitle}>Quick Quote</Text>
-          <Text style={styles.toolSub}>Instant materials est.</Text>
+          <Text style={styles.moduleIcon}>📐</Text>
+          <Text style={styles.moduleName}>CAD Blueprints</Text>
+          <Text style={styles.moduleSub}>Architectural 5D specs</Text>
         </Pressable>
       </View>
     </ScrollView>
@@ -332,20 +370,20 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   avatarPill: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: 10,
-    backgroundColor: '#1E222A',
+    backgroundColor: '#1C2028',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#2E3440',
+    borderColor: '#2A303C',
     marginRight: 12,
   },
   avatarInitial: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
   },
   contractorName: {
     fontFamily: fonts.displayBold,
@@ -366,9 +404,9 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   tradeBadgeText: {
-    fontFamily: fonts.bodyMedium,
-    color: '#D4D4D8',
-    fontSize: 9.5,
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 9,
     letterSpacing: 0.6,
   },
   zoneText: {
@@ -385,11 +423,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 6,
   },
-  toggleOnline: {
+  toggleOperating: {
     backgroundColor: 'rgba(16, 185, 129, 0.12)',
     borderColor: 'rgba(16, 185, 129, 0.35)',
   },
-  toggleOffline: {
+  toggleStandby: {
     backgroundColor: 'rgba(113, 113, 122, 0.12)',
     borderColor: 'rgba(113, 113, 122, 0.3)',
   },
@@ -398,10 +436,10 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 3.5,
   },
-  dotOnline: {
+  dotOperating: {
     backgroundColor: '#10B981',
   },
-  dotOffline: {
+  dotStandby: {
     backgroundColor: '#71717A',
   },
   statusText: {
@@ -409,10 +447,10 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     letterSpacing: 0.8,
   },
-  textOnline: {
+  textOperating: {
     color: '#10B981',
   },
-  textOffline: {
+  textStandby: {
     color: '#71717A',
   },
   metricsGrid: {
@@ -447,25 +485,21 @@ const styles = StyleSheet.create({
     color: '#71717A',
     fontSize: 10,
   },
-  leadContainer: {
-    backgroundColor: '#14181F',
+  tenderContainer: {
+    backgroundColor: '#13161D',
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#2C3440',
-    marginBottom: 18,
-    shadowColor: '#000000',
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 4,
+    borderColor: '#262D3B',
+    marginBottom: 20,
   },
-  leadHeader: {
+  tenderHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  leadBadge: {
+  tenderBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(245, 158, 11, 0.15)',
@@ -474,102 +508,96 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     gap: 6,
   },
-  pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#F59E0B',
-  },
-  leadBadgeText: {
+  tenderBadgeText: {
     fontFamily: fonts.displayBold,
     color: '#F59E0B',
     fontSize: 10,
     letterSpacing: 0.6,
   },
-  leadTimer: {
+  tenderCountdown: {
     fontFamily: fonts.bodyMedium,
     color: '#A1A1AA',
     fontSize: 11,
   },
-  leadTitle: {
+  tenderTitle: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 15.5,
-    marginBottom: 3,
+    fontSize: 15,
+    lineHeight: 20,
+    marginBottom: 4,
   },
-  leadClient: {
+  tenderClient: {
     fontFamily: fonts.body,
     color: '#A1A1AA',
-    fontSize: 12.5,
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  tenderMetaRow: {
+    flexDirection: 'row',
     marginBottom: 10,
   },
-  leadDetailsRow: {
-    flexDirection: 'row',
-    marginBottom: 6,
-  },
-  leadDetailItem: {
+  tenderMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  leadDetailText: {
+  tenderMetaText: {
     fontFamily: fonts.body,
-    color: '#A1A1AA',
-    fontSize: 12,
+    color: '#71717A',
+    fontSize: 11.5,
   },
-  leadFooter: {
+  tenderFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#20242D',
+    borderTopColor: '#1E232E',
     paddingTop: 12,
-    marginTop: 8,
   },
-  payoutLabel: {
+  tenderValLabel: {
     fontFamily: fonts.body,
     color: '#71717A',
-    fontSize: 10.5,
+    fontSize: 10,
   },
-  payoutAmount: {
+  tenderValAmount: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 18,
   },
-  leadActions: {
+  tenderActions: {
     flexDirection: 'row',
     gap: 8,
   },
-  declineButton: {
+  reviewSpecsBtn: {
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: '#262A33',
+    borderColor: '#2A303C',
   },
-  declineButtonText: {
+  reviewSpecsBtnText: {
     fontFamily: fonts.bodyMedium,
-    color: '#A1A1AA',
-    fontSize: 12.5,
+    color: '#D4D4D8',
+    fontSize: 12,
   },
-  acceptButton: {
+  submitBidBtn: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
   },
-  acceptButtonText: {
+  submitBidBtnText: {
     fontFamily: fonts.displayBold,
     color: '#000000',
-    fontSize: 12.5,
+    fontSize: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
-    marginTop: 6,
+    marginBottom: 12,
+    marginTop: 4,
   },
   sectionTitle: {
     fontFamily: fonts.displayBold,
@@ -582,21 +610,21 @@ const styles = StyleSheet.create({
     color: '#A1A1AA',
     fontSize: 12,
   },
-  activeJobCard: {
+  activeProjectCard: {
     backgroundColor: '#111317',
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
     borderColor: '#20242D',
-    marginBottom: 18,
+    marginBottom: 20,
   },
-  activeJobTop: {
+  projectHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  activeJobTag: {
+  statusPillActive: {
     backgroundColor: 'rgba(16, 185, 129, 0.12)',
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
@@ -604,85 +632,108 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginBottom: 6,
   },
-  activeJobTagText: {
+  statusPillActiveText: {
     fontFamily: fonts.displayBold,
     color: '#10B981',
-    fontSize: 10,
+    fontSize: 9.5,
     letterSpacing: 0.6,
   },
-  activeJobTitle: {
+  projectTitle: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 15.5,
     marginBottom: 2,
   },
-  activeJobClient: {
+  developerText: {
     fontFamily: fonts.body,
     color: '#A1A1AA',
     fontSize: 12,
   },
-  activeJobPayoutBox: {
+  valBox: {
     alignItems: 'flex-end',
   },
-  activeJobPayoutLabel: {
+  valBoxLabel: {
     fontFamily: fonts.body,
     color: '#71717A',
     fontSize: 10,
   },
-  activeJobPayoutVal: {
+  valBoxAmount: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
     fontSize: 16,
   },
-  locationPill: {
+  crewDeploymentBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#161920',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    gap: 6,
-    marginBottom: 12,
+    backgroundColor: '#161A22',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 14,
+    gap: 8,
   },
-  locationPillText: {
+  crewInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  crewInfoText: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 12,
+  },
+  crewDot: {
+    color: '#52525B',
+    fontSize: 10,
+  },
+  foremanText: {
     fontFamily: fonts.body,
     color: '#A1A1AA',
-    fontSize: 11.5,
+    fontSize: 12,
   },
-  progressContainer: {
-    marginBottom: 12,
+  progressSection: {
+    marginBottom: 14,
   },
-  progressBarBg: {
+  progressBarTrack: {
     height: 6,
-    backgroundColor: '#1E222B',
+    backgroundColor: '#1C2028',
     borderRadius: 3,
     overflow: 'hidden',
-    marginBottom: 4,
+    marginBottom: 5,
   },
   progressBarFill: {
     height: '100%',
     backgroundColor: '#10B981',
     borderRadius: 3,
   },
-  progressText: {
-    fontFamily: fonts.bodyMedium,
+  progressMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  progressPercentText: {
+    fontFamily: fonts.displayBold,
+    color: '#10B981',
+    fontSize: 11,
+  },
+  billedText: {
+    fontFamily: fonts.body,
     color: '#71717A',
     fontSize: 10.5,
-    textAlign: 'right',
   },
-  checklist: {
+  milestoneList: {
     backgroundColor: '#0C0D11',
-    borderRadius: 8,
-    padding: 10,
-    gap: 8,
+    borderRadius: 10,
+    padding: 12,
+    gap: 10,
     marginBottom: 14,
   },
-  checklistItem: {
+  milestoneRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 10,
   },
-  checkbox: {
+  mCheckbox: {
     width: 18,
     height: 18,
     borderRadius: 5,
@@ -690,109 +741,92 @@ const styles = StyleSheet.create({
     borderColor: '#3F4450',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 1,
   },
-  checkboxDone: {
+  mCheckboxDone: {
     backgroundColor: '#10B981',
     borderColor: '#10B981',
   },
-  checkmark: {
+  mCheckmark: {
     color: '#000000',
     fontSize: 11,
     fontWeight: 'bold',
   },
-  checklistLabel: {
-    fontFamily: fonts.body,
+  mTextGroup: {
+    flex: 1,
+  },
+  mTitle: {
+    fontFamily: fonts.displayBold,
     color: '#D4D4D8',
     fontSize: 12.5,
+    marginBottom: 1,
   },
-  checklistLabelDone: {
+  mTitleDone: {
     color: '#71717A',
-    textDecorationLine: 'line-through',
   },
-  jobActionsRow: {
+  mStage: {
+    fontFamily: fonts.body,
+    color: '#71717A',
+    fontSize: 11,
+  },
+  operationsActionRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
-  secondaryJobAction: {
+  opBtnSecondary: {
     flex: 1,
-    backgroundColor: '#191C24',
+    backgroundColor: '#181C24',
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#262C38',
+    borderColor: '#252B38',
   },
-  secondaryJobActionText: {
+  opBtnSecondaryText: {
     fontFamily: fonts.bodyMedium,
     color: '#FFFFFF',
-    fontSize: 12.5,
+    fontSize: 11.5,
   },
-  primaryJobAction: {
-    flex: 1.2,
+  opBtnPrimary: {
+    flex: 1.3,
     backgroundColor: '#FFFFFF',
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryJobActionText: {
+  opBtnPrimaryText: {
     fontFamily: fonts.displayBold,
     color: '#000000',
-    fontSize: 12.5,
-  },
-  noActiveJobCard: {
-    backgroundColor: '#111317',
-    borderRadius: 14,
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#20242D',
-    marginBottom: 18,
-  },
-  noActiveJobIcon: {
-    fontSize: 28,
-    marginBottom: 8,
-  },
-  noActiveJobTitle: {
-    fontFamily: fonts.displayBold,
-    color: '#FFFFFF',
-    fontSize: 14.5,
-    marginBottom: 4,
-  },
-  noActiveJobDesc: {
-    fontFamily: fonts.body,
-    color: '#71717A',
     fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 17,
   },
-  toolsRow: {
+  modulesGrid: {
     flexDirection: 'row',
     gap: 10,
   },
-  toolCard: {
+  moduleBox: {
     flex: 1,
     backgroundColor: '#111317',
     borderRadius: 12,
     paddingVertical: 14,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#20242D',
   },
-  toolIcon: {
+  moduleIcon: {
     fontSize: 22,
     marginBottom: 6,
   },
-  toolTitle: {
+  moduleName: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11.5,
     marginBottom: 2,
+    textAlign: 'center',
   },
-  toolSub: {
+  moduleSub: {
     fontFamily: fonts.body,
     color: '#71717A',
     fontSize: 9.5,

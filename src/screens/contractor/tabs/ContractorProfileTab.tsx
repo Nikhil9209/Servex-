@@ -25,7 +25,7 @@ export const ContractorProfileTab: React.FC<ContractorProfileTabProps> = ({
   const formattedPhone = AuthService.formatPhoneForDisplay(user.phone, user.countryCode);
 
   const handleLogoutPress = () => {
-    Alert.alert('Confirm Logout', 'Are you sure you want to log out of your Servex account?', [
+    Alert.alert('Confirm Logout', 'Are you sure you want to log out of the Servex Contractor Suite?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',
@@ -41,37 +41,45 @@ export const ContractorProfileTab: React.FC<ContractorProfileTabProps> = ({
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* CONTRACTOR IDENTITY CARD */}
-      <View style={styles.profileCard}>
+      {/* PRIME CONTRACTOR COMPANY CARD */}
+      <View style={styles.companyCard}>
         <View style={styles.avatarLarge}>
           <Text style={styles.avatarLargeText}>
             {user.name ? user.name.charAt(0).toUpperCase() : 'C'}
           </Text>
         </View>
 
-        <Text style={styles.profileName}>{user.name || 'Contractor Partner'}</Text>
-        <Text style={styles.profileContact}>{user.email}</Text>
-        <Text style={styles.profilePhone}>Phone: {formattedPhone}</Text>
+        <Text style={styles.companyName}>
+          {user.name ? `${user.name} Contracting & Infra` : 'Servex Prime Contracting'}
+        </Text>
+        <Text style={styles.authorizedDirector}>
+          Authorized Principal: {user.name}
+        </Text>
+        <Text style={styles.companyContact}>{user.email} • {formattedPhone}</Text>
 
         <View style={styles.badgeRow}>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleBadgeText}>VERIFIED CONTRACTOR</Text>
+          <View style={styles.classBadge}>
+            <Text style={styles.classBadgeText}>CLASS-1 PRIME CONTRACTOR</Text>
           </View>
-          <View style={styles.ratingBadge}>
-            <Text style={styles.ratingBadgeText}>4.9 ★ Top Rated</Text>
+          <View style={styles.isoBadge}>
+            <Text style={styles.isoBadgeText}>ISO 9001:2015 ✓</Text>
           </View>
         </View>
       </View>
 
-      {/* REPUTATION & STATS */}
+      {/* WORKFORCE & FLEET OVERVIEW */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Workforce & Site Deployment</Text>
+      </View>
+
       <View style={styles.statsRow}>
         <View style={styles.statBox}>
-          <Text style={styles.statNum}>86</Text>
-          <Text style={styles.statLabel}>Jobs Done</Text>
+          <Text style={styles.statNum}>34</Text>
+          <Text style={styles.statLabel}>Crew on Payroll</Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statNum}>99.2%</Text>
-          <Text style={styles.statLabel}>On-Time</Text>
+          <Text style={styles.statNum}>3</Text>
+          <Text style={styles.statLabel}>Site Foremen</Text>
         </View>
         <View style={styles.statBox}>
           <Text style={styles.statNum}>100%</Text>
@@ -79,9 +87,9 @@ export const ContractorProfileTab: React.FC<ContractorProfileTabProps> = ({
         </View>
       </View>
 
-      {/* VERIFICATIONS & CREDENTIALS */}
+      {/* CORPORATE LEGAL & TRADE CREDENTIALS */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Trade & Legal Credentials</Text>
+        <Text style={styles.sectionTitle}>Licenses & Compliance</Text>
       </View>
 
       <View style={styles.cardGroup}>
@@ -89,12 +97,12 @@ export const ContractorProfileTab: React.FC<ContractorProfileTabProps> = ({
           <View style={styles.itemLeft}>
             <Text style={styles.itemIcon}>🛡️</Text>
             <View>
-              <Text style={styles.itemTitle}>Trade License</Text>
-              <Text style={styles.itemSub}>Master Electrical & Structural</Text>
+              <Text style={styles.itemTitle}>State Electrical Board Class-1</Text>
+              <Text style={styles.itemSub}>High Tension (HT) & EHV Certified</Text>
             </View>
           </View>
           <View style={styles.verifiedTag}>
-            <Text style={styles.verifiedTagText}>VERIFIED ✓</Text>
+            <Text style={styles.verifiedTagText}>ACTIVE ✓</Text>
           </View>
         </View>
 
@@ -102,8 +110,8 @@ export const ContractorProfileTab: React.FC<ContractorProfileTabProps> = ({
           <View style={styles.itemLeft}>
             <Text style={styles.itemIcon}>📄</Text>
             <View>
-              <Text style={styles.itemTitle}>GSTIN / Business Tax</Text>
-              <Text style={styles.itemSub}>27AAAAA0000A1Z5</Text>
+              <Text style={styles.itemTitle}>Corporate GSTIN</Text>
+              <Text style={styles.itemSub}>27AAAAA0000A1Z5 (Valid)</Text>
             </View>
           </View>
           <View style={styles.verifiedTag}>
@@ -113,33 +121,33 @@ export const ContractorProfileTab: React.FC<ContractorProfileTabProps> = ({
 
         <View style={styles.groupItem}>
           <View style={styles.itemLeft}>
-            <Text style={styles.itemIcon}>🏢</Text>
+            <Text style={styles.itemIcon}>👷‍♂️</Text>
             <View>
-              <Text style={styles.itemTitle}>Commercial Liability</Text>
-              <Text style={styles.itemSub}>Insured up to ₹50,00,000</Text>
+              <Text style={styles.itemTitle}>Workmen Compensation Insurance</Text>
+              <Text style={styles.itemSub}>All 34 Workers Insured (₹1,00,00,000)</Text>
             </View>
           </View>
           <View style={styles.verifiedTag}>
-            <Text style={styles.verifiedTagText}>ACTIVE ✓</Text>
+            <Text style={styles.verifiedTagText}>INSURED ✓</Text>
           </View>
         </View>
       </View>
 
-      {/* DISPATCH & OPERATING PREFERENCES */}
+      {/* CONTRACTOR FLEET & HEAVY EQUIPMENT */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Dispatch Preferences</Text>
+        <Text style={styles.sectionTitle}>Contractor Heavy Machinery & Fleet</Text>
       </View>
 
       <View style={styles.cardGroup}>
         <Pressable
           style={styles.groupItem}
-          onPress={() => Alert.alert('Service Radius', 'Configured service radius: 15 km')}
+          onPress={() => Alert.alert('Contractor Machinery', 'Fleet: 4 Mobile Diesel DG Gensets, 2 Scissor Lifts, 1 Armored Cable Puller, 3 Megger HV Calibration Kits.')}
         >
           <View style={styles.itemLeft}>
-            <Text style={styles.itemIcon}>📍</Text>
+            <Text style={styles.itemIcon}>🚜</Text>
             <View>
-              <Text style={styles.itemTitle}>Service Territory Radius</Text>
-              <Text style={styles.itemSub}>Mumbai Metro & Suburbs (15 km)</Text>
+              <Text style={styles.itemTitle}>4 Heavy Gensets & 2 Lifts</Text>
+              <Text style={styles.itemSub}>Allocated across BKC & Lodha Job Sites</Text>
             </View>
           </View>
           <Text style={styles.chevron}>➔</Text>
@@ -147,13 +155,13 @@ export const ContractorProfileTab: React.FC<ContractorProfileTabProps> = ({
 
         <Pressable
           style={styles.groupItem}
-          onPress={() => Alert.alert('Emergency Dispatch', 'Emergency dispatch is enabled for off-peak calls.')}
+          onPress={() => Alert.alert('Subcontractor Network', '8 Authorized specialist sub-contractors on call.')}
         >
           <View style={styles.itemLeft}>
-            <Text style={styles.itemIcon}>⚡</Text>
+            <Text style={styles.itemIcon}>🤝</Text>
             <View>
-              <Text style={styles.itemTitle}>Emergency Night Dispatch</Text>
-              <Text style={styles.itemSub}>Enabled • 1.5x Premium Rates</Text>
+              <Text style={styles.itemTitle}>Specialist Subcontractors</Text>
+              <Text style={styles.itemSub}>HVAC Ducting & Fire Alarm Partners</Text>
             </View>
           </View>
           <Text style={styles.chevron}>➔</Text>
@@ -172,7 +180,7 @@ export const ContractorProfileTab: React.FC<ContractorProfileTabProps> = ({
         </View>
       )}
 
-      {/* LOGOUT BUTTON */}
+      {/* LOGOUT */}
       <View style={styles.logoutSection}>
         <Pressable
           style={styles.logoutBtn}
@@ -180,9 +188,9 @@ export const ContractorProfileTab: React.FC<ContractorProfileTabProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Log out"
         >
-          <Text style={styles.logoutBtnText}>Log Out of Servex Account</Text>
+          <Text style={styles.logoutBtnText}>Log Out of Contractor Suite</Text>
         </Pressable>
-        <Text style={styles.versionText}>Servex Contractor Suite v1.0.0 • Build 2026</Text>
+        <Text style={styles.versionText}>Servex Prime Contractor Suite v2.0 • Enterprise Edition</Text>
       </View>
     </ScrollView>
   );
@@ -198,7 +206,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 36,
   },
-  profileCard: {
+  companyCard: {
     backgroundColor: '#111317',
     borderRadius: 16,
     padding: 20,
@@ -223,19 +231,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 28,
   },
-  profileName: {
+  companyName: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 17,
     marginBottom: 3,
+    textAlign: 'center',
   },
-  profileContact: {
-    fontFamily: fonts.body,
-    color: '#A1A1AA',
+  authorizedDirector: {
+    fontFamily: fonts.bodyMedium,
+    color: '#D4D4D8',
     fontSize: 13,
     marginBottom: 2,
   },
-  profilePhone: {
+  companyContact: {
     fontFamily: fonts.body,
     color: '#71717A',
     fontSize: 12,
@@ -245,28 +254,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  roleBadge: {
+  classBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
   },
-  roleBadgeText: {
+  classBadgeText: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 9.5,
     letterSpacing: 0.6,
   },
-  ratingBadge: {
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+  isoBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
   },
-  ratingBadgeText: {
+  isoBadgeText: {
     fontFamily: fonts.displayBold,
-    color: '#F59E0B',
-    fontSize: 10,
+    color: '#10B981',
+    fontSize: 9.5,
   },
   statsRow: {
     flexDirection: 'row',
