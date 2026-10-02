@@ -14,7 +14,7 @@ import { fonts } from '../theme/tokens';
 
 export interface ServexLivingParticleLogoProps {
   /**
-   * Width of the SX particle logo in dp (defaults to sleek ~96-108dp)
+   * Width of the SX particle logo in dp (defaults to sleek ~96-104dp)
    */
   width?: number;
   /**
@@ -40,8 +40,8 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
   const windowDims = Dimensions.get('window');
   const screenWidth = windowDims.width;
 
-  // Sleek, compact executive size (~96 to 108dp on mobile)
-  const width = customWidth || Math.min(Math.max(Math.round(screenWidth * 0.26), 92), 108);
+  // Compact, executive proportion (~96 to 104dp on mobile)
+  const width = customWidth || Math.min(Math.max(Math.round(screenWidth * 0.26), 92), 106);
   // SX logo aspect ratio is ~1.428 (width / height)
   const height = Math.round(width / 1.428);
 
@@ -178,7 +178,7 @@ export const ServexLivingParticleLogo: React.FC<ServexLivingParticleLogoProps> =
             ref={pathRef}
             d={currentPath}
             stroke="#FFFFFF"
-            strokeWidth={2.6}
+            strokeWidth={2.7}
             strokeLinecap="round"
             strokeOpacity={0.96}
           />
@@ -224,7 +224,7 @@ function generateFramePath(time: number, flowStrength: number): string {
     const wave2 = Math.cos(time * 2.4 + p.normX * 5.0 - p.normY * 3.5);
     const wave3 = Math.sin(time * 1.4 + (p.normX * p.normX + p.normY * p.normY) * 5.5);
 
-    // Subtle fluid wave displacement (amplitude ~ 1.0 to 1.6 units in 140x98 space)
+    // Subtle fluid wave displacement (amplitude ~ 1.0 to 1.5 units in 140x98 space)
     const dx = (wave1 * 1.4 + wave3 * 0.7) * flowStrength;
     const dy = (wave2 * 1.2 + wave1 * 0.6) * flowStrength;
 

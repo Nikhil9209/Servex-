@@ -124,7 +124,7 @@ export const LoginScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.cardContainer}>
-          {/* Living SX White Dot Particle Logo (Continuous Fluid Wave Motion) */}
+          {/* Final Design: Living Servex SX White Dot Particle Logo */}
           <ServexLivingParticleLogo
             introProgress={progressAnim}
             showWordmark={true}

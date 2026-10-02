@@ -1,4 +1,4 @@
-// 3D Particles Definition for Servex Monogram (X, Y, Z coordinates in space)
+// 3D Hybrid Particles Definition for Servex Monogram (Dots & Dashes)
 export interface Logo3DParticle {
   id: number;
   targetX: number; // Normalized target X (-0.5 to 0.5)
@@ -11,6 +11,8 @@ export interface Logo3DParticle {
   color: string;
   delay: number; // ms
   layer: 'front' | 'depth' | 'bevel';
+  shape: 'dot' | 'dash';
+  angle: number; // degrees for dash tilt
 }
 
 export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
@@ -22,10 +24,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.585,
     "scatterY": -1.851,
     "scatterZ": 1.798,
-    "size": 3.7,
-    "color": "#3B82F6",
+    "size": 4.1,
+    "color": "#FFFFFF",
     "delay": 32,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 1,
@@ -35,10 +39,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.134,
     "scatterY": 0.927,
     "scatterZ": 0.341,
-    "size": 3.5,
+    "size": 3.9,
     "color": "#FFFFFF",
     "delay": 91,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 2,
@@ -48,10 +54,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.909,
     "scatterY": -0.001,
     "scatterZ": -1.907,
-    "size": 3.3,
+    "size": 3.6,
     "color": "#FFFFFF",
     "delay": 101,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 3,
@@ -61,10 +69,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.893,
     "scatterY": 1.056,
     "scatterZ": -1.497,
-    "size": 3,
+    "size": 3.3,
     "color": "#FFFFFF",
     "delay": 125,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 4,
@@ -74,10 +84,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.545,
     "scatterY": -1.86,
     "scatterZ": -1.113,
-    "size": 3.1,
-    "color": "#60A5FA",
+    "size": 3.4,
+    "color": "#FFFFFF",
     "delay": 132,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 5,
@@ -87,10 +99,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.483,
     "scatterY": 1.429,
     "scatterZ": -2.193,
-    "size": 3.5,
+    "size": 3.9,
     "color": "#FFFFFF",
     "delay": 6,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 6,
@@ -100,10 +114,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.251,
     "scatterY": -2.327,
     "scatterZ": -1.429,
-    "size": 3.1,
+    "size": 3.4,
     "color": "#FFFFFF",
     "delay": 1,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 7,
@@ -113,10 +129,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.105,
     "scatterY": -1.958,
     "scatterZ": -0.17,
-    "size": 3.1,
+    "size": 2.9,
     "color": "#FFFFFF",
     "delay": 101,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 8,
@@ -126,10 +144,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.714,
     "scatterY": -1.335,
     "scatterZ": -1.746,
-    "size": 3.7,
-    "color": "#60A5FA",
+    "size": 4.1,
+    "color": "#FFFFFF",
     "delay": 61,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 9,
@@ -139,10 +159,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.245,
     "scatterY": 1.293,
     "scatterZ": -0.362,
-    "size": 3.5,
+    "size": 3.9,
     "color": "#FFFFFF",
     "delay": 127,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 10,
@@ -152,10 +174,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.588,
     "scatterY": -1.317,
     "scatterZ": -2.144,
-    "size": 3,
+    "size": 3.3,
     "color": "#FFFFFF",
     "delay": 17,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 11,
@@ -165,10 +189,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.879,
     "scatterY": 1.785,
     "scatterZ": 0.749,
-    "size": 3.9,
+    "size": 3.7,
     "color": "#FFFFFF",
     "delay": 57,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 12,
@@ -178,10 +204,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.255,
     "scatterY": 0.546,
     "scatterZ": -1.951,
-    "size": 3.3,
-    "color": "#60A5FA",
+    "size": 3.6,
+    "color": "#FFFFFF",
     "delay": 87,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 13,
@@ -191,10 +219,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.652,
     "scatterY": 1.104,
     "scatterZ": -0.894,
-    "size": 3.4,
+    "size": 3.7,
     "color": "#FFFFFF",
     "delay": 22,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 14,
@@ -204,10 +234,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 2.278,
     "scatterY": 1.798,
     "scatterZ": 0.8,
-    "size": 3.8,
+    "size": 4.2,
     "color": "#FFFFFF",
     "delay": 137,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 15,
@@ -217,10 +249,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.122,
     "scatterY": -2.363,
     "scatterZ": -0.064,
-    "size": 3.3,
+    "size": 3.6,
     "color": "#FFFFFF",
     "delay": 122,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 16,
@@ -230,10 +264,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.016,
     "scatterY": 2.647,
     "scatterZ": 0.403,
-    "size": 3,
-    "color": "#60A5FA",
+    "size": 2.8,
+    "color": "#FFFFFF",
     "delay": 58,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 17,
@@ -243,10 +279,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -2.021,
     "scatterY": 1.527,
     "scatterZ": -1.893,
-    "size": 3.1,
+    "size": 2.9,
     "color": "#FFFFFF",
     "delay": 99,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 18,
@@ -256,10 +294,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.725,
     "scatterY": -0.408,
     "scatterZ": -1.506,
-    "size": 3.4,
+    "size": 3.7,
     "color": "#FFFFFF",
     "delay": 71,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 19,
@@ -269,10 +309,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.524,
     "scatterY": -0.299,
     "scatterZ": 3.279,
-    "size": 3.3,
+    "size": 3.6,
     "color": "#FFFFFF",
     "delay": 4,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 20,
@@ -282,10 +324,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.52,
     "scatterY": -1.442,
     "scatterZ": 2.317,
-    "size": 3.5,
-    "color": "#3B82F6",
+    "size": 3.3,
+    "color": "#FFFFFF",
     "delay": 102,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 21,
@@ -295,10 +339,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.107,
     "scatterY": -0.802,
     "scatterZ": -2.71,
-    "size": 3.6,
+    "size": 3.4,
     "color": "#FFFFFF",
     "delay": 68,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 22,
@@ -308,10 +354,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 2.012,
     "scatterY": -1.841,
     "scatterZ": -0.302,
-    "size": 3.9,
+    "size": 3.7,
     "color": "#FFFFFF",
     "delay": 86,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 23,
@@ -321,10 +369,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.285,
     "scatterY": -1.577,
     "scatterZ": -0.662,
-    "size": 3,
-    "color": "#60A5FA",
+    "size": 3.3,
+    "color": "#FFFFFF",
     "delay": 82,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 24,
@@ -334,10 +384,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.434,
     "scatterY": -0.206,
     "scatterZ": 0.078,
-    "size": 3.1,
-    "color": "#64748B",
+    "size": 3.4,
+    "color": "#FFFFFF",
     "delay": 140,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 25,
@@ -347,10 +399,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.081,
     "scatterY": -1.335,
     "scatterZ": -2.896,
-    "size": 2.5,
-    "color": "#64748B",
+    "size": 2.4,
+    "color": "#FFFFFF",
     "delay": 24,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 26,
@@ -360,10 +414,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.39,
     "scatterY": -1.528,
     "scatterZ": 0.511,
-    "size": 2.6,
-    "color": "#94A3B8",
+    "size": 2.9,
+    "color": "#FFFFFF",
     "delay": 64,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 27,
@@ -373,10 +429,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.067,
     "scatterY": -1.683,
     "scatterZ": -0.605,
-    "size": 2.6,
-    "color": "#64748B",
+    "size": 2.9,
+    "color": "#FFFFFF",
     "delay": 24,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 28,
@@ -386,10 +444,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.941,
     "scatterY": 0.696,
     "scatterZ": 1.053,
-    "size": 3,
-    "color": "#60A5FA",
+    "size": 2.8,
+    "color": "#FFFFFF",
     "delay": 91,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 29,
@@ -399,10 +459,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.051,
     "scatterY": -1.418,
     "scatterZ": 0.08,
-    "size": 3,
-    "color": "#94A3B8",
+    "size": 3.3,
+    "color": "#FFFFFF",
     "delay": 33,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 30,
@@ -412,10 +474,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 2.021,
     "scatterY": 0.847,
     "scatterZ": -0.525,
-    "size": 3,
-    "color": "#94A3B8",
+    "size": 2.8,
+    "color": "#FFFFFF",
     "delay": 36,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 31,
@@ -425,10 +489,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.176,
     "scatterY": 2.301,
     "scatterZ": 2.2,
-    "size": 2.4,
-    "color": "#64748B",
+    "size": 2.6,
+    "color": "#FFFFFF",
     "delay": 6,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 32,
@@ -438,10 +504,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.398,
     "scatterY": 2.4,
     "scatterZ": 0.061,
-    "size": 2.4,
-    "color": "#94A3B8",
+    "size": 2.6,
+    "color": "#FFFFFF",
     "delay": 131,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 33,
@@ -451,10 +519,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.697,
     "scatterY": -2.094,
     "scatterZ": 0.444,
-    "size": 2.4,
-    "color": "#3B82F6",
+    "size": 2.3,
+    "color": "#FFFFFF",
     "delay": 37,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 34,
@@ -464,10 +534,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.248,
     "scatterY": 1.799,
     "scatterZ": 0.646,
-    "size": 2.7,
-    "color": "#64748B",
+    "size": 3,
+    "color": "#FFFFFF",
     "delay": 50,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 35,
@@ -477,10 +549,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -2.274,
     "scatterY": 0.641,
     "scatterZ": -0.892,
-    "size": 2.7,
-    "color": "#94A3B8",
+    "size": 2.6,
+    "color": "#FFFFFF",
     "delay": 77,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 36,
@@ -490,10 +564,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.957,
     "scatterY": -0.078,
     "scatterZ": 1.846,
-    "size": 2.6,
-    "color": "#94A3B8",
+    "size": 2.5,
+    "color": "#FFFFFF",
     "delay": 26,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 37,
@@ -503,10 +579,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.238,
     "scatterY": 2.348,
     "scatterZ": 0.616,
-    "size": 2.9,
-    "color": "#64748B",
+    "size": 3.2,
+    "color": "#FFFFFF",
     "delay": 82,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 38,
@@ -516,10 +594,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.3,
     "scatterY": -1.148,
     "scatterZ": -0.228,
-    "size": 2.9,
-    "color": "#3B82F6",
+    "size": 2.8,
+    "color": "#FFFFFF",
     "delay": 12,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 39,
@@ -529,10 +609,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.38,
     "scatterY": 1.691,
     "scatterZ": 0.55,
-    "size": 3.6,
+    "size": 3.4,
     "color": "#FFFFFF",
     "delay": 25,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 40,
@@ -542,10 +624,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.988,
     "scatterY": -1.969,
     "scatterZ": 0.347,
-    "size": 3.8,
-    "color": "#60A5FA",
+    "size": 4.2,
+    "color": "#FFFFFF",
     "delay": 40,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 41,
@@ -555,10 +639,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.377,
     "scatterY": -0.709,
     "scatterZ": -3.32,
-    "size": 3.7,
+    "size": 3.5,
     "color": "#FFFFFF",
     "delay": 128,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 42,
@@ -568,10 +654,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 2.785,
     "scatterY": 0.307,
     "scatterZ": -1.414,
-    "size": 2.9,
+    "size": 3.2,
     "color": "#FFFFFF",
     "delay": 55,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 43,
@@ -581,10 +669,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.28,
     "scatterY": -0.258,
     "scatterZ": -2.97,
-    "size": 3,
+    "size": 3.3,
     "color": "#FFFFFF",
     "delay": 102,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 44,
@@ -594,10 +684,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.274,
     "scatterY": -1.572,
     "scatterZ": 0.253,
-    "size": 3.7,
-    "color": "#3B82F6",
+    "size": 3.5,
+    "color": "#FFFFFF",
     "delay": 46,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 45,
@@ -607,10 +699,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.001,
     "scatterY": 2.053,
     "scatterZ": 0.381,
-    "size": 3.8,
+    "size": 4.2,
     "color": "#FFFFFF",
     "delay": 97,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 46,
@@ -620,10 +714,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.888,
     "scatterY": -2.284,
     "scatterZ": 1.344,
-    "size": 3.6,
+    "size": 3.4,
     "color": "#FFFFFF",
     "delay": 63,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 47,
@@ -633,10 +729,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.741,
     "scatterY": 0.015,
     "scatterZ": -1.865,
-    "size": 2.9,
+    "size": 2.8,
     "color": "#FFFFFF",
     "delay": 8,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 48,
@@ -646,10 +744,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.052,
     "scatterY": 2.421,
     "scatterZ": -0.598,
-    "size": 3.5,
-    "color": "#60A5FA",
+    "size": 3.3,
+    "color": "#FFFFFF",
     "delay": 138,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 49,
@@ -659,10 +759,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.652,
     "scatterY": -0.552,
     "scatterZ": 1.805,
-    "size": 3.7,
+    "size": 4.1,
     "color": "#FFFFFF",
     "delay": 108,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 50,
@@ -672,10 +774,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.073,
     "scatterY": -2.036,
     "scatterZ": -0.318,
-    "size": 3.1,
+    "size": 3.4,
     "color": "#FFFFFF",
     "delay": 24,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 51,
@@ -685,10 +789,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.363,
     "scatterY": 1.945,
     "scatterZ": -0.506,
-    "size": 3.5,
+    "size": 3.3,
     "color": "#FFFFFF",
     "delay": 10,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 52,
@@ -698,10 +804,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.144,
     "scatterY": 1.486,
     "scatterZ": -0.683,
-    "size": 3.3,
-    "color": "#60A5FA",
+    "size": 3.6,
+    "color": "#FFFFFF",
     "delay": 23,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 53,
@@ -711,10 +819,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -2.569,
     "scatterY": 0.953,
     "scatterZ": 0.972,
-    "size": 3.4,
+    "size": 3.2,
     "color": "#FFFFFF",
     "delay": 10,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 54,
@@ -724,10 +834,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.211,
     "scatterY": -2.436,
     "scatterZ": -0.773,
-    "size": 3.4,
+    "size": 3.7,
     "color": "#FFFFFF",
     "delay": 66,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 55,
@@ -737,10 +849,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.906,
     "scatterY": -0.806,
     "scatterZ": 1.262,
-    "size": 3.5,
+    "size": 3.9,
     "color": "#FFFFFF",
     "delay": 98,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 56,
@@ -750,10 +864,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.481,
     "scatterY": 0.109,
     "scatterZ": -0.009,
-    "size": 3.9,
-    "color": "#3B82F6",
+    "size": 3.7,
+    "color": "#FFFFFF",
     "delay": 110,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 57,
@@ -763,10 +879,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.887,
     "scatterY": 0.403,
     "scatterZ": -0.498,
-    "size": 3.8,
+    "size": 4.2,
     "color": "#FFFFFF",
     "delay": 71,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 58,
@@ -776,10 +894,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.262,
     "scatterY": -1.824,
     "scatterZ": 0.881,
-    "size": 3.4,
+    "size": 3.7,
     "color": "#FFFFFF",
     "delay": 38,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 59,
@@ -789,10 +909,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.133,
     "scatterY": 2.073,
     "scatterZ": 0.6,
-    "size": 3.9,
+    "size": 4.3,
     "color": "#FFFFFF",
     "delay": 119,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 60,
@@ -802,10 +924,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.433,
     "scatterY": -2.274,
     "scatterZ": 0.348,
-    "size": 3.2,
-    "color": "#60A5FA",
+    "size": 3.5,
+    "color": "#FFFFFF",
     "delay": 107,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 61,
@@ -815,10 +939,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.744,
     "scatterY": -1.94,
     "scatterZ": -1.136,
-    "size": 3.7,
+    "size": 4.1,
     "color": "#FFFFFF",
     "delay": 140,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 62,
@@ -828,10 +954,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -2.384,
     "scatterY": -1.493,
     "scatterZ": -1.12,
-    "size": 3,
+    "size": 3.3,
     "color": "#FFFFFF",
     "delay": 68,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 63,
@@ -841,10 +969,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.341,
     "scatterY": 0.522,
     "scatterZ": 2.818,
-    "size": 3.6,
-    "color": "#60A5FA",
+    "size": 4,
+    "color": "#FFFFFF",
     "delay": 78,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 64,
@@ -854,10 +984,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.323,
     "scatterY": -1.623,
     "scatterZ": 0.778,
-    "size": 3.6,
+    "size": 4,
     "color": "#FFFFFF",
     "delay": 3,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 65,
@@ -867,10 +999,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.614,
     "scatterY": -1.241,
     "scatterZ": 1.343,
-    "size": 3.2,
+    "size": 3,
     "color": "#FFFFFF",
     "delay": 64,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 66,
@@ -880,10 +1014,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.378,
     "scatterY": -1.023,
     "scatterZ": 2.098,
-    "size": 3.1,
-    "color": "#3B82F6",
+    "size": 3.4,
+    "color": "#FFFFFF",
     "delay": 25,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 67,
@@ -893,10 +1029,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.097,
     "scatterY": 1.454,
     "scatterZ": 1.743,
-    "size": 3.3,
+    "size": 3.6,
     "color": "#FFFFFF",
     "delay": 123,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 68,
@@ -906,10 +1044,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.529,
     "scatterY": -1.119,
     "scatterZ": 3.195,
-    "size": 3.4,
+    "size": 3.2,
     "color": "#FFFFFF",
     "delay": 66,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 69,
@@ -919,10 +1059,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.22,
     "scatterY": 1.416,
     "scatterZ": 0.421,
-    "size": 3,
-    "color": "#60A5FA",
+    "size": 3.3,
+    "color": "#FFFFFF",
     "delay": 106,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 70,
@@ -932,10 +1074,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.599,
     "scatterY": 0.834,
     "scatterZ": 3.065,
-    "size": 3.7,
+    "size": 3.5,
     "color": "#FFFFFF",
     "delay": 104,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 71,
@@ -945,10 +1089,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.981,
     "scatterY": -0.915,
     "scatterZ": -1.417,
-    "size": 3.5,
+    "size": 3.3,
     "color": "#FFFFFF",
     "delay": 38,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 72,
@@ -958,10 +1104,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.246,
     "scatterY": -1.673,
     "scatterZ": -2.615,
-    "size": 3.2,
-    "color": "#3B82F6",
+    "size": 3.5,
+    "color": "#FFFFFF",
     "delay": 117,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 73,
@@ -971,10 +1119,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.097,
     "scatterY": -1.359,
     "scatterZ": -0.75,
-    "size": 3.9,
+    "size": 3.7,
     "color": "#FFFFFF",
     "delay": 43,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 74,
@@ -984,10 +1134,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.625,
     "scatterY": 2.031,
     "scatterZ": -1.479,
-    "size": 3.7,
+    "size": 3.5,
     "color": "#FFFFFF",
     "delay": 132,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 75,
@@ -997,10 +1149,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.798,
     "scatterY": 0.647,
     "scatterZ": -2.976,
-    "size": 2.9,
-    "color": "#60A5FA",
+    "size": 3.2,
+    "color": "#FFFFFF",
     "delay": 82,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 76,
@@ -1010,10 +1164,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.638,
     "scatterY": -0.45,
     "scatterZ": -3.105,
-    "size": 3.5,
+    "size": 3.3,
     "color": "#FFFFFF",
     "delay": 47,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 77,
@@ -1023,10 +1179,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.349,
     "scatterY": 1.799,
     "scatterZ": 2.216,
-    "size": 3.7,
+    "size": 3.5,
     "color": "#FFFFFF",
     "delay": 100,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 78,
@@ -1036,10 +1194,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.293,
     "scatterY": -2.29,
     "scatterZ": 1.133,
-    "size": 3.7,
+    "size": 3.5,
     "color": "#FFFFFF",
     "delay": 97,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 79,
@@ -1049,10 +1209,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.632,
     "scatterY": -1.489,
     "scatterZ": -2.649,
-    "size": 3.5,
+    "size": 3.9,
     "color": "#FFFFFF",
     "delay": 137,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 80,
@@ -1062,10 +1224,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.416,
     "scatterY": 1.628,
     "scatterZ": -0.409,
-    "size": 3.3,
-    "color": "#3B82F6",
+    "size": 3.6,
+    "color": "#FFFFFF",
     "delay": 82,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 81,
@@ -1075,10 +1239,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.08,
     "scatterY": 0.857,
     "scatterZ": -2.129,
-    "size": 3.2,
+    "size": 3,
     "color": "#FFFFFF",
     "delay": 126,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 82,
@@ -1088,10 +1254,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.778,
     "scatterY": 0.458,
     "scatterZ": -0.589,
-    "size": 3.7,
+    "size": 3.5,
     "color": "#FFFFFF",
     "delay": 129,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 83,
@@ -1101,10 +1269,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.495,
     "scatterY": -0.533,
     "scatterZ": 3.173,
-    "size": 3,
+    "size": 3.3,
     "color": "#FFFFFF",
     "delay": 17,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 84,
@@ -1114,10 +1284,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.946,
     "scatterY": -0.46,
     "scatterZ": 0.013,
-    "size": 3.5,
-    "color": "#60A5FA",
+    "size": 3.9,
+    "color": "#FFFFFF",
     "delay": 70,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 85,
@@ -1127,10 +1299,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.599,
     "scatterY": 1.107,
     "scatterZ": 0.508,
-    "size": 3.3,
+    "size": 3.1,
     "color": "#FFFFFF",
     "delay": 109,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 86,
@@ -1140,10 +1314,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.125,
     "scatterY": 2.516,
     "scatterZ": 0.368,
-    "size": 3.7,
+    "size": 3.5,
     "color": "#FFFFFF",
     "delay": 74,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 87,
@@ -1153,10 +1329,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.053,
     "scatterY": 1.973,
     "scatterZ": 0.926,
-    "size": 3.5,
+    "size": 3.9,
     "color": "#FFFFFF",
     "delay": 2,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 88,
@@ -1166,10 +1344,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.892,
     "scatterY": -1.357,
     "scatterZ": 2.027,
-    "size": 3.3,
-    "color": "#60A5FA",
+    "size": 3.6,
+    "color": "#FFFFFF",
     "delay": 139,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 89,
@@ -1179,10 +1359,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.136,
     "scatterY": -1.955,
     "scatterZ": 1.194,
-    "size": 3.8,
+    "size": 4.2,
     "color": "#FFFFFF",
     "delay": 38,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 90,
@@ -1192,10 +1374,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.119,
     "scatterY": -1.34,
     "scatterZ": 0.742,
-    "size": 3.5,
+    "size": 3.9,
     "color": "#FFFFFF",
     "delay": 62,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 91,
@@ -1205,10 +1389,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.126,
     "scatterY": 0.892,
     "scatterZ": -3.636,
-    "size": 3.9,
+    "size": 3.7,
     "color": "#FFFFFF",
     "delay": 79,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 92,
@@ -1218,10 +1404,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.765,
     "scatterY": -0.574,
     "scatterZ": 3.397,
-    "size": 3.7,
-    "color": "#60A5FA",
+    "size": 3.5,
+    "color": "#FFFFFF",
     "delay": 138,
-    "layer": "front"
+    "layer": "front",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 93,
@@ -1231,10 +1419,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.478,
     "scatterY": 0.856,
     "scatterZ": -1.894,
-    "size": 2.9,
-    "color": "#3B82F6",
+    "size": 2.8,
+    "color": "#FFFFFF",
     "delay": 25,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 94,
@@ -1244,10 +1434,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.266,
     "scatterY": 1.106,
     "scatterZ": 1.169,
-    "size": 2.7,
-    "color": "#60A5FA",
+    "size": 3,
+    "color": "#FFFFFF",
     "delay": 66,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 95,
@@ -1257,10 +1449,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.677,
     "scatterY": -2.257,
     "scatterZ": 0.689,
-    "size": 2.4,
-    "color": "#60A5FA",
+    "size": 2.6,
+    "color": "#FFFFFF",
     "delay": 28,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 96,
@@ -1270,10 +1464,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.101,
     "scatterY": 1.899,
     "scatterZ": -0.076,
-    "size": 2.5,
-    "color": "#3B82F6",
+    "size": 2.4,
+    "color": "#FFFFFF",
     "delay": 98,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 97,
@@ -1283,10 +1479,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.627,
     "scatterY": 1.424,
     "scatterZ": 0.728,
-    "size": 2.2,
-    "color": "#3B82F6",
+    "size": 2.1,
+    "color": "#FFFFFF",
     "delay": 42,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 98,
@@ -1296,10 +1494,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.016,
     "scatterY": 1.155,
     "scatterZ": -1.708,
-    "size": 2.9,
-    "color": "#60A5FA",
+    "size": 2.8,
+    "color": "#FFFFFF",
     "delay": 47,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 99,
@@ -1309,10 +1509,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.401,
     "scatterY": -1.53,
     "scatterZ": 1.55,
-    "size": 2.9,
-    "color": "#60A5FA",
+    "size": 3.2,
+    "color": "#FFFFFF",
     "delay": 19,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 100,
@@ -1322,10 +1524,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.212,
     "scatterY": 0.872,
     "scatterZ": -3.345,
-    "size": 2.6,
-    "color": "#60A5FA",
+    "size": 2.9,
+    "color": "#FFFFFF",
     "delay": 6,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 101,
@@ -1335,10 +1539,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.942,
     "scatterY": -1.084,
     "scatterZ": -0.014,
-    "size": 2.3,
-    "color": "#3B82F6",
+    "size": 2.5,
+    "color": "#FFFFFF",
     "delay": 53,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 102,
@@ -1348,10 +1554,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 1.677,
     "scatterY": -0.784,
     "scatterZ": -1.05,
-    "size": 2.3,
-    "color": "#60A5FA",
+    "size": 2.5,
+    "color": "#FFFFFF",
     "delay": 68,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 103,
@@ -1361,10 +1569,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.784,
     "scatterY": -0.477,
     "scatterZ": 1.575,
-    "size": 2.9,
-    "color": "#60A5FA",
+    "size": 3.2,
+    "color": "#FFFFFF",
     "delay": 98,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 104,
@@ -1374,10 +1584,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 2.073,
     "scatterY": 0.958,
     "scatterZ": 1.208,
-    "size": 2.6,
-    "color": "#3B82F6",
+    "size": 2.9,
+    "color": "#FFFFFF",
     "delay": 48,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 105,
@@ -1387,10 +1599,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.753,
     "scatterY": -0.372,
     "scatterZ": 0.461,
-    "size": 2.6,
-    "color": "#3B82F6",
+    "size": 2.9,
+    "color": "#FFFFFF",
     "delay": 106,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 106,
@@ -1400,10 +1614,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.344,
     "scatterY": -1.653,
     "scatterZ": -0.567,
-    "size": 2.2,
-    "color": "#3B82F6",
+    "size": 2.4,
+    "color": "#FFFFFF",
     "delay": 38,
-    "layer": "depth"
+    "layer": "depth",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 107,
@@ -1413,10 +1629,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.09,
     "scatterY": 1.435,
     "scatterZ": -0.041,
-    "size": 3.2,
-    "color": "#E2E8F0",
+    "size": 3.5,
+    "color": "#FFFFFF",
     "delay": 129,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 108,
@@ -1426,10 +1644,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.086,
     "scatterY": 1.87,
     "scatterZ": 0.594,
-    "size": 2.5,
-    "color": "#E2E8F0",
+    "size": 2.4,
+    "color": "#FFFFFF",
     "delay": 90,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 109,
@@ -1439,10 +1659,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.238,
     "scatterY": 1.687,
     "scatterZ": -0.3,
-    "size": 3.2,
-    "color": "#E2E8F0",
+    "size": 3.5,
+    "color": "#FFFFFF",
     "delay": 53,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 110,
@@ -1452,10 +1674,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.036,
     "scatterY": -0.993,
     "scatterZ": 3.054,
-    "size": 3.5,
-    "color": "#E2E8F0",
+    "size": 3.9,
+    "color": "#FFFFFF",
     "delay": 34,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 111,
@@ -1465,10 +1689,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.319,
     "scatterY": 2.168,
     "scatterZ": -0.036,
-    "size": 2.5,
-    "color": "#E2E8F0",
+    "size": 2.8,
+    "color": "#FFFFFF",
     "delay": 42,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 112,
@@ -1478,10 +1704,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.753,
     "scatterY": 1.631,
     "scatterZ": 2.335,
-    "size": 2.8,
-    "color": "#E2E8F0",
+    "size": 3.1,
+    "color": "#FFFFFF",
     "delay": 6,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 113,
@@ -1491,10 +1719,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.042,
     "scatterY": -1.307,
     "scatterZ": -1.314,
-    "size": 2.8,
-    "color": "#E2E8F0",
+    "size": 2.7,
+    "color": "#FFFFFF",
     "delay": 67,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dot",
+    "angle": 55
   },
   {
     "id": 114,
@@ -1504,10 +1734,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.792,
     "scatterY": -1.225,
     "scatterZ": 1.758,
-    "size": 3.3,
-    "color": "#E2E8F0",
+    "size": 3.6,
+    "color": "#FFFFFF",
     "delay": 126,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 115,
@@ -1517,10 +1749,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -1.833,
     "scatterY": 1.484,
     "scatterZ": 0.083,
-    "size": 2.6,
-    "color": "#E2E8F0",
+    "size": 2.9,
+    "color": "#FFFFFF",
     "delay": 48,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 116,
@@ -1530,10 +1764,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.257,
     "scatterY": 0.882,
     "scatterZ": -1.35,
-    "size": 3.4,
-    "color": "#E2E8F0",
+    "size": 3.7,
+    "color": "#FFFFFF",
     "delay": 99,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 117,
@@ -1543,10 +1779,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.715,
     "scatterY": -1.042,
     "scatterZ": 2.226,
-    "size": 3,
-    "color": "#E2E8F0",
+    "size": 2.8,
+    "color": "#FFFFFF",
     "delay": 73,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dot",
+    "angle": -52
   },
   {
     "id": 118,
@@ -1556,10 +1794,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": -0.387,
     "scatterY": -2.645,
     "scatterZ": -0.03,
-    "size": 2.7,
-    "color": "#E2E8F0",
+    "size": 3,
+    "color": "#FFFFFF",
     "delay": 51,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dash",
+    "angle": -52
   },
   {
     "id": 119,
@@ -1569,10 +1809,12 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.411,
     "scatterY": 2.411,
     "scatterZ": -1.481,
-    "size": 3.2,
-    "color": "#E2E8F0",
+    "size": 3.5,
+    "color": "#FFFFFF",
     "delay": 4,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dash",
+    "angle": 55
   },
   {
     "id": 120,
@@ -1582,9 +1824,11 @@ export const LOGO_3D_PARTICLES: Logo3DParticle[] = [
     "scatterX": 0.359,
     "scatterY": -1.354,
     "scatterZ": -0.002,
-    "size": 2.6,
-    "color": "#E2E8F0",
+    "size": 2.9,
+    "color": "#FFFFFF",
     "delay": 35,
-    "layer": "bevel"
+    "layer": "bevel",
+    "shape": "dash",
+    "angle": 55
   }
 ];
