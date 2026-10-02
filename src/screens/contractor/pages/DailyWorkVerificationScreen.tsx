@@ -110,6 +110,7 @@ export const DailyWorkVerificationScreen: React.FC<DailyWorkVerificationScreenPr
     );
 
     onSaveDailyReport(report);
+    setQuantitiesToday({});
     Alert.alert(
       'Daily Work Verified',
       `Site work audit verified at ₹${totalWorkValueToday.toLocaleString('en-IN')}.\nWorker Wages: -₹${totalWageToday.toLocaleString('en-IN')}\nContractor Net Margin: +₹${netContractorMarginToday.toLocaleString('en-IN')}`

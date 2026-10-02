@@ -45,7 +45,7 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
   onAddWorker,
   onUpdateAttendance,
 }) => {
-  const [attendance, setAttendance] = useState<AttendanceEntry[]>(project.todayAttendance);
+  const attendance = project.todayAttendance;
   const [showAddWorkerModal, setShowAddWorkerModal] = useState(false);
   const [newWorkerName, setNewWorkerName] = useState('');
   const [newWorkerRole, setNewWorkerRole] = useState<WorkerRecord['role']>('Mason');
@@ -58,7 +58,7 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
   const totalWageToday = attendance.reduce((sum, a) => sum + a.wageCalculated, 0);
 
   const setStatus = (workerId: string, status: AttendanceEntry['status']) => {
-    const updated = attendance.map((a) => {
+    const updated = project.todayAttendance.map((a) => {
       if (a.workerId !== workerId) return a;
       const wageCalculated =
         status === 'present' ? a.dailyWage : status === 'half_day' ? Math.round(a.dailyWage / 2) : 0;
@@ -68,12 +68,11 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
         wageCalculated,
       };
     });
-    setAttendance(updated);
     onUpdateAttendance(updated);
   };
 
   const toggleProof = (workerId: string) => {
-    const updated = attendance.map((a) => {
+    const updated = project.todayAttendance.map((a) => {
       if (a.workerId !== workerId) return a;
       const newProof = !a.proofVerified;
       return {
@@ -84,7 +83,6 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
           : 'Awaiting proof verification',
       };
     });
-    setAttendance(updated);
     onUpdateAttendance(updated);
   };
 

@@ -168,6 +168,44 @@ async function runContractorBackendTests() {
   assert(status.isCloudConnected === isSupabaseConfigured(), 'Sync status accurately reflects Supabase config');
   assert(status.syncError === null, 'No sync errors');
 
+  // Test 11: Real Data Cross-Screen Calculation Consistency & RA Bill
+  console.log('\n[Test 11] Cross-Screen Calculation Consistency & RA Bill');
+  const activeProj = (await ContractorStorageService.getProjectById(createdProject.id))!;
+  const calcTotalScope = activeProj.scopeItems.reduce((sum, item) => sum + item.totalAmount, 0);
+  const calcTotalCompleted = activeProj.scopeItems.reduce(
+    (sum, item) => sum + item.completedQuantity * item.ratePerUnit,
+    0
+  );
+  const calcExecutionPct = calcTotalScope > 0 ? Math.round((calcTotalCompleted / calcTotalScope) * 100) : 0;
+  const calcReceived = activeProj.transactions
+    .filter((t) => t.type === 'received_from_client')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const calcPaid = activeProj.transactions
+    .filter((t) => t.type === 'paid_to_worker')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const calcNetCashflow = calcReceived - calcPaid;
+  const calcBalanceDue = Math.max(0, calcTotalCompleted - calcReceived);
+
+  assert(calcTotalScope === 216000, 'Total Contract Scope Value is ₹2,16,000');
+  assert(calcTotalCompleted === 72000, 'Total Work Executed Value is ₹72,000');
+  assert(calcExecutionPct === 33, 'Execution progress calculates to 33%');
+  assert(calcReceived === 100000, 'Total Cash Collected is ₹1,00,000');
+  assert(calcPaid === 0, 'Total Paid to Workers is ₹0');
+  assert(calcNetCashflow === 100000, 'Net Cashflow Balance is ₹1,00,000');
+  assert(calcBalanceDue === 0, 'RA Bill Balance Due correctly reflects zero pending balance');
+
+  // Test 12: Persistence Verification Across Simulated App Reload
+  console.log('\n[Test 12] Persistence Across App Reload');
+  const allProjectsReloaded = await ContractorStorageService.getProjects();
+  const reloadedProject = allProjectsReloaded.find((p) => p.id === createdProject.id);
+  assert(Boolean(reloadedProject), 'Project found after simulated app reload');
+  assert(reloadedProject?.scopeItems.length === 1, 'Scope items intact across reload');
+  assert(reloadedProject?.workers.length === 1, 'Workers roster intact across reload');
+  assert(reloadedProject?.todayAttendance.length === 1, 'Attendance records intact across reload');
+  assert(reloadedProject?.dailyReports.length === 1, 'Daily reports intact across reload');
+  assert(reloadedProject?.transactions.length === 1, 'Transactions intact across reload');
+  assert(reloadedProject?.chatState?.messages.length! >= 2, 'Chat history intact across reload');
+
   // Clean up test project
   await ContractorStorageService.deleteProject(createdProject.id);
   const deletedCheck = await ContractorStorageService.getProjectById(createdProject.id);
