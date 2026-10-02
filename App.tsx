@@ -12,6 +12,7 @@ import { View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
 import { AuthProvider } from './src/context/AuthContext';
+import { ContractorProvider } from './src/context/ContractorContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import DiscordSplashScreen from './src/components/DiscordSplashScreen';
 
@@ -62,10 +63,12 @@ export default function App() {
   // 2. Main App: Rendered only once splash finishes
   return (
     <AuthProvider>
-      <View style={styles.container}>
-        <StatusBar style="light" />
-        <RootNavigator onReplaySplash={handleReplaySplash} />
-      </View>
+      <ContractorProvider>
+        <View style={styles.container}>
+          <StatusBar style="light" />
+          <RootNavigator onReplaySplash={handleReplaySplash} />
+        </View>
+      </ContractorProvider>
     </AuthProvider>
   );
 }

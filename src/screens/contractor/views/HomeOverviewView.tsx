@@ -23,6 +23,7 @@ import {
   SpringPressable,
   PulsingDot,
 } from '../../../components/AnimatedComponents';
+import { isSupabaseConfigured } from '../../../services/supabaseClient';
 
 interface HomeOverviewViewProps {
   user: User;
@@ -45,6 +46,7 @@ export const HomeOverviewView: React.FC<HomeOverviewViewProps> = ({
   const activeProjectsCount = projects.filter((p) => p.status === 'active').length;
   const totalCrewCount = projects.reduce((acc, p) => acc + (p.workers?.length || 0), 0);
   const totalVerifiedReports = projects.reduce((acc, p) => acc + (p.dailyReports?.length || 0), 0);
+  const isCloud = isSupabaseConfigured();
 
   return (
     <View style={styles.rootContainer}>
@@ -56,7 +58,15 @@ export const HomeOverviewView: React.FC<HomeOverviewViewProps> = ({
         {/* 1. TOP HEADER WITH CIRCULAR BUTTONS (MATCHING REFERENCE) */}
         <FadeInSlide delay={40} distance={14}>
           <View style={styles.headerRow}>
-            <Text style={styles.headerTitle}>Overview</Text>
+            <View style={styles.titleContainer}>
+              <Text style={styles.headerTitle}>Overview</Text>
+              <View style={styles.syncBadge}>
+                <PulsingDot color={isCloud ? '#10B981' : '#38BDF8'} size={6} />
+                <Text style={styles.syncBadgeText}>
+                  {isCloud ? 'Cloud' : 'Local'}
+                </Text>
+              </View>
+            </View>
 
             <View style={styles.headerControls}>
               {/* Filter / Sliders Circular Button */}
@@ -227,8 +237,29 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: fonts.displayBold,
     color: '#FFFFFF',
-    fontSize: 32,
+    fontSize: 30,
     letterSpacing: -0.6,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  syncBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#16161A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#222228',
+  },
+  syncBadgeText: {
+    fontFamily: fonts.displayBold,
+    color: '#8E8E93',
+    fontSize: 10,
   },
   headerControls: {
     flexDirection: 'row',

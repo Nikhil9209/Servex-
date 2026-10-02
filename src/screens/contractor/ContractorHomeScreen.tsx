@@ -13,8 +13,6 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { fonts } from '../../theme/tokens';
 import { User, UserRole } from '../../types/auth';
-import { ContractorProjectDetail } from '../../types/contractor';
-import { INITIAL_CONTRACTOR_PROJECTS } from '../../services/contractorStorage';
 import {
   GridTabIcon,
   ScheduleTabIcon,
@@ -34,6 +32,7 @@ import { JobsListView } from './views/JobsListView';
 import { ScheduleView } from './views/ScheduleView';
 import { ProfileSettingsView } from './views/ProfileSettingsView';
 import { ProjectWorkspaceScreen } from './pages/ProjectWorkspaceScreen';
+import { useContractor } from '../../context/ContractorContext';
 
 export interface ContractorHomeScreenProps {
   user: User;
@@ -50,8 +49,15 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
   onReplaySplash,
   onSwitchRole,
 }) => {
-  const [projects, setProjects] = useState<ContractorProjectDetail[]>(INITIAL_CONTRACTOR_PROJECTS);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const {
+    projects,
+    setSelectedProjectId,
+    selectedProject,
+    createProject,
+    updateProject,
+    joinProjectByCode,
+  } = useContractor();
+
   const [activeTab, setActiveTab] = useState<TabType>('home');
 
   // Modals for Join & Create Project
@@ -64,7 +70,6 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
   const [newSiteAddress, setNewSiteAddress] = useState('');
 
   // 1. IF A JOB IS SELECTED, OPEN THE DEDICATED JOB DETAILS / WORKSPACE SCREEN!
-  const selectedProject = projects.find((p) => p.id === selectedProjectId);
   if (selectedProject) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -73,33 +78,30 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
           project={selectedProject}
           onBack={() => setSelectedProjectId(null)}
           onUpdateProject={(updatedProject) => {
-            setProjects((prev) =>
-              prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
-            );
+            updateProject(updatedProject);
           }}
         />
       </SafeAreaView>
     );
   }
 
-  const handleJoinByCode = () => {
+  const handleJoinByCode = async () => {
     const code = clientCodeInput.trim().toUpperCase();
     if (!code) {
       Alert.alert('Missing Code', 'Please enter the client project code.');
       return;
     }
 
-    const exists = projects.find((p) => p.clientCode === code);
-    if (exists) {
-      Alert.alert('Project Linked', `Opening workspace for ${exists.projectName}.`);
+    const joined = await joinProjectByCode(code);
+    if (joined) {
+      Alert.alert('Project Linked', `Opening workspace for ${joined.projectName}.`);
       setShowJoinModal(false);
       setClientCodeInput('');
-      setSelectedProjectId(exists.id);
+      setSelectedProjectId(joined.id);
       return;
     }
 
-    const newLinkedProject: ContractorProjectDetail = {
-      id: `proj-${Date.now()}`,
+    const newLinkedProject = await createProject({
       clientCode: code,
       projectName: `Site Project (${code})`,
       clientName: 'Client Partner',
@@ -107,39 +109,22 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
       siteAddress: 'Client Assigned Site Location',
       startDate: 'Today',
       status: 'active',
-      scopeItems: [
-        {
-          id: `sc-${Date.now()}`,
-          name: 'Site Mobilization & Layout',
-          unit: 'sqft',
-          quantity: 1000,
-          ratePerUnit: 60,
-          totalAmount: 60000,
-          completedQuantity: 0,
-        },
-      ],
-      workers: [],
-      todayAttendance: [],
-      dailyReports: [],
-      transactions: [],
-    };
+    });
 
-    setProjects((prev) => [newLinkedProject, ...prev]);
     setShowJoinModal(false);
     setClientCodeInput('');
     setSelectedProjectId(newLinkedProject.id);
     Alert.alert('Connected', `Successfully joined project with Client Code ${code}.`);
   };
 
-  const handleCreateNewProject = () => {
+  const handleCreateNewProject = async () => {
     if (!newProjectName.trim() || !newClientName.trim()) {
       Alert.alert('Missing Information', 'Please enter project name and client name.');
       return;
     }
 
     const generatedCode = `CLT-${Math.floor(1000 + Math.random() * 9000)}`;
-    const createdProject: ContractorProjectDetail = {
-      id: `proj-${Date.now()}`,
+    const createdProject = await createProject({
       clientCode: generatedCode,
       projectName: newProjectName.trim(),
       clientName: newClientName.trim(),
@@ -147,14 +132,8 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
       siteAddress: newSiteAddress.trim() || 'Metro Construction Zone',
       startDate: 'Today',
       status: 'active',
-      scopeItems: [],
-      workers: [],
-      todayAttendance: [],
-      dailyReports: [],
-      transactions: [],
-    };
+    });
 
-    setProjects((prev) => [createdProject, ...prev]);
     setShowCreateModal(false);
     setNewProjectName('');
     setNewClientName('');
