@@ -386,16 +386,26 @@ export const ContractorBackendService = {
     }
 
     const trimmedCode = clientCode.trim();
-    const { uid, role } = await getAuthenticatedSupabaseIdentity();
+    const { uid } = await getAuthenticatedSupabaseIdentity();
+
+    if (!uid) {
+      throw new Error('Authentication required to join project');
+    }
+
     const local = await ContractorStorageService.findProjectByCode(trimmedCode);
 
     if (local) {
+      // Prevent contractor from joining their own project as client
+      if (local.contractorId && local.contractorId === uid) {
+        throw new Error('Contractor cannot join their own project as client');
+      }
+
       // Prevent claiming a project that is already linked to another client
-      if (local.clientId && uid && local.clientId !== uid) {
+      if (local.clientId && local.clientId !== uid) {
         throw new Error('This project is already linked to another client account');
       }
 
-      if (uid && role === 'client' && !local.clientId) {
+      if (!local.clientId) {
         local.clientId = uid;
         await ContractorStorageService.updateProject(local);
       }
@@ -411,6 +421,9 @@ export const ContractorBackendService = {
         });
 
         if (rpcErr) {
+          if (rpcErr.message && rpcErr.message.includes('Project not found')) {
+            return null;
+          }
           throw new Error(rpcErr.message);
         }
 
@@ -448,8 +461,16 @@ export const ContractorBackendService = {
           return project;
         }
       } catch (err: any) {
-        if (err.message && err.message.includes('already linked')) {
+        if (
+          err.message &&
+          (err.message.includes('already linked') ||
+            err.message.includes('Authentication required') ||
+            err.message.includes('Contractor cannot join'))
+        ) {
           throw err;
+        }
+        if (err.message && err.message.includes('Project not found')) {
+          return null;
         }
         // Safe offline queue
       }

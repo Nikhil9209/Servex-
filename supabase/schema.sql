@@ -240,18 +240,24 @@ BEGIN
         RAISE EXCEPTION 'Project code is required';
     END IF;
 
-    -- Lookup project strictly by unique client_code
+    -- Lookup project strictly by unique client_code with exclusive row lock for atomic concurrency
     SELECT * INTO v_project
     FROM projects
-    WHERE UPPER(TRIM(client_code)) = UPPER(TRIM(p_client_code));
+    WHERE UPPER(TRIM(client_code)) = UPPER(TRIM(p_client_code))
+    FOR UPDATE;
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Project not found with code %', p_client_code;
     END IF;
 
-    -- If already linked to this client, return existing record
+    -- If already linked to this client, return existing record safely and idempotently
     IF v_project.client_id = v_user_id THEN
         RETURN v_project;
+    END IF;
+
+    -- Prevent contractor from joining their own project as a client
+    IF v_project.contractor_id = v_user_id THEN
+        RAISE EXCEPTION 'Contractor cannot join their own project as client';
     END IF;
 
     -- Prevent claiming a project that is already linked to another client
@@ -262,11 +268,16 @@ BEGIN
     -- Mark transaction context as authorized client linking flow
     PERFORM set_config('servex.allow_client_linking', 'true', true);
 
-    -- Securely link client_id to the caller's verified auth.uid()
+    -- Securely link client_id to the caller's verified auth.uid() atomically
     UPDATE projects
     SET client_id = v_user_id, updated_at = NOW()
     WHERE id = v_project.id
+      AND (client_id IS NULL OR client_id = v_user_id)
     RETURNING * INTO v_project;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'This project is already linked to another client account';
+    END IF;
 
     RETURN v_project;
 END;

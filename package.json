@@ -39,8 +39,9 @@
     "test:stage1": "npx tsx scripts/test-stage1-runner.js",
     "test:stage2": "npx tsx scripts/test-stage2-runner.js",
     "test:stage3": "npx tsx scripts/test-stage3-runner.js",
+    "test:stage4": "npx tsx scripts/test-stage4-runner.js",
     "test:backend": "npx tsx scripts/test-contractor-runner.js",
-    "test:all": "npm test && npm run test:stage1 && npm run test:stage2 && npm run test:stage3 && npm run test:backend"
+    "test:all": "npm test && npm run test:stage1 && npm run test:stage2 && npm run test:stage3 && npm run test:stage4 && npm run test:backend"
   },
   "private": true
 }
