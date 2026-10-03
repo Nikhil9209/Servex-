@@ -17,6 +17,7 @@ import {
   ProjectChatMessage,
 } from '../types/contractor';
 import { ContractorBackendService } from '../services/contractorBackendService';
+import { useAuth } from './AuthContext';
 
 interface ContractorContextValue {
   projects: ContractorProjectDetail[];
@@ -68,6 +69,7 @@ interface ContractorContextValue {
 const ContractorContext = createContext<ContractorContextValue | null>(null);
 
 export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [projects, setProjects] = useState<ContractorProjectDetail[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -78,35 +80,57 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
   }, []);
 
   const loadAllProjects = useCallback(async () => {
+    if (!user) {
+      setProjects([]);
+      setSelectedProjectId(null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const data = await ContractorBackendService.getAllProjects();
+      setIsLoading(true);
+      const data = await ContractorBackendService.getAllProjects(user.id);
       setProjects(data);
     } catch {
       // Fallback
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     let isMounted = true;
-    ContractorBackendService.getAllProjects()
-      .then((data) => {
+
+    async function syncProjects() {
+      if (!user) {
+        if (isMounted) {
+          setProjects([]);
+          setSelectedProjectId(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const data = await ContractorBackendService.getAllProjects(user.id);
         if (isMounted) {
           setProjects(data);
+          setSelectedProjectId(null);
           setIsLoading(false);
         }
-      })
-      .catch(() => {
+      } catch {
         if (isMounted) {
           setIsLoading(false);
         }
-      });
+      }
+    }
+
+    syncProjects();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user]);
 
   const selectedProject = useMemo(() => {
     if (!selectedProjectId) return null;

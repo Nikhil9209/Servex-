@@ -141,7 +141,7 @@ async function runStage4LinkingTests() {
       secondClientDenied = true;
     }
   }
-  const checkAfterAttemptB = await ContractorStorageService.getProjectById(project1.id);
+  const checkAfterAttemptB = await ContractorStorageService.getProjectById(project1.id, IDENTITIES.clientA.id);
   assert(
     secondClientDenied && checkAfterAttemptB?.clientId === IDENTITIES.clientA.id,
     'Client Bob CANNOT claim or overwrite project linked to Client Alice (DENIED)'
@@ -252,7 +252,7 @@ async function runStage4LinkingTests() {
   }
   assert(claim2Denied, 'Second claiming client (Bob) is rejected; exactly one client claims the project');
 
-  const checkFinalH = await ContractorStorageService.getProjectById(projectH.id);
+  const checkFinalH = await ContractorStorageService.getProjectById(projectH.id, IDENTITIES.clientA.id);
   assert(
     checkFinalH?.clientId === IDENTITIES.clientA.id,
     'Database state atomically preserves first claimant; no overwrite occurred'

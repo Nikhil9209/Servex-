@@ -388,7 +388,7 @@ async function runStage3RlsTests() {
       clientBClaimDenied = true;
     }
   }
-  const checkAfterAttempt4 = await ContractorStorageService.getProjectById(projectA.id);
+  const checkAfterAttempt4 = await ContractorStorageService.getProjectById(projectA.id, IDENTITIES.contractorA.id);
   assert(
     clientBClaimDenied && checkAfterAttempt4?.clientId === IDENTITIES.clientA.id,
     'Client B CANNOT claim Project A (DENIED)'
@@ -428,7 +428,7 @@ async function runStage3RlsTests() {
   } catch {
     clientBJoinLinkedDenied = true;
   }
-  const checkAfterAttempt6 = await ContractorStorageService.getProjectById(projectA.id);
+  const checkAfterAttempt6 = await ContractorStorageService.getProjectById(projectA.id, IDENTITIES.contractorA.id);
   assert(
     clientBJoinLinkedDenied && checkAfterAttempt6?.clientId === IDENTITIES.clientA.id,
     'Client B CANNOT join Project A after Client A is linked (DENIED)'

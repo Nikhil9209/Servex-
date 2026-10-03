@@ -9,10 +9,28 @@ import {
   ProjectChatMessage,
 } from '../types/contractor';
 import { INITIAL_CONTRACTOR_PROJECTS } from './contractorStorage';
+import { StorageService } from './storage';
+import { getSupabaseClient } from './supabaseClient';
 
-const CONTRACTOR_PROJECTS_KEY = 'servex_contractor_projects_v2';
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isValidUuid(id?: string | null): boolean {
+  return Boolean(id && UUID_REGEX.test(id));
+}
+
+export const CACHE_PREFIX = 'servex_contractor_projects_v2';
+export const UNOWNED_SEED_KEY = 'servex_unowned_seed_projects_v2';
+export const LEGACY_STATIC_KEY = 'servex_contractor_projects_v2';
+export const USER_REGISTRY_KEY = 'servex_user_cache_registry_v2';
+
+export function getProjectStorageKey(userId?: string | null): string {
+  if (userId && isValidUuid(userId)) {
+    return `${CACHE_PREFIX}_${userId.toLowerCase()}`;
+  }
+  return UNOWNED_SEED_KEY;
+}
+
 const memoryStore = new Map<string, string>();
-
 const isWeb = typeof window !== 'undefined' && typeof (window as any).document !== 'undefined';
 
 async function setStorageItem(key: string, value: string): Promise<void> {
@@ -54,58 +72,278 @@ async function getStorageItem(key: string): Promise<string | null> {
   }
 }
 
+async function deleteStorageItem(key: string): Promise<void> {
+  if (isWeb) {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  try {
+    await SecureStore.deleteItemAsync(key);
+  } catch {
+    // Ignore
+  }
+  memoryStore.delete(key);
+}
+
+async function registerUserKey(userId: string): Promise<void> {
+  if (!userId || !isValidUuid(userId)) return;
+  const normalized = userId.toLowerCase();
+  try {
+    const raw = await getStorageItem(USER_REGISTRY_KEY);
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    if (!list.includes(normalized)) {
+      list.push(normalized);
+      await setStorageItem(USER_REGISTRY_KEY, JSON.stringify(list));
+    }
+  } catch {
+    // Ignore
+  }
+}
+
+async function getRegisteredUserIds(): Promise<string[]> {
+  const ids = new Set<string>();
+  try {
+    const raw = await getStorageItem(USER_REGISTRY_KEY);
+    if (raw) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        list.forEach((id) => {
+          if (typeof id === 'string' && isValidUuid(id)) {
+            ids.add(id.toLowerCase());
+          }
+        });
+      }
+    }
+  } catch {
+    // Ignore
+  }
+
+  // Also check memoryStore keys for test environments
+  for (const k of memoryStore.keys()) {
+    if (k.startsWith(CACHE_PREFIX + '_')) {
+      const candidateId = k.slice(CACHE_PREFIX.length + 1);
+      if (isValidUuid(candidateId)) {
+        ids.add(candidateId.toLowerCase());
+      }
+    }
+  }
+
+  // Also check localStorage in web environments
+  if (isWeb) {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const k = window.localStorage.key(i);
+          if (k && k.startsWith(CACHE_PREFIX + '_')) {
+            const candidateId = k.slice(CACHE_PREFIX.length + 1);
+            if (isValidUuid(candidateId)) {
+              ids.add(candidateId.toLowerCase());
+            }
+          }
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  return Array.from(ids);
+}
+
 export const ContractorStorageService = {
   /**
-   * Loads all contractor projects from local device storage.
-   * If first time launch, initializes storage with default INITIAL_CONTRACTOR_PROJECTS.
+   * Resolves the active authenticated user ID.
+   * Priority:
+   * 1. Explicit verified UUID passed as argument.
+   * 2. Verified Supabase Auth UID.
+   * 3. Verified local session user ID in StorageService.
+   * Returns null if unauthenticated.
    */
-  async getProjects(): Promise<ContractorProjectDetail[]> {
+  async resolveActiveUserId(userId?: string | null): Promise<string | null> {
+    if (userId && isValidUuid(userId)) {
+      return userId;
+    }
+
+    // 1. Check Supabase Auth
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (data?.user?.id && isValidUuid(data.user.id)) {
+          return data.user.id;
+        }
+      } catch {
+        // Safe offline fallback
+      }
+    }
+
+    // 2. Check local session
     try {
-      const raw = await getStorageItem(CONTRACTOR_PROJECTS_KEY);
-      if (!raw) {
-        await this.saveProjects(INITIAL_CONTRACTOR_PROJECTS);
-        return INITIAL_CONTRACTOR_PROJECTS;
+      const session = await StorageService.getSession();
+      if (session?.user?.id && isValidUuid(session.user.id)) {
+        return session.user.id;
       }
-      const parsed: ContractorProjectDetail[] = JSON.parse(raw);
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        await this.saveProjects(INITIAL_CONTRACTOR_PROJECTS);
-        return INITIAL_CONTRACTOR_PROJECTS;
+    } catch {
+      // Safe offline fallback
+    }
+
+    return null;
+  },
+
+  /**
+   * Safely migrates projects from the legacy un-namespaced key if any exist.
+   * CRITICAL SECURITY INVARIANT:
+   * - Only projects where contractorId === targetUserId OR clientId === targetUserId are imported.
+   * - Never blindly assigns unverified or other users' projects.
+   * - Deletes the legacy static key immediately to prevent future cross-user leakage.
+   */
+  async migrateLegacyCache(targetUserId: string): Promise<void> {
+    if (!targetUserId || !isValidUuid(targetUserId)) return;
+
+    const legacyRaw = await getStorageItem(LEGACY_STATIC_KEY);
+    if (!legacyRaw) return;
+
+    try {
+      const legacyList = JSON.parse(legacyRaw);
+      if (Array.isArray(legacyList) && legacyList.length > 0) {
+        const ownedByUser = legacyList.filter(
+          (p: ContractorProjectDetail) => p.contractorId === targetUserId || p.clientId === targetUserId
+        );
+
+        if (ownedByUser.length > 0) {
+          const userKey = getProjectStorageKey(targetUserId);
+          const currentRaw = await getStorageItem(userKey);
+          const currentList: ContractorProjectDetail[] = currentRaw ? JSON.parse(currentRaw) : [];
+          const merged = [
+            ...ownedByUser,
+            ...currentList.filter((cp) => !ownedByUser.some((op) => op.id === cp.id)),
+          ];
+          await setStorageItem(userKey, JSON.stringify(merged));
+        }
       }
-      return parsed;
+    } catch {
+      // Ignore parse failure
+    } finally {
+      await deleteStorageItem(LEGACY_STATIC_KEY);
+    }
+  },
+
+  /**
+   * Loads projects from user-scoped device storage.
+   * - Authenticated user: reads servex_contractor_projects_v2_<userId>.
+   * - Unauthenticated user: reads servex_unowned_seed_projects_v2 (unowned catalog only).
+   */
+  async getProjects(userId?: string | null): Promise<ContractorProjectDetail[]> {
+    const activeUserId = await this.resolveActiveUserId(userId);
+
+    // 1. Authenticated user: check legacy migration then load user namespace
+    if (activeUserId) {
+      await this.migrateLegacyCache(activeUserId);
+      const userKey = getProjectStorageKey(activeUserId);
+      const raw = await getStorageItem(userKey);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            return parsed;
+          }
+        } catch {
+          // Ignore
+        }
+      }
+
+      // First time launch for this user: initialize with default seed catalog
+      await setStorageItem(userKey, JSON.stringify(INITIAL_CONTRACTOR_PROJECTS));
+      return INITIAL_CONTRACTOR_PROJECTS;
+    }
+
+    // 2. Unauthenticated caller: access strictly unowned seed catalog
+    const unownedRaw = await getStorageItem(UNOWNED_SEED_KEY);
+    if (!unownedRaw) {
+      await setStorageItem(UNOWNED_SEED_KEY, JSON.stringify(INITIAL_CONTRACTOR_PROJECTS));
+      return INITIAL_CONTRACTOR_PROJECTS;
+    }
+    try {
+      const parsed: ContractorProjectDetail[] = JSON.parse(unownedRaw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+      await setStorageItem(UNOWNED_SEED_KEY, JSON.stringify(INITIAL_CONTRACTOR_PROJECTS));
+      return INITIAL_CONTRACTOR_PROJECTS;
     } catch {
       return INITIAL_CONTRACTOR_PROJECTS;
     }
   },
 
   /**
-   * Persists the projects array into device storage.
+   * Persists projects array into user-scoped device storage.
    */
-  async saveProjects(projects: ContractorProjectDetail[]): Promise<void> {
-    await setStorageItem(CONTRACTOR_PROJECTS_KEY, JSON.stringify(projects));
+  async saveProjects(projects: ContractorProjectDetail[], userId?: string | null): Promise<void> {
+    const activeUserId = await this.resolveActiveUserId(userId);
+    const key = getProjectStorageKey(activeUserId);
+    await setStorageItem(key, JSON.stringify(projects));
+    if (activeUserId) {
+      await registerUserKey(activeUserId);
+    }
   },
 
   /**
-   * Finds a specific project by id.
+   * Finds a specific project by id in the user's scoped storage or unowned demonstration catalog.
+   * Never inspects other users' private caches.
    */
-  async getProjectById(id: string): Promise<ContractorProjectDetail | null> {
-    const list = await this.getProjects();
-    return list.find((p) => p.id === id) || null;
+  async getProjectById(id: string, userId?: string | null): Promise<ContractorProjectDetail | null> {
+    // 1. If explicit userId provided, check strictly that user's cache
+    if (userId) {
+      const list = await this.getProjects(userId);
+      return list.find((p) => p.id === id) || null;
+    }
+
+    // 2. Check active caller's cache
+    const activeUserId = await this.resolveActiveUserId(userId);
+    if (activeUserId) {
+      const list = await this.getProjects(activeUserId);
+      const found = list.find((p) => p.id === id);
+      if (found) return found;
+    }
+
+    // 3. Check unowned seed cache
+    const unownedRaw = await getStorageItem(UNOWNED_SEED_KEY);
+    if (unownedRaw) {
+      try {
+        const unownedList: ContractorProjectDetail[] = JSON.parse(unownedRaw);
+        const found = unownedList.find((p) => p.id === id);
+        if (found) return found;
+      } catch {
+        // Ignore
+      }
+    }
+
+    return null;
   },
 
   /**
-   * Creates a new project and saves to storage.
+   * Creates a new project and saves to the user's scoped storage.
    */
   async createProject(
     data: Omit<
       ContractorProjectDetail,
       'id' | 'scopeItems' | 'workers' | 'todayAttendance' | 'dailyReports' | 'transactions'
-    >
+    >,
+    userId?: string | null
   ): Promise<ContractorProjectDetail> {
-    const list = await this.getProjects();
+    const activeUserId = await this.resolveActiveUserId(userId);
+    const list = await this.getProjects(activeUserId);
+
     const newProject: ContractorProjectDetail = {
       ...data,
       id: `proj-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      contractorId: data.contractorId ?? null,
+      contractorId: data.contractorId ?? (activeUserId ? activeUserId : null),
       clientId: data.clientId ?? null,
       scopeItems: [],
       workers: [],
@@ -132,21 +370,23 @@ export const ContractorStorageService = {
     };
 
     const updated = [newProject, ...list];
-    await this.saveProjects(updated);
+    await this.saveProjects(updated, activeUserId);
     return newProject;
   },
 
+
+
   /**
-   * Updates an entire project object and saves to storage.
+   * Updates an entire project object and saves to the user's scoped storage.
    */
-  async updateProject(project: ContractorProjectDetail): Promise<ContractorProjectDetail> {
-    const list = await this.getProjects();
+  async updateProject(project: ContractorProjectDetail, userId?: string | null): Promise<ContractorProjectDetail> {
+    const activeUserId = await this.resolveActiveUserId(userId);
+    const list = await this.getProjects(activeUserId);
     const index = list.findIndex((p) => p.id === project.id);
     const existing = index >= 0 ? list[index] : null;
 
     const mergedProject: ContractorProjectDetail = {
       ...project,
-      // Preserve existing ownership if established
       contractorId:
         project.contractorId !== undefined
           ? project.contractorId
@@ -163,26 +403,178 @@ export const ContractorStorageService = {
     } else {
       updatedList = [mergedProject, ...list];
     }
-    await this.saveProjects(updatedList);
+    await this.saveProjects(updatedList, activeUserId);
     return mergedProject;
   },
 
   /**
-   * Deletes a project by id.
+   * Deletes a project by id from the user's scoped storage.
    */
-  async deleteProject(id: string): Promise<void> {
-    const list = await this.getProjects();
-    const updated = list.filter((p) => p.id !== id);
-    await this.saveProjects(updated);
+  async deleteProject(id: string, userId?: string | null): Promise<void> {
+    const activeUserId = await this.resolveActiveUserId(userId);
+    if (userId) {
+      const list = await this.getProjects(activeUserId);
+      const updated = list.filter((p) => p.id !== id);
+      await this.saveProjects(updated, activeUserId);
+      return;
+    }
+
+    // Default: delete from caller's cache
+    if (activeUserId) {
+      const list = await this.getProjects(activeUserId);
+      const updated = list.filter((p) => p.id !== id);
+      await this.saveProjects(updated, activeUserId);
+    }
+
+    // Also delete from unowned seed cache if present
+    const unownedRaw = await getStorageItem(UNOWNED_SEED_KEY);
+    if (unownedRaw) {
+      try {
+        const unownedList: ContractorProjectDetail[] = JSON.parse(unownedRaw);
+        const filtered = unownedList.filter((p) => p.id !== id);
+        if (filtered.length !== unownedList.length) {
+          await setStorageItem(UNOWNED_SEED_KEY, JSON.stringify(filtered));
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
   },
 
   /**
-   * Looks up a project by its client code (e.g. "CLT-8842").
+   * Looks up a project by its client code strictly in caller's user-scoped storage
+   * or unowned demonstration seed catalog.
+   * NEVER inspects other users' private caches.
    */
-  async findProjectByCode(clientCode: string): Promise<ContractorProjectDetail | null> {
-    const list = await this.getProjects();
+  async findProjectByCode(clientCode: string, userId?: string | null): Promise<ContractorProjectDetail | null> {
     const normalized = clientCode.trim().toUpperCase();
-    return list.find((p) => p.clientCode.toUpperCase() === normalized) || null;
+    if (!normalized) return null;
+
+    // 1. Check current caller's cache first
+    const callerList = await this.getProjects(userId);
+    const inCaller = callerList.find((p) => p.clientCode?.toUpperCase() === normalized);
+    if (inCaller) return inCaller;
+
+    // 2. Check unowned seed cache
+    const unownedRaw = await getStorageItem(UNOWNED_SEED_KEY);
+    if (unownedRaw) {
+      try {
+        const unownedList: ContractorProjectDetail[] = JSON.parse(unownedRaw);
+        const inUnowned = unownedList.find((p) => p.clientCode?.toUpperCase() === normalized);
+        if (inUnowned) return inUnowned;
+      } catch {
+        // Ignore
+      }
+    }
+
+    return null;
+  },
+
+  /**
+   * Internal atomic linking helper for local/offline client project code linking.
+   * CRITICAL SECURITY INVARIANTS:
+   * 1. Caller must be an authenticated user with verified role 'client'.
+   * 2. Contractors can NEVER claim projects via code.
+   * 3. Cannot claim project if already linked to another client.
+   * 4. Never exposes project data prior to successful linking.
+   */
+  async linkProjectByCodeLocally(
+    clientCode: string,
+    clientUid: string,
+    clientRole: string | null
+  ): Promise<ContractorProjectDetail | null> {
+    if (!clientCode || !clientCode.trim()) {
+      throw new Error('Project code is required');
+    }
+    if (!clientUid || !isValidUuid(clientUid)) {
+      throw new Error('Authentication required to join project');
+    }
+    if (clientRole !== 'client') {
+      throw new Error('Unauthorized: Only client accounts can join projects via project code');
+    }
+
+    const normalized = clientCode.trim().toUpperCase();
+
+    // 1. Check if already in client's own cache (idempotent re-join)
+    const clientProjects = await this.getProjects(clientUid);
+    const existingInClient = clientProjects.find(
+      (p) => p.clientCode?.toUpperCase() === normalized
+    );
+    if (existingInClient) {
+      if (existingInClient.clientId && existingInClient.clientId !== clientUid) {
+        throw new Error('This project is already linked to another client account');
+      }
+      if (!existingInClient.clientId) {
+        existingInClient.clientId = clientUid;
+        await this.updateProject(existingInClient, clientUid);
+      }
+      return existingInClient;
+    }
+
+    // 2. Check unowned seed catalog
+    const unownedRaw = await getStorageItem(UNOWNED_SEED_KEY);
+    if (unownedRaw) {
+      try {
+        const unownedList: ContractorProjectDetail[] = JSON.parse(unownedRaw);
+        const match = unownedList.find((p) => p.clientCode?.toUpperCase() === normalized);
+        if (match && match.contractorId === null && match.clientId === null) {
+          match.clientId = clientUid;
+          await this.updateProject(match, clientUid);
+          return match;
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
+    // 3. Check registered caches for unlinked candidate project to link
+    const registeredIds = await getRegisteredUserIds();
+    for (const uid of registeredIds) {
+      if (uid === clientUid) continue;
+      const key = getProjectStorageKey(uid);
+      const raw = await getStorageItem(key);
+      if (!raw) continue;
+      try {
+        const list: ContractorProjectDetail[] = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          const matchIndex = list.findIndex(
+            (p) => p.clientCode?.toUpperCase() === normalized
+          );
+          if (matchIndex >= 0) {
+            const candidate = list[matchIndex];
+            // Contractor cannot join their own project as client
+            if (candidate.contractorId && candidate.contractorId === clientUid) {
+              throw new Error('Contractor cannot join their own project as client');
+            }
+            // Project already claimed by another client
+            if (candidate.clientId && candidate.clientId !== clientUid) {
+              throw new Error('This project is already linked to another client account');
+            }
+
+            // ATOMIC LINKING: Assign client_id and sync
+            candidate.clientId = clientUid;
+            list[matchIndex] = candidate;
+            await setStorageItem(key, JSON.stringify(list));
+
+            // Place authorized project into client's own cache
+            await this.updateProject(candidate, clientUid);
+            return candidate;
+          }
+        }
+      } catch (err: any) {
+        if (
+          err.message &&
+          (err.message.includes('Contractor cannot join') ||
+            err.message.includes('already linked') ||
+            err.message.includes('Unauthorized'))
+        ) {
+          throw err;
+        }
+      }
+    }
+
+    return null;
   },
 
   /**
@@ -190,9 +582,10 @@ export const ContractorStorageService = {
    */
   async addScopeItem(
     projectId: string,
-    item: Omit<ProjectScopeItem, 'id' | 'completedQuantity'>
+    item: Omit<ProjectScopeItem, 'id' | 'completedQuantity'>,
+    userId?: string | null
   ): Promise<ContractorProjectDetail | null> {
-    const project = await this.getProjectById(projectId);
+    const project = await this.getProjectById(projectId, userId);
     if (!project) return null;
 
     const newItem: ProjectScopeItem = {
@@ -206,7 +599,7 @@ export const ContractorStorageService = {
       scopeItems: [...project.scopeItems, newItem],
     };
 
-    return await this.updateProject(updated);
+    return await this.updateProject(updated, userId);
   },
 
   /**
@@ -214,9 +607,10 @@ export const ContractorStorageService = {
    */
   async addWorker(
     projectId: string,
-    worker: Omit<WorkerRecord, 'id'>
+    worker: Omit<WorkerRecord, 'id'>,
+    userId?: string | null
   ): Promise<ContractorProjectDetail | null> {
-    const project = await this.getProjectById(projectId);
+    const project = await this.getProjectById(projectId, userId);
     if (!project) return null;
 
     const newWorker: WorkerRecord = {
@@ -247,7 +641,7 @@ export const ContractorStorageService = {
       todayAttendance: [...project.todayAttendance, initialAttendance],
     };
 
-    return await this.updateProject(updated);
+    return await this.updateProject(updated, userId);
   },
 
   /**
@@ -255,9 +649,10 @@ export const ContractorStorageService = {
    */
   async updateAttendance(
     projectId: string,
-    attendanceList: AttendanceEntry[]
+    attendanceList: AttendanceEntry[],
+    userId?: string | null
   ): Promise<ContractorProjectDetail | null> {
-    const project = await this.getProjectById(projectId);
+    const project = await this.getProjectById(projectId, userId);
     if (!project) return null;
 
     const updated: ContractorProjectDetail = {
@@ -265,7 +660,7 @@ export const ContractorStorageService = {
       todayAttendance: attendanceList,
     };
 
-    return await this.updateProject(updated);
+    return await this.updateProject(updated, userId);
   },
 
   /**
@@ -273,12 +668,12 @@ export const ContractorStorageService = {
    */
   async saveDailyReport(
     projectId: string,
-    report: DailyWorkReport
+    report: DailyWorkReport,
+    userId?: string | null
   ): Promise<ContractorProjectDetail | null> {
-    const project = await this.getProjectById(projectId);
+    const project = await this.getProjectById(projectId, userId);
     if (!project) return null;
 
-    // Update completed quantity on matching scope items
     const updatedScope = project.scopeItems.map((item) => {
       const match = report.items.find((i) => i.scopeItemId === item.id);
       if (match) {
@@ -296,7 +691,7 @@ export const ContractorStorageService = {
       dailyReports: [report, ...project.dailyReports],
     };
 
-    return await this.updateProject(updated);
+    return await this.updateProject(updated, userId);
   },
 
   /**
@@ -304,9 +699,10 @@ export const ContractorStorageService = {
    */
   async addTransaction(
     projectId: string,
-    tx: Omit<ClientTransaction, 'id'>
+    tx: Omit<ClientTransaction, 'id'>,
+    userId?: string | null
   ): Promise<ContractorProjectDetail | null> {
-    const project = await this.getProjectById(projectId);
+    const project = await this.getProjectById(projectId, userId);
     if (!project) return null;
 
     const created: ClientTransaction = {
@@ -319,7 +715,7 @@ export const ContractorStorageService = {
       transactions: [created, ...project.transactions],
     };
 
-    return await this.updateProject(updated);
+    return await this.updateProject(updated, userId);
   },
 
   /**
@@ -327,9 +723,10 @@ export const ContractorStorageService = {
    */
   async sendChatMessage(
     projectId: string,
-    message: ProjectChatMessage
+    message: ProjectChatMessage,
+    userId?: string | null
   ): Promise<ContractorProjectDetail | null> {
-    const project = await this.getProjectById(projectId);
+    const project = await this.getProjectById(projectId, userId);
     if (!project) return null;
 
     const currentChat = project.chatState || {
@@ -345,7 +742,7 @@ export const ContractorStorageService = {
       },
     };
 
-    return await this.updateProject(updated);
+    return await this.updateProject(updated, userId);
   },
 
   /**
@@ -353,9 +750,10 @@ export const ContractorStorageService = {
    */
   async toggleWorkerAuthority(
     projectId: string,
-    allowed: boolean
+    allowed: boolean,
+    userId?: string | null
   ): Promise<ContractorProjectDetail | null> {
-    const project = await this.getProjectById(projectId);
+    const project = await this.getProjectById(projectId, userId);
     if (!project) return null;
 
     const currentChat = project.chatState || {
@@ -386,14 +784,26 @@ export const ContractorStorageService = {
       },
     };
 
-    return await this.updateProject(updated);
+    return await this.updateProject(updated, userId);
   },
 
   /**
-   * Resets local storage back to seed data.
+   * Resets the user's scoped storage back to seed data.
    */
-  async resetToSeedData(): Promise<ContractorProjectDetail[]> {
-    await this.saveProjects(INITIAL_CONTRACTOR_PROJECTS);
+  async resetToSeedData(userId?: string | null): Promise<ContractorProjectDetail[]> {
+    const activeUserId = await this.resolveActiveUserId(userId);
+    await this.saveProjects(INITIAL_CONTRACTOR_PROJECTS, activeUserId);
     return INITIAL_CONTRACTOR_PROJECTS;
+  },
+
+  /**
+   * Purges user-scoped local cache upon factory reset or account deletion.
+   */
+  async clearUserCache(userId?: string | null): Promise<void> {
+    const activeUserId = await this.resolveActiveUserId(userId);
+    if (activeUserId) {
+      const key = getProjectStorageKey(activeUserId);
+      await deleteStorageItem(key);
+    }
   },
 };

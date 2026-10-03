@@ -42,7 +42,8 @@
     "test:stage4": "npx tsx scripts/test-stage4-runner.js",
     "test:backend": "npx tsx scripts/test-contractor-runner.js",
     "test:remediation1": "npx tsx scripts/test-remediation1-runner.js",
-    "test:all": "npm test && npm run test:stage1 && npm run test:stage2 && npm run test:stage3 && npm run test:stage4 && npm run test:backend && npm run test:remediation1"
+    "test:remediation2": "npx tsx scripts/test-remediation2-runner.js",
+    "test:all": "npm test && npm run test:stage1 && npm run test:stage2 && npm run test:stage3 && npm run test:stage4 && npm run test:backend && npm run test:remediation1 && npm run test:remediation2"
   },
   "private": true
 }

@@ -73,9 +73,9 @@ export const ContractorBackendService = {
    * 1. Loads instantly from local persistent storage.
    * 2. If Supabase is connected, pulls updates in the background and updates storage.
    */
-  async getAllProjects(): Promise<ContractorProjectDetail[]> {
+  async getAllProjects(userId?: string | null): Promise<ContractorProjectDetail[]> {
     // 1. Instant local read
-    const localProjects = await ContractorStorageService.getProjects();
+    const localProjects = await ContractorStorageService.getProjects(userId);
 
     // 2. If Supabase configured, attempt cloud fetch
     const supabase = getSupabaseClient();
@@ -158,7 +158,7 @@ export const ContractorBackendService = {
             },
           }));
 
-          await ContractorStorageService.saveProjects(mapped);
+          await ContractorStorageService.saveProjects(mapped, userId);
           return mapped;
         }
       } catch {
@@ -194,11 +194,14 @@ export const ContractorBackendService = {
       }
     }
 
-    const created = await ContractorStorageService.createProject({
-      ...data,
-      contractorId,
-      clientId,
-    });
+    const created = await ContractorStorageService.createProject(
+      {
+        ...data,
+        contractorId,
+        clientId,
+      },
+      uid
+    );
 
     const supabase = getSupabaseClient();
     if (supabase) {
@@ -251,6 +254,8 @@ export const ContractorBackendService = {
       if (project.contractorId !== undefined && project.contractorId !== existing.contractorId) {
         throw new Error('Unauthorized: contractor_id cannot be modified');
       }
+    } else {
+      throw new Error('Unauthorized: Project not found or caller lacks permission to modify');
     }
 
     // Preserve existing ownership from storage/cloud
@@ -263,7 +268,7 @@ export const ContractorBackendService = {
       clientId,
     };
 
-    const updated = await ContractorStorageService.updateProject(projectToUpdate);
+    const updated = await ContractorStorageService.updateProject(projectToUpdate, uid);
 
     const supabase = getSupabaseClient();
     if (supabase) {
@@ -379,6 +384,12 @@ export const ContractorBackendService = {
 
   /**
    * Joins a project by client code.
+   * Role and authorization invariants:
+   * 1. Caller must be authenticated.
+   * 2. Caller's role must be 'client'. Contractors can never claim projects.
+   * 3. Online mode: Authoritative Supabase RPC `join_project_by_code` is executed.
+   * 4. Once joined, project is saved ONLY into the joining client's own user-scoped cache.
+   * 5. Offline mode: Controlled atomic local linking via ContractorStorageService.linkProjectByCodeLocally.
    */
   async joinProjectByCode(clientCode: string): Promise<ContractorProjectDetail | null> {
     if (!clientCode || !clientCode.trim()) {
@@ -386,36 +397,33 @@ export const ContractorBackendService = {
     }
 
     const trimmedCode = clientCode.trim();
-    const { uid } = await getAuthenticatedSupabaseIdentity();
+    const { uid, role } = await getAuthenticatedSupabaseIdentity();
 
     if (!uid) {
       throw new Error('Authentication required to join project');
     }
 
-    const local = await ContractorStorageService.findProjectByCode(trimmedCode);
-
-    if (local) {
-      // Prevent contractor from joining their own project as client
-      if (local.contractorId && local.contractorId === uid) {
+    // Requirement 5: Role enforcement
+    // A contractor must never be able to claim a project as client.
+    if (role === 'contractor') {
+      const callerProjects = await ContractorStorageService.getProjects(uid);
+      const ownProject = callerProjects.find(
+        (p) => p.clientCode?.toUpperCase() === trimmedCode.toUpperCase()
+      );
+      if (ownProject) {
         throw new Error('Contractor cannot join their own project as client');
       }
-
-      // Prevent claiming a project that is already linked to another client
-      if (local.clientId && local.clientId !== uid) {
-        throw new Error('This project is already linked to another client account');
-      }
-
-      if (!local.clientId) {
-        local.clientId = uid;
-        await ContractorStorageService.updateProject(local);
-      }
-      return local;
+      throw new Error('Contractor cannot join project as client: Only client accounts can join projects');
     }
 
+    if (role !== 'client') {
+      throw new Error('Unauthorized: Only client accounts can join projects via project code');
+    }
+
+    // ONLINE MODE: Authoritative Supabase RPC
     const supabase = getSupabaseClient();
-    if (supabase) {
+    if (supabase && isSupabaseConfigured()) {
       try {
-        // 1. Try secure atomic RPC joining (works under strict RLS)
         const { data: rpcData, error: rpcErr } = await supabase.rpc('join_project_by_code', {
           p_client_code: trimmedCode,
         });
@@ -457,7 +465,8 @@ export const ContractorBackendService = {
             },
           };
 
-          await ContractorStorageService.updateProject(project);
+          // Save ONLY into joining user's own local cache
+          await ContractorStorageService.updateProject(project, uid);
           return project;
         }
       } catch (err: any) {
@@ -472,11 +481,12 @@ export const ContractorBackendService = {
         if (err.message && err.message.includes('Project not found')) {
           return null;
         }
-        // Safe offline queue
+        // Safe offline queue / fallback to local linking if network/offline
       }
     }
 
-    return null;
+    // OFFLINE MODE: Controlled local linking
+    return await ContractorStorageService.linkProjectByCodeLocally(trimmedCode, uid, role);
   },
 
   /**
@@ -486,7 +496,8 @@ export const ContractorBackendService = {
     projectId: string,
     item: Omit<ProjectScopeItem, 'id' | 'completedQuantity'>
   ): Promise<ContractorProjectDetail | null> {
-    const updated = await ContractorStorageService.addScopeItem(projectId, item);
+    const { uid } = await getAuthenticatedSupabaseIdentity();
+    const updated = await ContractorStorageService.addScopeItem(projectId, item, uid);
     if (!updated) return null;
 
     const supabase = getSupabaseClient();
@@ -520,7 +531,8 @@ export const ContractorBackendService = {
     projectId: string,
     worker: Omit<WorkerRecord, 'id'>
   ): Promise<ContractorProjectDetail | null> {
-    const updated = await ContractorStorageService.addWorker(projectId, worker);
+    const { uid } = await getAuthenticatedSupabaseIdentity();
+    const updated = await ContractorStorageService.addWorker(projectId, worker, uid);
     if (!updated) return null;
 
     const supabase = getSupabaseClient();
@@ -552,7 +564,8 @@ export const ContractorBackendService = {
     projectId: string,
     attendanceList: AttendanceEntry[]
   ): Promise<ContractorProjectDetail | null> {
-    const updated = await ContractorStorageService.updateAttendance(projectId, attendanceList);
+    const { uid } = await getAuthenticatedSupabaseIdentity();
+    const updated = await ContractorStorageService.updateAttendance(projectId, attendanceList, uid);
 
     const supabase = getSupabaseClient();
     if (supabase) {
@@ -586,7 +599,8 @@ export const ContractorBackendService = {
     projectId: string,
     report: DailyWorkReport
   ): Promise<ContractorProjectDetail | null> {
-    const updated = await ContractorStorageService.saveDailyReport(projectId, report);
+    const { uid } = await getAuthenticatedSupabaseIdentity();
+    const updated = await ContractorStorageService.saveDailyReport(projectId, report, uid);
 
     const supabase = getSupabaseClient();
     if (supabase) {
@@ -626,7 +640,8 @@ export const ContractorBackendService = {
     projectId: string,
     tx: Omit<ClientTransaction, 'id'>
   ): Promise<ContractorProjectDetail | null> {
-    const updated = await ContractorStorageService.addTransaction(projectId, tx);
+    const { uid } = await getAuthenticatedSupabaseIdentity();
+    const updated = await ContractorStorageService.addTransaction(projectId, tx, uid);
     if (!updated) return null;
 
     const supabase = getSupabaseClient();
@@ -660,7 +675,8 @@ export const ContractorBackendService = {
     projectId: string,
     message: ProjectChatMessage
   ): Promise<ContractorProjectDetail | null> {
-    const updated = await ContractorStorageService.sendChatMessage(projectId, message);
+    const { uid } = await getAuthenticatedSupabaseIdentity();
+    const updated = await ContractorStorageService.sendChatMessage(projectId, message, uid);
 
     const supabase = getSupabaseClient();
     if (supabase) {
@@ -689,7 +705,8 @@ export const ContractorBackendService = {
     projectId: string,
     allowed: boolean
   ): Promise<ContractorProjectDetail | null> {
-    const updated = await ContractorStorageService.toggleWorkerAuthority(projectId, allowed);
+    const { uid } = await getAuthenticatedSupabaseIdentity();
+    const updated = await ContractorStorageService.toggleWorkerAuthority(projectId, allowed, uid);
 
     const supabase = getSupabaseClient();
     if (supabase) {
