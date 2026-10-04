@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS projects (
     worker_messaging_allowed BOOLEAN DEFAULT FALSE,
     contractor_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     client_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    code_created_at TIMESTAMPTZ DEFAULT NOW(),
+    code_expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '30 days'),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -129,11 +131,11 @@ ALTER PUBLICATION supabase_realtime ADD TABLE projects;
 -- ==============================================================================
 -- Note: contractor_id and client_id are explicitly NULL for pre-seeded projects.
 -- Existing unmapped projects require controlled migration/linking when claimed by verified Supabase Auth accounts.
-INSERT INTO projects (id, client_code, project_name, client_name, client_phone, site_address, start_date, status, worker_messaging_allowed, contractor_id, client_id)
+INSERT INTO projects (id, client_code, project_name, client_name, client_phone, site_address, start_date, status, worker_messaging_allowed, contractor_id, client_id, code_created_at, code_expires_at)
 VALUES 
-('proj-1', 'CLT-8842', 'Skyline Penthouse Renovation', 'Vikramaditya Singhania', '+91 98201 12345', 'Flat 4201, Tower B, Worli Sea Face, Mumbai', '15 Sep 2026', 'active', true, NULL, NULL),
-('proj-2', 'CLT-7721', 'Apex Tech Park HVAC Fitout', 'Pooja Hegde', '+91 98920 66778', 'Plot C-14, BKC G-Block, Bandra Kurla Complex, Mumbai', '01 Sep 2026', 'active', true, NULL, NULL),
-('proj-3', 'CLT-9104', 'Bandra Retail Showroom Fitout', 'Karan Mehra', '+91 98333 77889', 'Ground Floor, Linking Road, Bandra West, Mumbai', '10 Oct 2026', 'upcoming', false, NULL, NULL)
+('proj-1', 'CLT-8842', 'Skyline Penthouse Renovation', 'Vikramaditya Singhania', '+91 98201 12345', 'Flat 4201, Tower B, Worli Sea Face, Mumbai', '15 Sep 2026', 'active', true, NULL, NULL, NOW(), NOW() + INTERVAL '365 days'),
+('proj-2', 'CLT-7721', 'Apex Tech Park HVAC Fitout', 'Pooja Hegde', '+91 98920 66778', 'Plot C-14, BKC G-Block, Bandra Kurla Complex, Mumbai', '01 Sep 2026', 'active', true, NULL, NULL, NOW(), NOW() + INTERVAL '365 days'),
+('proj-3', 'CLT-9104', 'Bandra Retail Showroom Fitout', 'Karan Mehra', '+91 98333 77889', 'Ground Floor, Linking Road, Bandra West, Mumbai', '10 Oct 2026', 'upcoming', false, NULL, NULL, NOW(), NOW() + INTERVAL '365 days')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO scope_items (id, project_id, name, unit, quantity, rate_per_unit, total_amount, completed_quantity)
@@ -402,6 +404,22 @@ USING (
     contractor_id = (select auth.uid())
 );
 
+-- ==============================================================================
+-- 4. REMEDIATION 4: PROJECT CODE RATE-LIMITING & ATTEMPT TRACKING
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS project_code_attempts (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    failed_attempts INT NOT NULL DEFAULT 0,
+    first_failed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_failed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    locked_until TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_project_code_attempts_locked ON project_code_attempts (user_id, locked_until);
+
+ALTER TABLE project_code_attempts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE project_code_attempts FROM PUBLIC;
+
 -- 4. Secure Stored Function for Client Joining by Code
 CREATE OR REPLACE FUNCTION join_project_by_code(p_client_code TEXT)
 RETURNS projects
@@ -412,49 +430,93 @@ AS $$
 DECLARE
     v_project projects%ROWTYPE;
     v_user_id UUID := auth.uid();
+    v_attempt RECORD;
+    v_clean_code TEXT;
 BEGIN
+    -- 1. Authentication requirement
     IF v_user_id IS NULL THEN
         RAISE EXCEPTION 'Authentication required to join project';
     END IF;
 
+    -- 2. Input validation
     IF p_client_code IS NULL OR TRIM(p_client_code) = '' THEN
         RAISE EXCEPTION 'Project code is required';
     END IF;
 
-    -- Lookup project strictly by unique client_code with exclusive row lock for atomic concurrency
-    SELECT * INTO v_project
-    FROM projects
-    WHERE UPPER(TRIM(client_code)) = UPPER(TRIM(p_client_code))
-    FOR UPDATE;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Project not found with code %', p_client_code;
-    END IF;
-
-    -- If already linked to this client, return existing record safely and idempotently
-    IF v_project.client_id = v_user_id THEN
-        RETURN v_project;
-    END IF;
-
-    -- Prevent contractor from joining their own project as a client
-    IF v_project.contractor_id = v_user_id THEN
-        RAISE EXCEPTION 'Contractor cannot join their own project as client';
-    END IF;
-
-    -- Prevent contractor from joining any project as a client (Role Enforcement)
+    -- 3. Role enforcement: Contractors cannot join any project as client
     IF is_contractor() THEN
         RAISE EXCEPTION 'Contractor cannot join project as client: Only client accounts can join projects';
     END IF;
 
-    -- Prevent claiming a project that is already linked to another client
-    IF v_project.client_id IS NOT NULL AND v_project.client_id <> v_user_id THEN
-        RAISE EXCEPTION 'This project is already linked to another client account';
+    -- 4. Rate-limiting check for caller (auth.uid())
+    SELECT * INTO v_attempt
+    FROM project_code_attempts
+    WHERE user_id = v_user_id
+    FOR UPDATE;
+
+    IF FOUND THEN
+        -- If locked and lockout window is still active
+        IF v_attempt.locked_until IS NOT NULL AND v_attempt.locked_until > NOW() THEN
+            RAISE EXCEPTION 'Too many failed project code attempts. Please try again in 15 minutes.';
+        END IF;
+
+        -- If lockout expired or sliding window (15 minutes) passed, reset window
+        IF (v_attempt.locked_until IS NOT NULL AND v_attempt.locked_until <= NOW()) OR
+           (v_attempt.first_failed_at < NOW() - INTERVAL '15 minutes') THEN
+            UPDATE project_code_attempts
+            SET failed_attempts = 0,
+                first_failed_at = NOW(),
+                last_failed_at = NOW(),
+                locked_until = NULL
+            WHERE user_id = v_user_id;
+        END IF;
     END IF;
 
-    -- Mark transaction context as authorized client linking flow
+    -- Clean code for matching (case-insensitive, normalize hyphens)
+    v_clean_code := UPPER(TRIM(p_client_code));
+
+    -- 5. Exclusive row lock lookup
+    SELECT * INTO v_project
+    FROM projects
+    WHERE UPPER(TRIM(client_code)) = v_clean_code
+       OR UPPER(REPLACE(client_code, '-', '')) = UPPER(REPLACE(v_clean_code, '-', ''))
+    FOR UPDATE;
+
+    -- 6. Evaluate failure conditions (uniform rejection without enumeration oracle)
+    -- Condition A: Code not found in database
+    -- Condition B: Code belongs to a project already claimed by another client
+    -- Condition C: Code has expired for an unlinked project
+    IF NOT FOUND OR
+       (v_project.client_id IS NOT NULL AND v_project.client_id <> v_user_id) OR
+       (v_project.client_id IS NULL AND v_project.code_expires_at IS NOT NULL AND v_project.code_expires_at < NOW()) THEN
+
+        INSERT INTO project_code_attempts (user_id, failed_attempts, first_failed_at, last_failed_at, locked_until)
+        VALUES (v_user_id, 1, NOW(), NOW(), NULL)
+        ON CONFLICT (user_id) DO UPDATE
+        SET failed_attempts = project_code_attempts.failed_attempts + 1,
+            last_failed_at = NOW(),
+            locked_until = CASE
+                WHEN project_code_attempts.failed_attempts + 1 >= 5 THEN NOW() + INTERVAL '15 minutes'
+                ELSE NULL
+            END;
+
+        RETURN NULL;
+    END IF;
+
+    -- 7. If caller is already the linked client: return existing record safely and idempotently
+    IF v_project.client_id = v_user_id THEN
+        DELETE FROM project_code_attempts WHERE user_id = v_user_id;
+        RETURN v_project;
+    END IF;
+
+    -- 8. Prevent contractor from joining their own project as a client
+    IF v_project.contractor_id = v_user_id THEN
+        RAISE EXCEPTION 'Contractor cannot join their own project as client';
+    END IF;
+
+    -- 9. Atomic Linking
     PERFORM set_config('servex.allow_client_linking', 'true', true);
 
-    -- Securely link client_id to the caller's verified auth.uid() atomically
     UPDATE projects
     SET client_id = v_user_id, updated_at = NOW()
     WHERE id = v_project.id
@@ -462,8 +524,21 @@ BEGIN
     RETURNING * INTO v_project;
 
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'This project is already linked to another client account';
+        INSERT INTO project_code_attempts (user_id, failed_attempts, first_failed_at, last_failed_at, locked_until)
+        VALUES (v_user_id, 1, NOW(), NOW(), NULL)
+        ON CONFLICT (user_id) DO UPDATE
+        SET failed_attempts = project_code_attempts.failed_attempts + 1,
+            last_failed_at = NOW(),
+            locked_until = CASE
+                WHEN project_code_attempts.failed_attempts + 1 >= 5 THEN NOW() + INTERVAL '15 minutes'
+                ELSE NULL
+            END;
+
+        RETURN NULL;
     END IF;
+
+    -- 10. Success: Clear failed attempts
+    DELETE FROM project_code_attempts WHERE user_id = v_user_id;
 
     RETURN v_project;
 END;
@@ -471,6 +546,60 @@ $$;
 
 REVOKE ALL ON FUNCTION join_project_by_code(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION join_project_by_code(TEXT) TO authenticated;
+
+-- Secure Function for Contractor Code Rotation
+CREATE OR REPLACE FUNCTION rotate_project_code(p_project_id TEXT, p_new_code TEXT)
+RETURNS projects
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_project projects%ROWTYPE;
+    v_user_id UUID := auth.uid();
+    v_clean_code TEXT;
+BEGIN
+    IF v_user_id IS NULL THEN
+        RAISE EXCEPTION 'Authentication required';
+    END IF;
+
+    IF p_project_id IS NULL OR TRIM(p_project_id) = '' THEN
+        RAISE EXCEPTION 'Project ID is required';
+    END IF;
+
+    IF p_new_code IS NULL OR LENGTH(TRIM(p_new_code)) < 8 THEN
+        RAISE EXCEPTION 'New project code must be at least 8 characters';
+    END IF;
+
+    v_clean_code := UPPER(TRIM(p_new_code));
+
+    SELECT * INTO v_project
+    FROM projects
+    WHERE id = p_project_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Project not found';
+    END IF;
+
+    IF v_project.contractor_id IS NULL OR v_project.contractor_id <> v_user_id THEN
+        RAISE EXCEPTION 'Unauthorized: Only the project contractor can rotate the project code';
+    END IF;
+
+    UPDATE projects
+    SET client_code = v_clean_code,
+        code_created_at = NOW(),
+        code_expires_at = NOW() + INTERVAL '30 days',
+        updated_at = NOW()
+    WHERE id = p_project_id
+    RETURNING * INTO v_project;
+
+    RETURN v_project;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION rotate_project_code(TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION rotate_project_code(TEXT, TEXT) TO authenticated;
 
 -- Database-level immutability guard: guarantees direct UPDATE cannot alter client_id
 CREATE OR REPLACE FUNCTION check_project_client_id_immutable()

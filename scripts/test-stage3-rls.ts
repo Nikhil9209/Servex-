@@ -422,7 +422,7 @@ async function runStage3RlsTests() {
   let clientBJoinLinkedDenied = false;
   try {
     const res = await ContractorBackendService.joinProjectByCode(codeA);
-    if (res?.clientId === IDENTITIES.clientA.id) {
+    if (res === null || res?.clientId === IDENTITIES.clientA.id) {
       clientBJoinLinkedDenied = true;
     }
   } catch {

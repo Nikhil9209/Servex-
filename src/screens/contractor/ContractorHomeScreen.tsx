@@ -28,6 +28,7 @@ import {
   SpringPressable,
 } from '../../components/AnimatedComponents';
 import { HomeOverviewView } from './views/HomeOverviewView';
+import { generateSecureProjectCode } from '../../utils/projectCodeGenerator';
 import { JobsListView } from './views/JobsListView';
 import { ScheduleView } from './views/ScheduleView';
 import { ProfileSettingsView } from './views/ProfileSettingsView';
@@ -92,29 +93,19 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
       return;
     }
 
-    const joined = await joinProjectByCode(code);
-    if (joined) {
-      Alert.alert('Project Linked', `Opening workspace for ${joined.projectName}.`);
-      setShowJoinModal(false);
-      setClientCodeInput('');
-      setSelectedProjectId(joined.id);
-      return;
+    try {
+      const joined = await joinProjectByCode(code);
+      if (joined) {
+        Alert.alert('Project Linked', `Opening workspace for ${joined.projectName}.`);
+        setShowJoinModal(false);
+        setClientCodeInput('');
+        setSelectedProjectId(joined.id);
+        return;
+      }
+      Alert.alert('Invalid Code', 'The project code entered is invalid or expired.');
+    } catch (err: any) {
+      Alert.alert('Unable to Link', err.message || 'Invalid or expired project code.');
     }
-
-    const newLinkedProject = await createProject({
-      clientCode: code,
-      projectName: `Site Project (${code})`,
-      clientName: 'Client Partner',
-      clientPhone: '+91 98000 00000',
-      siteAddress: 'Client Assigned Site Location',
-      startDate: 'Today',
-      status: 'active',
-    });
-
-    setShowJoinModal(false);
-    setClientCodeInput('');
-    setSelectedProjectId(newLinkedProject.id);
-    Alert.alert('Connected', `Successfully joined project with Client Code ${code}.`);
   };
 
   const handleCreateNewProject = async () => {
@@ -123,7 +114,7 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
       return;
     }
 
-    const generatedCode = `CLT-${Math.floor(1000 + Math.random() * 9000)}`;
+    const generatedCode = generateSecureProjectCode();
     const createdProject = await createProject({
       clientCode: generatedCode,
       projectName: newProjectName.trim(),
@@ -275,7 +266,7 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
             <Text style={styles.inputLabel}>Client Project Code</Text>
             <TextInput
               style={styles.codeInput}
-              placeholder="e.g. CLT-8842"
+              placeholder="e.g. SRX-8K9M-2P4W"
               placeholderTextColor="#686870"
               autoCapitalize="characters"
               value={clientCodeInput}

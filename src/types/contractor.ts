@@ -93,5 +93,7 @@ export interface ContractorProjectDetail {
   todayAttendance: AttendanceEntry[];
   dailyReports: DailyWorkReport[];
   transactions: ClientTransaction[];
+  codeCreatedAt?: string | null;
+  codeExpiresAt?: string | null;
   chatState?: ProjectChatState;
 }

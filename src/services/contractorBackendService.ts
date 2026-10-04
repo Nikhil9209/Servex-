@@ -10,6 +10,7 @@ import {
 import { ContractorStorageService } from './contractorStorageService';
 import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 import { StorageService } from './storage';
+import { generateSecureProjectCode } from '../utils/projectCodeGenerator';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -261,6 +262,10 @@ export const ContractorBackendService = {
           worker_messaging_allowed: false,
           contractor_id: contractorId,
           client_id: clientId,
+          code_created_at: created.codeCreatedAt || new Date().toISOString(),
+          code_expires_at:
+            created.codeExpiresAt ||
+            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         });
       } catch {
         // Safe offline queue
@@ -472,16 +477,29 @@ export const ContractorBackendService = {
         });
 
         if (rpcErr) {
-          if (rpcErr.message && rpcErr.message.includes('Project not found')) {
+          if (rpcErr.message && rpcErr.message.includes('Too many failed')) {
+            throw new Error(rpcErr.message);
+          }
+          if (
+            rpcErr.message &&
+            (rpcErr.message.includes('Project not found') ||
+              rpcErr.message.includes('Invalid or expired project code'))
+          ) {
             return null;
           }
           throw new Error(rpcErr.message);
         }
 
-        const targetId = rpcData?.id;
-        const query = targetId
-          ? supabase.from('projects').select('*, scope_items(*), workers(*), attendance_records(*), daily_work_reports(*), ledger_transactions(*), chat_messages(*)').eq('id', targetId).single()
-          : supabase.from('projects').select('*, scope_items(*), workers(*), attendance_records(*), daily_work_reports(*), ledger_transactions(*), chat_messages(*)').ilike('client_code', trimmedCode).single();
+        if (!rpcData) {
+          return null;
+        }
+
+        const targetId = rpcData.id;
+        const query = supabase
+          .from('projects')
+          .select('*, scope_items(*), workers(*), attendance_records(*), daily_work_reports(*), ledger_transactions(*), chat_messages(*)')
+          .eq('id', targetId)
+          .single();
 
         const { data, error } = await query;
 
@@ -497,6 +515,8 @@ export const ContractorBackendService = {
             status: data.status || 'active',
             contractorId: data.contractor_id || null,
             clientId: data.client_id || uid || null,
+            codeCreatedAt: data.code_created_at || null,
+            codeExpiresAt: data.code_expires_at || null,
             scopeItems: data.scope_items || [],
             workers: data.workers || [],
             todayAttendance: data.attendance_records || [],
@@ -517,11 +537,16 @@ export const ContractorBackendService = {
           err.message &&
           (err.message.includes('already linked') ||
             err.message.includes('Authentication required') ||
-            err.message.includes('Contractor cannot join'))
+            err.message.includes('Contractor cannot join') ||
+            err.message.includes('Too many failed'))
         ) {
           throw err;
         }
-        if (err.message && err.message.includes('Project not found')) {
+        if (
+          err.message &&
+          (err.message.includes('Project not found') ||
+            err.message.includes('Invalid or expired project code'))
+        ) {
           return null;
         }
         // Safe offline queue / fallback to local linking if network/offline
@@ -530,6 +555,49 @@ export const ContractorBackendService = {
 
     // OFFLINE MODE: Controlled local linking
     return await ContractorStorageService.linkProjectByCodeLocally(trimmedCode, uid, role);
+  },
+
+  /**
+   * Rotates a project's client invite code to a new CSPRNG-generated code.
+   * Can only be executed by the verified contractor who owns the project.
+   */
+  async rotateProjectCode(
+    projectId: string,
+    newCode?: string
+  ): Promise<ContractorProjectDetail | null> {
+    const { uid, role } = await getAuthenticatedSupabaseIdentity();
+    if (!uid || role !== 'contractor') {
+      throw new Error('Unauthorized: Only verified contractor accounts can rotate project codes');
+    }
+
+    const secureCode = newCode?.trim() || generateSecureProjectCode();
+
+    const supabase = getSupabaseClient();
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.rpc('rotate_project_code', {
+          p_project_id: projectId,
+          p_new_code: secureCode,
+        });
+
+        if (!error && data) {
+          const local = await ContractorStorageService.getProjectById(projectId, uid);
+          if (local) {
+            local.clientCode = secureCode;
+            local.codeCreatedAt = data.code_created_at || new Date().toISOString();
+            local.codeExpiresAt =
+              data.code_expires_at ||
+              new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            await ContractorStorageService.updateProject(local, uid);
+            return local;
+          }
+        }
+      } catch {
+        // Fall back to local
+      }
+    }
+
+    return await ContractorStorageService.rotateProjectCodeLocally(projectId, secureCode, uid);
   },
 
   /**

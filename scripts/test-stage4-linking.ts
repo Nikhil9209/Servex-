@@ -132,12 +132,12 @@ async function runStage4LinkingTests() {
   let secondClientDenied = false;
   try {
     const resB = await ContractorBackendService.joinProjectByCode(code1);
-    if (resB?.clientId === IDENTITIES.clientA.id) {
+    if (resB === null || resB?.clientId === IDENTITIES.clientA.id) {
       // If returned without overwriting, verify Client A was NOT stolen
       secondClientDenied = true;
     }
   } catch (err: any) {
-    if (err.message && err.message.includes('already linked')) {
+    if (err.message && (err.message.includes('already linked') || err.message.includes('Invalid or expired'))) {
       secondClientDenied = true;
     }
   }
@@ -244,7 +244,7 @@ async function runStage4LinkingTests() {
   let claim2Denied = false;
   try {
     const claim2 = await ContractorBackendService.joinProjectByCode(codeH);
-    if (claim2?.clientId === IDENTITIES.clientA.id) {
+    if (claim2 === null || claim2?.clientId === IDENTITIES.clientA.id) {
       claim2Denied = true; // Claim 2 did not steal project
     }
   } catch {

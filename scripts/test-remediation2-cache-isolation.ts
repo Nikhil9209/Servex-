@@ -547,9 +547,12 @@ async function runRemediation2Tests() {
   await setTestSession(USER_D);
   let clientDDenied = false;
   try {
-    await ContractorBackendService.joinProjectByCode(codeSecA);
+    const joinRes = await ContractorBackendService.joinProjectByCode(codeSecA);
+    if (!joinRes) {
+      clientDDenied = true;
+    }
   } catch (err: any) {
-    if (err.message && err.message.includes('already linked')) {
+    if (err.message && (err.message.includes('already linked') || err.message.includes('Invalid or expired'))) {
       clientDDenied = true;
     }
   }

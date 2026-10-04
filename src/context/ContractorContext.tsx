@@ -35,6 +35,7 @@ interface ContractorContextValue {
   ) => Promise<ContractorProjectDetail>;
   updateProject: (project: ContractorProjectDetail) => Promise<void>;
   joinProjectByCode: (clientCode: string) => Promise<ContractorProjectDetail | null>;
+  rotateProjectCode: (projectId: string, newCode?: string) => Promise<ContractorProjectDetail | null>;
   addScopeItem: (
     projectId: string,
     item: Omit<ProjectScopeItem, 'id' | 'completedQuantity'>
@@ -192,6 +193,24 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
     []
   );
 
+  const handleRotateProjectCode = useCallback(
+    async (projectId: string, newCode?: string): Promise<ContractorProjectDetail | null> => {
+      setIsSyncing(true);
+      try {
+        const rotated = await ContractorBackendService.rotateProjectCode(projectId, newCode);
+        if (rotated) {
+          setProjects((prev) =>
+            prev.map((p) => (p.id === rotated.id ? rotated : p))
+          );
+        }
+        return rotated;
+      } finally {
+        setIsSyncing(false);
+      }
+    },
+    []
+  );
+
   const handleAddScopeItem = useCallback(
     async (
       projectId: string,
@@ -294,6 +313,7 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
     createProject: handleCreateProject,
     updateProject: handleUpdateProject,
     joinProjectByCode: handleJoinProjectByCode,
+    rotateProjectCode: handleRotateProjectCode,
     addScopeItem: handleAddScopeItem,
     addWorker: handleAddWorker,
     updateAttendance: handleUpdateAttendance,
@@ -312,6 +332,7 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
     handleCreateProject,
     handleUpdateProject,
     handleJoinProjectByCode,
+    handleRotateProjectCode,
     handleAddScopeItem,
     handleAddWorker,
     handleUpdateAttendance,

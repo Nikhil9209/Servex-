@@ -11,6 +11,7 @@ import {
 import { INITIAL_CONTRACTOR_PROJECTS } from './contractorStorage';
 import { StorageService } from './storage';
 import { getSupabaseClient } from './supabaseClient';
+import { generateSecureProjectCode } from '../utils/projectCodeGenerator';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -22,6 +23,9 @@ export const CACHE_PREFIX = 'servex_contractor_projects_v2';
 export const UNOWNED_SEED_KEY = 'servex_unowned_seed_projects_v2';
 export const LEGACY_STATIC_KEY = 'servex_contractor_projects_v2';
 export const USER_REGISTRY_KEY = 'servex_user_cache_registry_v2';
+export const CODE_ATTEMPTS_PREFIX = 'servex_code_attempts_';
+export const MAX_FAILED_ATTEMPTS = 5;
+export const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 export function getProjectStorageKey(userId?: string | null): string {
   if (userId && isValidUuid(userId)) {
@@ -31,6 +35,7 @@ export function getProjectStorageKey(userId?: string | null): string {
 }
 
 const memoryStore = new Map<string, string>();
+const codeAttemptQueues = new Map<string, Promise<any>>();
 const isWeb = typeof window !== 'undefined' && typeof (window as any).document !== 'undefined';
 
 async function setStorageItem(key: string, value: string): Promise<void> {
@@ -340,9 +345,15 @@ export const ContractorStorageService = {
     const activeUserId = await this.resolveActiveUserId(userId);
     const list = await this.getProjects(activeUserId);
 
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
     const newProject: ContractorProjectDetail = {
       ...data,
       id: `proj-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      clientCode: data.clientCode || generateSecureProjectCode(),
+      codeCreatedAt: data.codeCreatedAt || now.toISOString(),
+      codeExpiresAt: data.codeExpiresAt || expiresAt.toISOString(),
       contractorId: data.contractorId ?? (activeUserId ? activeUserId : null),
       clientId: data.clientId ?? null,
       scopeItems: [],
@@ -471,6 +482,72 @@ export const ContractorStorageService = {
     return null;
   },
 
+  async getCodeAttempts(userId: string): Promise<{
+    failedAttempts: number;
+    firstFailedAt: number;
+    lastFailedAt: number;
+    lockedUntil: number | null;
+  }> {
+    const raw = await getStorageItem(`${CODE_ATTEMPTS_PREFIX}${userId}`);
+    if (!raw) {
+      return {
+        failedAttempts: 0,
+        firstFailedAt: Date.now(),
+        lastFailedAt: Date.now(),
+        lockedUntil: null,
+      };
+    }
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return {
+        failedAttempts: 0,
+        firstFailedAt: Date.now(),
+        lastFailedAt: Date.now(),
+        lockedUntil: null,
+      };
+    }
+  },
+
+  async recordFailedCodeAttempt(userId: string): Promise<void> {
+    const prev = codeAttemptQueues.get(userId) || Promise.resolve();
+    const next = prev.then(async () => {
+      const record = await this.getCodeAttempts(userId);
+      const now = Date.now();
+
+      if (record.lastFailedAt && now - record.lastFailedAt > LOCKOUT_DURATION_MS) {
+        record.failedAttempts = 0;
+        record.firstFailedAt = now;
+        record.lockedUntil = null;
+      }
+
+      record.failedAttempts += 1;
+      record.lastFailedAt = now;
+      if (record.failedAttempts >= MAX_FAILED_ATTEMPTS) {
+        record.lockedUntil = now + LOCKOUT_DURATION_MS;
+      }
+      await setStorageItem(`${CODE_ATTEMPTS_PREFIX}${userId}`, JSON.stringify(record));
+    }).catch(() => {});
+    codeAttemptQueues.set(userId, next);
+    await next;
+  },
+
+  async clearCodeAttempts(userId: string): Promise<void> {
+    await deleteStorageItem(`${CODE_ATTEMPTS_PREFIX}${userId}`);
+  },
+
+  async saveCodeAttempts(
+    userId: string,
+    record: {
+      failedAttempts: number;
+      firstFailedAt: number;
+      lastFailedAt: number;
+      lockedUntil: number | null;
+    }
+  ): Promise<void> {
+    await setStorageItem(`${CODE_ATTEMPTS_PREFIX}${userId}`, JSON.stringify(record));
+  },
+
   /**
    * Internal atomic linking helper for local/offline client project code linking.
    * CRITICAL SECURITY INVARIANTS:
@@ -478,6 +555,7 @@ export const ContractorStorageService = {
    * 2. Contractors can NEVER claim projects via code.
    * 3. Cannot claim project if already linked to another client.
    * 4. Never exposes project data prior to successful linking.
+   * 5. Enforces rate limits and code expiration.
    */
   async linkProjectByCodeLocally(
     clientCode: string,
@@ -494,6 +572,18 @@ export const ContractorStorageService = {
       throw new Error('Unauthorized: Only client accounts can join projects via project code');
     }
 
+    // Rate-limit check
+    const attemptRecord = await this.getCodeAttempts(clientUid);
+    const now = Date.now();
+    if (attemptRecord.lockedUntil) {
+      if (attemptRecord.lockedUntil > now) {
+        throw new Error('Too many failed project code attempts. Please try again in 15 minutes.');
+      } else {
+        // Lockout expired: reset window
+        await this.clearCodeAttempts(clientUid);
+      }
+    }
+
     const normalized = clientCode.trim().toUpperCase();
 
     // 1. Check if already in client's own cache (idempotent re-join)
@@ -503,12 +593,14 @@ export const ContractorStorageService = {
     );
     if (existingInClient) {
       if (existingInClient.clientId && existingInClient.clientId !== clientUid) {
-        throw new Error('This project is already linked to another client account');
+        await this.recordFailedCodeAttempt(clientUid);
+        return null;
       }
       if (!existingInClient.clientId) {
         existingInClient.clientId = clientUid;
         await this.updateProject(existingInClient, clientUid);
       }
+      await this.clearCodeAttempts(clientUid);
       return existingInClient;
     }
 
@@ -519,12 +611,24 @@ export const ContractorStorageService = {
         const unownedList: ContractorProjectDetail[] = JSON.parse(unownedRaw);
         const match = unownedList.find((p) => p.clientCode?.toUpperCase() === normalized);
         if (match && match.contractorId === null && match.clientId === null) {
+          if (match.codeExpiresAt && new Date(match.codeExpiresAt).getTime() < Date.now()) {
+            await this.recordFailedCodeAttempt(clientUid);
+            return null;
+          }
           match.clientId = clientUid;
           await this.updateProject(match, clientUid);
+          await this.clearCodeAttempts(clientUid);
           return match;
         }
-      } catch {
-        // Ignore
+      } catch (err: any) {
+        if (
+          err.message &&
+          (err.message.includes('Contractor cannot join') ||
+            err.message.includes('Too many failed') ||
+            err.message.includes('Unauthorized'))
+        ) {
+          throw err;
+        }
       }
     }
 
@@ -549,7 +653,13 @@ export const ContractorStorageService = {
             }
             // Project already claimed by another client
             if (candidate.clientId && candidate.clientId !== clientUid) {
-              throw new Error('This project is already linked to another client account');
+              await this.recordFailedCodeAttempt(clientUid);
+              return null;
+            }
+            // Expired code check
+            if (candidate.codeExpiresAt && new Date(candidate.codeExpiresAt).getTime() < Date.now()) {
+              await this.recordFailedCodeAttempt(clientUid);
+              return null;
             }
 
             // ATOMIC LINKING: Assign client_id and sync
@@ -559,6 +669,7 @@ export const ContractorStorageService = {
 
             // Place authorized project into client's own cache
             await this.updateProject(candidate, clientUid);
+            await this.clearCodeAttempts(clientUid);
             return candidate;
           }
         }
@@ -566,7 +677,7 @@ export const ContractorStorageService = {
         if (
           err.message &&
           (err.message.includes('Contractor cannot join') ||
-            err.message.includes('already linked') ||
+            err.message.includes('Too many failed') ||
             err.message.includes('Unauthorized'))
         ) {
           throw err;
@@ -574,7 +685,31 @@ export const ContractorStorageService = {
       }
     }
 
+    await this.recordFailedCodeAttempt(clientUid);
     return null;
+  },
+
+  /**
+   * Rotates project code to a new secure code. Only project contractor can rotate.
+   */
+  async rotateProjectCodeLocally(
+    projectId: string,
+    newCode: string,
+    contractorUid: string
+  ): Promise<ContractorProjectDetail | null> {
+    const list = await this.getProjects(contractorUid);
+    const index = list.findIndex((p) => p.id === projectId);
+    if (index === -1) return null;
+    const project = list[index];
+    if (project.contractorId && project.contractorId !== contractorUid) {
+      throw new Error('Unauthorized: Only the project contractor can rotate the project code');
+    }
+    project.clientCode = newCode;
+    project.codeCreatedAt = new Date().toISOString();
+    project.codeExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    list[index] = project;
+    await this.saveProjects(list, contractorUid);
+    return project;
   },
 
   /**
