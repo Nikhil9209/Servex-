@@ -123,8 +123,9 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_project_id ON chat_messages (projec
 -- REALTIME ENABLEMENT
 -- ==============================================================================
 ALTER PUBLICATION supabase_realtime ADD TABLE chat_messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE attendance_records;
-ALTER PUBLICATION supabase_realtime ADD TABLE projects;
+-- NOTE: projects and attendance_records are intentionally NOT in the realtime
+-- publication: postgres_changes broadcasts are not column-scoped and would leak
+-- contractor-only financial/attendance details to any project subscriber.
 
 -- ==============================================================================
 -- INITIAL SEED DATA (Servex Skyline Penthouse & Apex Tech Park)
@@ -695,7 +696,7 @@ USING (
     EXISTS (
         SELECT 1 FROM projects p
         WHERE p.id = workers.project_id
-        AND (p.contractor_id = (select auth.uid()) OR p.client_id = (select auth.uid()))
+        AND p.contractor_id = (select auth.uid())
     )
 );
 
@@ -743,7 +744,7 @@ USING (
     EXISTS (
         SELECT 1 FROM projects p
         WHERE p.id = attendance_records.project_id
-        AND (p.contractor_id = (select auth.uid()) OR p.client_id = (select auth.uid()))
+        AND p.contractor_id = (select auth.uid())
     )
 );
 
@@ -791,7 +792,7 @@ USING (
     EXISTS (
         SELECT 1 FROM projects p
         WHERE p.id = daily_work_reports.project_id
-        AND (p.contractor_id = (select auth.uid()) OR p.client_id = (select auth.uid()))
+        AND p.contractor_id = (select auth.uid())
     )
 );
 
@@ -833,13 +834,27 @@ USING (
 );
 
 -- 9. Ledger Transactions Policies (Contractor Financial Authority - Clients Cannot Modify)
+-- Contractors can read all financial rows for their projects
 CREATE POLICY "ledger_transactions_select_policy" ON ledger_transactions
 FOR SELECT TO authenticated
 USING (
     EXISTS (
         SELECT 1 FROM projects p
         WHERE p.id = ledger_transactions.project_id
-        AND (p.contractor_id = (select auth.uid()) OR p.client_id = (select auth.uid()))
+        AND p.contractor_id = (select auth.uid())
+    )
+);
+
+-- Clients may ONLY read client-facing received payments (RA billing).
+-- Worker payouts (paid_to_worker) and worker wage liabilities are contractor-only.
+CREATE POLICY "ledger_transactions_select_client_policy" ON ledger_transactions
+FOR SELECT TO authenticated
+USING (
+    type = 'received_from_client'
+    AND EXISTS (
+        SELECT 1 FROM projects p
+        WHERE p.id = ledger_transactions.project_id
+        AND p.client_id = (select auth.uid())
     )
 );
 

@@ -839,13 +839,15 @@ export const ContractorBackendService = {
   subscribeToProjectRealtime(
     projectId: string,
     onNewChatMessage: (msg: ProjectChatMessage) => void,
-    onAttendanceUpdated: () => void
+    _onAttendanceUpdated?: () => void
   ): () => void {
     const supabase = getSupabaseClient();
     if (!supabase) {
       return () => {};
     }
 
+    // NOTE: attendance_records is intentionally NOT subscribed. It contains
+    // contractor-only wage data and is no longer in the realtime publication.
     const channel = supabase
       .channel(`project-realtime-${projectId}`)
       .on(
@@ -867,18 +869,6 @@ export const ContractorBackendService = {
               isAuthorityAction: Boolean(payload.new.is_authority_action),
             });
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'attendance_records',
-          filter: `project_id=eq.${projectId}`,
-        },
-        () => {
-          onAttendanceUpdated();
         }
       )
       .subscribe();
