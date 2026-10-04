@@ -14,7 +14,6 @@ import {
   ChevronRightIcon,
   SparklesIcon,
   LogoutIcon,
-  DashboardTabIcon,
 } from '../../../components/ContractorIcons';
 
 import { useContractor } from '../../../context/ContractorContext';
@@ -199,24 +198,6 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
             <ChevronRightIcon size={14} color="#71717A" />
           </SpringPressable>
 
-          {onSwitchRole && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.actionMenuItem,
-                pressed && styles.itemPressed,
-              ]}
-              onPress={() => onSwitchRole('client')}
-            >
-              <View style={styles.itemIconBox}>
-                <DashboardTabIcon size={16} color="#1A73E8" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemTitle}>Switch to Client Portal</Text>
-                <Text style={styles.itemSub}>View site projects as a client</Text>
-              </View>
-              <ChevronRightIcon size={14} color="#71717A" />
-            </Pressable>
-          )}
 
           {onReplaySplash && (
             <Pressable

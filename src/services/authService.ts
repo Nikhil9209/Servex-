@@ -216,6 +216,23 @@ export const AuthService = {
       }
     }
 
+    // Sync server-authoritative role from user_roles table if connected
+    if (supabase && supabaseUid) {
+      try {
+        const { data: roleRow } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('id', supabaseUid)
+          .maybeSingle();
+
+        if (roleRow?.role && (roleRow.role === 'contractor' || roleRow.role === 'client')) {
+          foundUser.role = roleRow.role;
+        }
+      } catch {
+        // Non-blocking
+      }
+    }
+
     // Prepare session
     const session: AppAuthSession = {
       token: `srvx_sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
@@ -278,6 +295,22 @@ export const AuthService = {
 
     // Flow C: Existing Google user with assigned role (whether phone was verified or skipped for later)
     if (existingAccount && existingAccount.role) {
+      if (supabase && supabaseUid) {
+        try {
+          const { data: roleRow } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('id', supabaseUid)
+            .maybeSingle();
+
+          if (roleRow?.role && (roleRow.role === 'contractor' || roleRow.role === 'client')) {
+            existingAccount.role = roleRow.role;
+          }
+        } catch {
+          // Non-blocking
+        }
+      }
+
       if (supabaseUid && existingAccount.id !== supabaseUid) {
         existingAccount.id = supabaseUid;
         const userIdx = existingUsers.findIndex(
@@ -624,6 +657,16 @@ export const AuthService = {
           });
           if (oauthData?.user) {
             supabaseUid = oauthData.user.id;
+          }
+        }
+        if (supabaseUid) {
+          try {
+            await supabase.rpc('complete_user_onboarding', {
+              p_role: role,
+              p_phone: pending.phone || '9800000000',
+            });
+          } catch {
+            // Trigger or conflict handled
           }
         }
       } catch {

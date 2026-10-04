@@ -492,32 +492,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [pendingRegistration]
   );
 
-  // Switch User Role (Client <-> Contractor)
+  // Switch User Role (Protected by Server-Authoritative Role Enforcement)
   const switchUserRole = useCallback(
-    async (newRole: UserRole) => {
-      if (!user) return;
-      setIsLoading(true);
-      try {
-        const updatedUser: User = { ...user, role: newRole };
-        const session = await StorageService.getSession();
-        if (session) {
-          session.user = updatedUser;
-          await StorageService.saveSession(session);
-        }
-        const registeredUsers = await StorageService.getRegisteredUsers();
-        const idx = registeredUsers.findIndex(
-          (u) => u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase()
-        );
-        if (idx >= 0) {
-          registeredUsers[idx].role = newRole;
-          await StorageService.saveRegisteredUsers(registeredUsers);
-        }
-        setUser(updatedUser);
-      } finally {
-        setIsLoading(false);
-      }
+    async (_newRole: UserRole) => {
+      // Stage 5 — Remediation 3: Database role enforcement
+      // Clients cannot modify their own authorization level through exposed client APIs
+      throw new Error(
+        'Unauthorized: Client cannot modify its own role. User role changes are server-authoritative and immutable through client APIs.'
+      );
     },
-    [user]
+    []
   );
 
   // Logout

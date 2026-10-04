@@ -13,7 +13,6 @@ import { fonts } from '../../theme/tokens';
 import { User } from '../../types/auth';
 import { ServexLogo } from '../../components/ServexLogo';
 import { AuthService } from '../../services/authService';
-import { useAuth } from '../../context/AuthContext';
 import { useContractor } from '../../context/ContractorContext';
 import { PdfBillModal } from '../contractor/pages/PdfBillModal';
 import { ContractorProjectDetail } from '../../types/contractor';
@@ -25,7 +24,6 @@ interface ClientHomeScreenProps {
 }
 
 export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogout }) => {
-  const { switchUserRole } = useAuth();
   const { projects } = useContractor();
   const [searchQuery, setSearchQuery] = useState('');
   const [billModalProject, setBillModalProject] = useState<ContractorProjectDetail | null>(null);
@@ -70,19 +68,6 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogo
           <View style={styles.headerRightActions}>
             <Pressable
               style={({ pressed }) => [
-                styles.contractorHeaderBtn,
-                pressed && { opacity: 0.8 },
-              ]}
-              onPress={() => switchUserRole('contractor')}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Switch to Contractor Suite"
-            >
-              <Text style={styles.contractorHeaderBtnText}>Contractor Suite 🛠️</Text>
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [
                 styles.logoutButton,
                 pressed && { opacity: 0.7 },
               ]}
@@ -96,33 +81,6 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogo
           </View>
         </View>
 
-        {/* PROMINENT CONTRACTOR SUITE SWITCH BANNER */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.contractorSwitchCard,
-            pressed && styles.contractorSwitchCardPressed,
-          ]}
-          onPress={() => switchUserRole('contractor')}
-          accessibilityRole="button"
-          accessibilityLabel="Switch to Contractor Suite"
-        >
-          <View style={styles.switchIconBox}>
-            <Text style={styles.switchIcon}>🛠️</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={styles.switchTitleRow}>
-              <Text style={styles.switchTitle}>Contractor Workspace</Text>
-              <View style={styles.tapToOpenPill}>
-                <Text style={styles.tapToOpenText}>TAP TO ENTER</Text>
-              </View>
-            </View>
-            <Text style={styles.switchSubtitle}>
-              Manage sites, join via client code, workforce attendance, and generate bill PDFs.
-            </Text>
-          </View>
-          <Text style={styles.switchArrow}>➔</Text>
-        </Pressable>
-
         {/* User Welcome Card */}
         <View style={styles.userCard}>
           <View style={styles.userAvatar}>
@@ -134,13 +92,9 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogo
           <View style={styles.userInfo}>
             <View style={styles.roleBadgeRow}>
               <Text style={styles.userName}>{user.name}</Text>
-              <Pressable
-                style={styles.rolePill}
-                onPress={() => switchUserRole('contractor')}
-                hitSlop={6}
-              >
-                <Text style={styles.roleText}>CLIENT • SWITCH TO CONTRACTOR ➔</Text>
-              </Pressable>
+              <View style={styles.rolePill}>
+                <Text style={styles.roleText}>CLIENT</Text>
+              </View>
             </View>
             <Text style={styles.userContact}>{user.email}</Text>
             <Text style={styles.userPhone}>

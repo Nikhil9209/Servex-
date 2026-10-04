@@ -184,6 +184,186 @@ ALTER TABLE projects REPLICA IDENTITY FULL;
 ALTER TABLE attendance_records REPLICA IDENTITY FULL;
 ALTER TABLE chat_messages REPLICA IDENTITY FULL;
 
+-- 2B. Server-Authoritative User Roles & Helper Functions (Stage 5 — Remediation 3)
+CREATE TABLE IF NOT EXISTS user_roles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    role VARCHAR(16) NOT NULL CHECK (role IN ('contractor', 'client')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_roles_id ON user_roles (id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles (role);
+
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+
+-- SELECT: Users can only read their own server-authoritative role
+CREATE POLICY "user_roles_select_policy" ON user_roles
+FOR SELECT TO authenticated
+USING (
+    id = (select auth.uid())
+);
+
+-- INSERT: Explicitly DENY direct client-side inserts. Roles are established strictly
+-- via the PostgreSQL trigger on auth.users (email) or complete_user_onboarding() (OAuth).
+CREATE POLICY "user_roles_insert_deny_policy" ON user_roles
+FOR INSERT TO authenticated
+WITH CHECK (false);
+
+-- UPDATE: Explicitly DENY all updates by authenticated users
+CREATE POLICY "user_roles_update_deny_policy" ON user_roles
+FOR UPDATE TO authenticated
+USING (false)
+WITH CHECK (false);
+
+-- DELETE: Explicitly DENY all deletes by authenticated users
+CREATE POLICY "user_roles_delete_deny_policy" ON user_roles
+FOR DELETE TO authenticated
+USING (false);
+
+-- Helper functions with pinned search_path = public and SECURITY DEFINER
+CREATE OR REPLACE FUNCTION is_contractor()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE id = auth.uid() AND role = 'contractor'
+    );
+$$;
+
+REVOKE ALL ON FUNCTION is_contractor() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION is_contractor() TO authenticated;
+
+CREATE OR REPLACE FUNCTION is_client()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE id = auth.uid() AND role = 'client'
+    );
+$$;
+
+REVOKE ALL ON FUNCTION is_client() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION is_client() TO authenticated;
+
+CREATE OR REPLACE FUNCTION get_my_role()
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT role FROM user_roles
+    WHERE id = auth.uid();
+$$;
+
+REVOKE ALL ON FUNCTION get_my_role() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_my_role() TO authenticated;
+
+-- assign_user_role: Safe role inquiry for existing users, rejects unassigned direct self-assignment
+CREATE OR REPLACE FUNCTION assign_user_role(p_role TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_uid UUID := auth.uid();
+    v_existing TEXT;
+BEGIN
+    IF v_uid IS NULL THEN
+        RAISE EXCEPTION 'Authentication required to assign role';
+    END IF;
+
+    -- If user already has an authoritative role, return it safely (strictly immutable, prevents escalation)
+    SELECT role INTO v_existing FROM public.user_roles WHERE id = v_uid;
+    IF v_existing IS NOT NULL THEN
+        RETURN v_existing;
+    END IF;
+
+    -- Unassigned authenticated users cannot directly self-assign roles via this RPC.
+    -- Direct role assignment is strictly rejected to prevent privilege escalation.
+    RAISE EXCEPTION 'Direct role assignment is unauthorized. Unassigned users must complete legitimate onboarding.';
+END;
+$$;
+
+REVOKE ALL ON FUNCTION assign_user_role(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION assign_user_role(TEXT) TO authenticated;
+
+-- complete_user_onboarding: Authorized first-time role selection during legitimate onboarding (e.g. Google OAuth)
+CREATE OR REPLACE FUNCTION complete_user_onboarding(p_role TEXT, p_phone TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_uid UUID := auth.uid();
+    v_existing TEXT;
+    v_clean_phone TEXT;
+BEGIN
+    IF v_uid IS NULL THEN
+        RAISE EXCEPTION 'Authentication required for onboarding';
+    END IF;
+
+    IF p_role NOT IN ('contractor', 'client') THEN
+        RAISE EXCEPTION 'Invalid role: %', p_role;
+    END IF;
+
+    v_clean_phone := regexp_replace(COALESCE(p_phone, ''), '\D', '', 'g');
+    IF length(v_clean_phone) < 10 THEN
+        RAISE EXCEPTION 'Valid phone number is mandatory for account onboarding';
+    END IF;
+
+    -- Check if user already has an authoritative role (strictly immutable)
+    SELECT role INTO v_existing FROM public.user_roles WHERE id = v_uid;
+    IF v_existing IS NOT NULL THEN
+        RETURN v_existing;
+    END IF;
+
+    -- Insert authoritative role exactly once
+    INSERT INTO public.user_roles (id, role)
+    VALUES (v_uid, p_role)
+    ON CONFLICT (id) DO NOTHING;
+
+    RETURN p_role;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION complete_user_onboarding(TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION complete_user_onboarding(TEXT, TEXT) TO authenticated;
+
+CREATE OR REPLACE FUNCTION handle_new_user_role()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_role TEXT := NEW.raw_user_meta_data->>'role';
+BEGIN
+    IF v_role IN ('contractor', 'client') THEN
+        INSERT INTO public.user_roles (id, role)
+        VALUES (NEW.id, v_role)
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_on_auth_user_created ON auth.users;
+CREATE TRIGGER trg_on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW
+EXECUTE FUNCTION handle_new_user_role();
+
 -- 3. Projects Table Policies
 -- SELECT: Authenticated contractor or linked client only
 CREATE POLICY "projects_select_policy" ON projects
@@ -193,12 +373,13 @@ USING (
     OR client_id = (select auth.uid())
 );
 
--- INSERT: Contractor only; inserted contractor_id MUST match auth.uid()
+-- INSERT: Contractor only; inserted contractor_id MUST match auth.uid() AND user must be verified contractor
 CREATE POLICY "projects_insert_policy" ON projects
 FOR INSERT TO authenticated
 WITH CHECK (
     contractor_id = (select auth.uid())
     AND (client_id IS NULL OR client_id = (select auth.uid()))
+    AND is_contractor()
 );
 
 -- UPDATE: Contractor only; cannot change contractor_id ownership or tamper with client_id
@@ -258,6 +439,11 @@ BEGIN
     -- Prevent contractor from joining their own project as a client
     IF v_project.contractor_id = v_user_id THEN
         RAISE EXCEPTION 'Contractor cannot join their own project as client';
+    END IF;
+
+    -- Prevent contractor from joining any project as a client (Role Enforcement)
+    IF is_contractor() THEN
+        RAISE EXCEPTION 'Contractor cannot join project as client: Only client accounts can join projects';
     END IF;
 
     -- Prevent claiming a project that is already linked to another client

@@ -17,16 +17,52 @@ export function isValidUuid(id?: string | null): boolean {
   return Boolean(id && UUID_REGEX.test(id));
 }
 
-async function getAuthenticatedSupabaseIdentity(): Promise<{ uid: string | null; role: string | null }> {
+export async function getAuthenticatedSupabaseIdentity(): Promise<{ uid: string | null; role: string | null }> {
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
       const { data: authData } = await supabase.auth.getUser();
       const user = authData?.user;
       if (user && isValidUuid(user.id)) {
+        // Remediation 3: Server-authoritative role verification from user_roles
+        // Never trust client-writable user.user_metadata.role directly
+        let authoritativeRole: string | null = null;
+        try {
+          const { data: roleRow, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (!roleError && roleRow?.role) {
+            authoritativeRole = roleRow.role;
+          }
+        } catch {
+          // Table query failed
+        }
+
+        if (!authoritativeRole) {
+          try {
+            const { data: rpcRole, error: rpcError } = await supabase.rpc('get_my_role');
+            if (!rpcError && rpcRole && (rpcRole === 'contractor' || rpcRole === 'client')) {
+              authoritativeRole = rpcRole;
+            }
+          } catch {
+            // RPC fallback
+          }
+        }
+
+        // Only fall back to local verified session if DB is unreachable or offline
+        if (!authoritativeRole) {
+          const session = await StorageService.getSession();
+          if (session?.user?.id === user.id && session.user.role) {
+            authoritativeRole = session.user.role;
+          }
+        }
+
         return {
           uid: user.id,
-          role: (user.user_metadata?.role as string) || null,
+          role: authoritativeRole,
         };
       }
     } catch {
@@ -57,6 +93,8 @@ export interface BackendSyncStatus {
 }
 
 export const ContractorBackendService = {
+  getAuthenticatedSupabaseIdentity,
+
   /**
    * Returns current sync and connection status.
    */
@@ -182,16 +220,21 @@ export const ContractorBackendService = {
     // Arbitrary contractor_id or client_id in client input is never blindly accepted.
     const { uid, role } = await getAuthenticatedSupabaseIdentity();
 
+    // Remediation 3: Server-authoritative role enforcement
+    // Clients can NEVER create contractor projects
+    if (uid && role === 'client') {
+      throw new Error('Unauthorized: Client accounts cannot create projects. Projects must be created by a contractor.');
+    }
+
+    if (uid && role !== 'contractor') {
+      throw new Error('Unauthorized: Only verified contractor accounts can create projects.');
+    }
+
     let contractorId: string | null = null;
     let clientId: string | null = null;
 
     if (uid) {
-      if (role === 'client') {
-        clientId = uid;
-      } else {
-        // Default contractor creation
-        contractorId = uid;
-      }
+      contractorId = uid;
     }
 
     const created = await ContractorStorageService.createProject(
