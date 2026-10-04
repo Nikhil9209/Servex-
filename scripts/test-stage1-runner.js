@@ -31,9 +31,13 @@ globalThis.expo = globalThis.expo || {
 };
 
 const Module = require('module');
+
 const originalResolveFilename = Module._resolveFilename;
 
 Module._resolveFilename = function (request, parent, isMain, options) {
+  if (typeof request === 'string' && request.endsWith('supabaseClient')) {
+    return path.join(__dirname, 'mocks', 'supabaseClient.js');
+  }
   if (request === 'react-native') {
     return originalResolveFilename.call(this, 'react-native-web', parent, isMain, options);
   }

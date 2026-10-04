@@ -19,13 +19,11 @@ export const OtpVerificationScreen: React.FC = () => {
   const {
     pendingRegistration,
     verifyOtpCode,
-    skipOtpVerification,
     resendOtpCode,
     setAuthScreenStep,
     cancelRegistration,
     authError,
     clearAuthError,
-    lastGeneratedOtp,
     infoBanner,
   } = useAuth();
 
@@ -73,16 +71,6 @@ export const OtpVerificationScreen: React.FC = () => {
       // Handled in context
     } finally {
       setIsVerifying(false);
-    }
-  };
-
-  const handleSkipVerification = async () => {
-    setLocalError(null);
-    clearAuthError();
-    try {
-      await skipOtpVerification();
-    } catch {
-      // Handled in context
     }
   };
 
@@ -172,26 +160,6 @@ export const OtpVerificationScreen: React.FC = () => {
                 A real SMS with your 6-digit code was sent to your phone SIM card. Check your Messages inbox.
               </Text>
             </View>
-          ) : lastGeneratedOtp ? (
-            <View style={styles.devCodeBox}>
-              <View style={styles.simHeaderRow}>
-                <View style={styles.simIndicatorDot} />
-                <Text style={styles.devCodeTitle}>TEST MODE ACTIVE</Text>
-              </View>
-
-              <Text style={styles.devCodeHeading}>Your 6-Digit Verification Code</Text>
-              <Text style={styles.devCodeValue}>{lastGeneratedOtp}</Text>
-
-              <Pressable
-                style={styles.devCodeFillBtn}
-                onPress={() => {
-                  setOtp(lastGeneratedOtp);
-                  handleVerify(lastGeneratedOtp);
-                }}
-              >
-                <Text style={styles.devCodeFillText}>Auto-fill Code & Continue →</Text>
-              </Pressable>
-            </View>
           ) : null}
 
           {/* Info Banner */}
@@ -242,22 +210,6 @@ export const OtpVerificationScreen: React.FC = () => {
             ) : (
               <Text style={styles.verifyBtnText}>VERIFY CODE</Text>
             )}
-          </Pressable>
-
-          {/* Skip / Verify Later Action */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.verifyLaterBtn,
-              pressed && styles.verifyLaterBtnPressed,
-            ]}
-            onPress={handleSkipVerification}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Verify phone later"
-          >
-            <Text style={styles.verifyLaterText}>
-              Verify phone later (Enter Servex) →
-            </Text>
           </Pressable>
 
           {/* Resend Cooldown Section */}

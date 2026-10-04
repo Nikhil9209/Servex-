@@ -9,8 +9,9 @@ import {
   UserRole,
 } from '../types/auth';
 import { StorageService } from './storage';
-import { SmsService } from './smsService';
+import { OtpService } from './otpService';
 import { getSupabaseClient } from './supabaseClient';
+import { getSecureRandomBytes } from '../utils/projectCodeGenerator';
 import bcrypt from 'bcryptjs';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -33,11 +34,21 @@ function verifyLocalBcryptPassword(passwordRaw: string, storedHash?: string): bo
 }
 
 function generateUuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+  const bytes = getSecureRandomBytes(16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex: string[] = [];
+  for (let i = 0; i < 16; i++) hex.push(bytes[i].toString(16).padStart(2, '0'));
+  return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10, 16).join('')}`;
+}
+
+function generateSessionToken(prefix: string = 'srvx_sess_'): string {
+  const bytes = getSecureRandomBytes(16);
+  let hex = '';
+  for (let i = 0; i < 16; i++) {
+    hex += bytes[i].toString(16).padStart(2, '0');
+  }
+  return `${prefix}${Date.now()}_${hex}`;
 }
 
 // Google OAuth Discovery Endpoints
@@ -235,7 +246,7 @@ export const AuthService = {
 
     // Prepare session
     const session: AppAuthSession = {
-      token: `srvx_sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      token: generateSessionToken('srvx_sess_'),
       user: {
         id: foundUser.id,
         name: foundUser.name,
@@ -323,7 +334,7 @@ export const AuthService = {
       }
 
       const session: AppAuthSession = {
-        token: `srvx_sess_g_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        token: generateSessionToken('srvx_sess_g_'),
         user: {
           id: existingAccount.id,
           name: existingAccount.name || googleUser.name,
@@ -352,7 +363,6 @@ export const AuthService = {
       googleSub: googleUser.sub,
       googleIdToken,
       avatarUrl: googleUser.picture,
-      otpCode: '',
       otpExpiresAt: 0,
       otpLastSentAt: 0,
     };
@@ -521,17 +531,7 @@ export const AuthService = {
   },
 
   /**
-   * Generates a 6-digit OTP code and records cooldown & expiration
-   */
-  generateOtp(): { code: string; expiresAt: number } {
-    // 6-digit cryptographic-style numeric code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes validity
-    return { code, expiresAt };
-  },
-
-  /**
-   * Request / Send OTP to phone number
+   * Request / Send OTP to phone number via the authoritative server OTP engine
    */
   async requestOtpForPhone(
     pending: PendingRegistration,
@@ -556,51 +556,47 @@ export const AuthService = {
       );
     }
 
-    // Enforce cooldown if resending
-    if (pending.otpLastSentAt && Date.now() - pending.otpLastSentAt < 30000) {
-      const waitSec = Math.ceil((30000 - (Date.now() - pending.otpLastSentAt)) / 1000);
-      throw new Error(`Please wait ${waitSec} seconds before requesting another code.`);
-    }
-
-    const { code, expiresAt } = this.generateOtp();
-
-    // Dispatch OTP via live SMS Gateway (Fast2SMS for +91 / Twilio for global / Simulation fallback)
-    const smsResult = await SmsService.sendOtpSms(cleanPhone, countryCode, code);
+    // Server-authoritative OTP challenge creation (enforces cooldown, rate limit, CSPRNG, and HMAC)
+    const challengeRes = await OtpService.requestOtp(cleanPhone, countryCode);
 
     return {
       ...pending,
       phone: cleanPhone,
       countryCode,
-      otpCode: code,
-      otpExpiresAt: expiresAt,
+      challengeId: challengeRes.challengeId,
+      otpExpiresAt: challengeRes.expiresAt,
       otpLastSentAt: Date.now(),
-      smsDeliveryProvider: smsResult.success ? smsResult.provider : 'simulation',
-      smsDeliveryMessage: smsResult.success
-        ? smsResult.provider === 'simulation'
+      smsDeliveryProvider: challengeRes.smsDeliveryProvider || 'simulation',
+      smsDeliveryMessage:
+        challengeRes.smsDeliveryProvider === 'simulation'
           ? 'Simulation mode active (Add FAST2SMS or TWILIO key to .env for real SMS)'
-          : `Delivered via ${smsResult.provider.toUpperCase()}`
-        : smsResult.error,
+          : `Delivered via ${String(challengeRes.smsDeliveryProvider).toUpperCase()}`,
     };
   },
 
   /**
-   * Verify entered 6-digit OTP
+   * Verify entered 6-digit OTP via server-authoritative OtpService
    */
-  verifyOtp(pending: PendingRegistration, enteredOtp: string): boolean {
-    const cleaned = enteredOtp.trim();
+  async verifyOtp(pending: PendingRegistration, enteredOtp: string): Promise<boolean> {
+    const cleaned = enteredOtp ? enteredOtp.trim() : '';
 
     if (!cleaned || cleaned.length !== 6) {
       throw new Error('Please enter the complete 6-digit verification code.');
     }
 
-    if (Date.now() > pending.otpExpiresAt) {
-      throw new Error('Verification code has expired. Please request a new one.');
+    if (!pending.challengeId) {
+      throw new Error('No active verification session found. Please request a verification code.');
     }
 
-    if (cleaned !== pending.otpCode) {
-      throw new Error('Incorrect verification code. Please try again.');
+    // Server-authoritative verification (checks expiry, attempts, lockout, and HMAC match)
+    const result = await OtpService.verifyOtp(pending.challengeId, cleaned, pending.phone);
+
+    if (!result.verified || !result.verificationToken) {
+      throw new Error(result.error || 'Incorrect verification code. Please try again.');
     }
 
+    pending.isPhoneVerified = true;
+    pending.verificationToken = result.verificationToken;
     return true;
   },
 
@@ -611,6 +607,24 @@ export const AuthService = {
     pending: PendingRegistration,
     role: UserRole
   ): Promise<{ user: User; session: AppAuthSession }> {
+    // Servex Security Requirement: Phone verification is compulsory and must be completed before account creation
+    if (!pending.isPhoneVerified || !pending.verificationToken) {
+      throw new Error(
+        'Registration rejected: Phone verification is compulsory and must be completed before account creation.'
+      );
+    }
+
+    // Server-authoritative single-use token consumption
+    const tokenConsumed = await OtpService.consumeVerificationToken(
+      pending.phone,
+      pending.verificationToken
+    );
+    if (!tokenConsumed) {
+      throw new Error(
+        'Registration rejected: Invalid or expired phone verification token. Please verify your phone number again.'
+      );
+    }
+
     // Supabase Auth is the sole password authority and handles salted bcrypt hashing in PostgreSQL.
     // The application does NOT maintain a secondary password database.
     // For local offline test runners without Supabase, hash with standard bcrypt if needed.
@@ -664,6 +678,7 @@ export const AuthService = {
             await supabase.rpc('complete_user_onboarding', {
               p_role: role,
               p_phone: pending.phone || '9800000000',
+              p_verification_token: pending.verificationToken,
             });
           } catch {
             // Trigger or conflict handled
@@ -684,14 +699,14 @@ export const AuthService = {
       avatarUrl: pending.avatarUrl,
       authProvider: pending.authProvider,
       createdAt: new Date().toISOString(),
-      isPhoneVerified: pending.isPhoneVerified ?? true,
+      isPhoneVerified: true,
       passwordHash: offlineBcryptHash,
     };
 
     await StorageService.addRegisteredUser(newUser);
 
     const session: AppAuthSession = {
-      token: `srvx_sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      token: generateSessionToken('srvx_sess_'),
       user: {
         id: newUser.id,
         name: newUser.name,
@@ -702,7 +717,7 @@ export const AuthService = {
         avatarUrl: newUser.avatarUrl,
         authProvider: newUser.authProvider,
         createdAt: newUser.createdAt,
-        isPhoneVerified: newUser.isPhoneVerified,
+        isPhoneVerified: true,
       },
       expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
     };

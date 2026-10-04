@@ -23,7 +23,6 @@ interface AuthContextType {
   pendingRegistration: PendingRegistration | null;
   authError: string | null;
   infoBanner: string | null;
-  lastGeneratedOtp: string | null; // Exposed for verification/testing feedback
 
   // Navigation within auth stack
   setAuthScreenStep: (step: AuthScreenStep) => void;
@@ -38,8 +37,7 @@ interface AuthContextType {
     phone: string,
     countryCode: string,
     password: string,
-    agreeTerms: boolean,
-    shouldVerifyPhone?: boolean
+    agreeTerms: boolean
   ) => Promise<void>;
   startGoogleSignIn: () => Promise<void>;
   authenticateWithGoogleUser: (profile: {
@@ -50,11 +48,9 @@ interface AuthContextType {
   }) => Promise<void>;
   submitPhoneForGoogle: (
     phone: string,
-    countryCode: string,
-    shouldVerifyPhone?: boolean
+    countryCode: string
   ) => Promise<void>;
   verifyOtpCode: (enteredOtp: string) => Promise<void>;
-  skipOtpVerification: () => Promise<void>;
   resendOtpCode: () => Promise<void>;
   selectAccountRole: (role: UserRole) => Promise<void>;
   switchUserRole: (newRole: UserRole) => Promise<void>;
@@ -70,7 +66,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pendingRegistration, setPendingRegistration] = useState<PendingRegistration | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [infoBanner, setInfoBanner] = useState<string | null>(null);
-  const [lastGeneratedOtp, setLastGeneratedOtp] = useState<string | null>(null);
 
   const clearAuthError = useCallback(() => {
     setAuthError(null);
@@ -140,7 +135,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPendingRegistration(null);
     setAuthError(null);
     setInfoBanner(null);
-    setLastGeneratedOtp(null);
     setAuthScreenStep('LOGIN');
   }, []);
 
@@ -168,8 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       phone: string,
       countryCode: string,
       password: string,
-      agreeTerms: boolean,
-      shouldVerifyPhone: boolean = true
+      agreeTerms: boolean
     ) => {
       setAuthError(null);
 
@@ -231,26 +224,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(msg);
       }
 
-      if (!shouldVerifyPhone) {
-        // Direct entry: phone saved to profile, skips SMS OTP entirely
-        const pendingWithoutOtp: PendingRegistration = {
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          phone: cleanPhone,
-          countryCode: countryCode || '+91',
-          passwordRaw: password,
-          authProvider: 'email',
-          otpCode: '',
-          otpExpiresAt: 0,
-          otpLastSentAt: 0,
-          isPhoneVerified: false,
-        };
-        setPendingRegistration(pendingWithoutOtp);
-        setInfoBanner(null);
-        setAuthScreenStep('ROLE_SELECT');
-        return;
-      }
-
       const initialPending: PendingRegistration = {
         name: name.trim(),
         email: email.trim().toLowerCase(),
@@ -258,7 +231,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         countryCode: countryCode || '+91',
         passwordRaw: password,
         authProvider: 'email',
-        otpCode: '',
         otpExpiresAt: 0,
         otpLastSentAt: 0,
       };
@@ -266,7 +238,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const withOtp = await AuthService.requestOtpForPhone(initialPending, cleanPhone, countryCode);
         setPendingRegistration(withOtp);
-        setLastGeneratedOtp(withOtp.otpCode);
         setInfoBanner(`Verification code sent to ${withOtp.countryCode} ${withOtp.phone}`);
         setAuthScreenStep('OTP_VERIFY');
       } catch (err: any) {
@@ -339,9 +310,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     []
   );
 
-  // Submit Phone for Google User
+  // Submit Phone for Google User (Compulsory OTP verification)
   const submitPhoneForGoogle = useCallback(
-    async (phone: string, countryCode: string, shouldVerifyPhone: boolean = true) => {
+    async (phone: string, countryCode: string) => {
       setAuthError(null);
       if (!pendingRegistration) {
         setAuthError('Registration session expired. Please sign in again.');
@@ -363,19 +334,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
       }
 
-      if (!shouldVerifyPhone) {
-        // Direct entry: phone saved on Google account, skips SMS OTP entirely
-        setPendingRegistration({
-          ...pendingRegistration,
-          phone: cleanPhone,
-          countryCode: countryCode || '+91',
-          isPhoneVerified: false,
-        });
-        setInfoBanner(null);
-        setAuthScreenStep('ROLE_SELECT');
-        return;
-      }
-
       try {
         const withOtp = await AuthService.requestOtpForPhone(
           pendingRegistration,
@@ -383,7 +341,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           countryCode
         );
         setPendingRegistration(withOtp);
-        setLastGeneratedOtp(withOtp.otpCode);
         setInfoBanner(`Verification code sent to ${withOtp.countryCode} ${withOtp.phone}`);
         setAuthScreenStep('OTP_VERIFY');
       } catch (err: any) {
@@ -394,7 +351,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [pendingRegistration]
   );
 
-  // Verify 6-digit OTP
+  // Verify 6-digit OTP via server-authoritative AuthService
   const verifyOtpCode = useCallback(
     async (enteredOtp: string) => {
       setAuthError(null);
@@ -405,7 +362,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
-        AuthService.verifyOtp(pendingRegistration, enteredOtp);
+        await AuthService.verifyOtp(pendingRegistration, enteredOtp);
         // OTP is verified! Mark verified & proceed to Role Selection
         setPendingRegistration({
           ...pendingRegistration,
@@ -420,24 +377,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     },
     [pendingRegistration]
   );
-
-  // Skip Phone Verification for now and proceed directly to Role Selection
-  const skipOtpVerification = useCallback(async () => {
-    setAuthError(null);
-    if (!pendingRegistration) {
-      setAuthError('Session expired. Please restart sign-in.');
-      setAuthScreenStep('LOGIN');
-      return;
-    }
-
-    // Set phone as unverified initially, and proceed to role selection
-    setPendingRegistration({
-      ...pendingRegistration,
-      isPhoneVerified: false,
-    });
-    setInfoBanner(null);
-    setAuthScreenStep('ROLE_SELECT');
-  }, [pendingRegistration]);
 
   // Resend OTP
   const resendOtpCode = useCallback(async () => {
@@ -454,7 +393,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         pendingRegistration.countryCode
       );
       setPendingRegistration(withOtp);
-      setLastGeneratedOtp(withOtp.otpCode);
       setInfoBanner(`New code sent to ${withOtp.countryCode} ${withOtp.phone}`);
     } catch (err: any) {
       setAuthError(err?.message || 'Could not resend OTP.');
@@ -480,7 +418,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
         setUser(registeredUser);
         setPendingRegistration(null);
-        setLastGeneratedOtp(null);
         setInfoBanner(null);
       } catch (err: any) {
         setAuthError(err?.message || 'Account creation failed.');
@@ -511,7 +448,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await AuthService.logout();
       setUser(null);
       setPendingRegistration(null);
-      setLastGeneratedOtp(null);
       setAuthError(null);
       setInfoBanner(null);
       setAuthScreenStep('LOGIN');
@@ -528,7 +464,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     pendingRegistration,
     authError,
     infoBanner,
-    lastGeneratedOtp,
     setAuthScreenStep,
     clearAuthError,
     cancelRegistration,
@@ -538,7 +473,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authenticateWithGoogleUser,
     submitPhoneForGoogle,
     verifyOtpCode,
-    skipOtpVerification,
     resendOtpCode,
     selectAccountRole,
     switchUserRole,

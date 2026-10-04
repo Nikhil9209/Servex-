@@ -34,31 +34,29 @@ export const PhoneCollectionScreen: React.FC = () => {
 
   const displayError = localError || authError;
 
-  const handlePhoneSubmit = async (shouldVerify: boolean) => {
+  const handlePhoneSubmit = async () => {
     setLocalError(null);
     clearAuthError();
 
     const cleanPhone = phone.replace(/\D/g, '');
-    if (shouldVerify) {
-      if (!cleanPhone) {
-        setLocalError('Please enter your phone number.');
-        return;
-      }
+    if (!cleanPhone) {
+      setLocalError('Please enter your phone number.');
+      return;
+    }
 
-      if (
-        cleanPhone.length < selectedCountry.minLength ||
-        cleanPhone.length > selectedCountry.maxLength
-      ) {
-        setLocalError(
-          `Please enter a valid ${selectedCountry.minLength}-digit phone number for ${selectedCountry.name}.`
-        );
-        return;
-      }
+    if (
+      cleanPhone.length < selectedCountry.minLength ||
+      cleanPhone.length > selectedCountry.maxLength
+    ) {
+      setLocalError(
+        `Please enter a valid ${selectedCountry.minLength}-digit phone number for ${selectedCountry.name}.`
+      );
+      return;
     }
 
     setIsSubmitting(true);
     try {
-      await submitPhoneForGoogle(cleanPhone, selectedCountry.dialCode, shouldVerify);
+      await submitPhoneForGoogle(cleanPhone, selectedCountry.dialCode);
     } catch {
       // Handled in context
     } finally {
@@ -145,7 +143,7 @@ export const PhoneCollectionScreen: React.FC = () => {
                 pressed && styles.sendButtonPressed,
                 isSubmitting && styles.buttonDisabled,
               ]}
-              onPress={() => handlePhoneSubmit(true)}
+              onPress={() => handlePhoneSubmit()}
               disabled={isSubmitting}
               accessibilityRole="button"
               accessibilityLabel="Verify your phone number"
@@ -155,20 +153,6 @@ export const PhoneCollectionScreen: React.FC = () => {
               ) : (
                 <Text style={styles.sendButtonText}>Verify your phone number →</Text>
               )}
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.verifyLaterBtn,
-                pressed && styles.verifyLaterBtnPressed,
-                isSubmitting && styles.buttonDisabled,
-              ]}
-              onPress={() => handlePhoneSubmit(false)}
-              disabled={isSubmitting}
-              accessibilityRole="button"
-              accessibilityLabel="Verify it later"
-            >
-              <Text style={styles.verifyLaterBtnText}>Verify it later</Text>
             </Pressable>
           </View>
 

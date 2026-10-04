@@ -77,7 +77,7 @@ export const RegisterScreen: React.FC = () => {
     }
   };
 
-  const handleRegister = async (shouldVerifyPhone: boolean = true) => {
+  const handleRegister = async () => {
     setLocalError(null);
     clearAuthError();
 
@@ -141,8 +141,7 @@ export const RegisterScreen: React.FC = () => {
         phone,
         selectedCountry.dialCode,
         password,
-        agreeTerms,
-        shouldVerifyPhone
+        agreeTerms
       );
     } catch {
       // Error handled in AuthContext
@@ -417,7 +416,7 @@ export const RegisterScreen: React.FC = () => {
                 pressed && styles.createBtnPressed,
                 isSubmitting && styles.btnDisabled,
               ]}
-              onPress={() => handleRegister(true)}
+              onPress={() => handleRegister()}
               disabled={isSubmitting}
               accessibilityRole="button"
               accessibilityLabel="Verify your phone number"
@@ -427,21 +426,6 @@ export const RegisterScreen: React.FC = () => {
               ) : (
                 <Text style={styles.createBtnText}>Verify your phone number →</Text>
               )}
-            </Pressable>
-
-            {/* Secondary Action: Verify it later */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.verifyLaterBtn,
-                pressed && styles.verifyLaterBtnPressed,
-                isSubmitting && styles.btnDisabled,
-              ]}
-              onPress={() => handleRegister(false)}
-              disabled={isSubmitting}
-              accessibilityRole="button"
-              accessibilityLabel="Verify it later"
-            >
-              <Text style={styles.verifyLaterBtnText}>Verify it later</Text>
             </Pressable>
           </View>
 

@@ -1,4 +1,6 @@
 import { AuthService } from '../src/services/authService';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { __getSimulatedDeliveredOtp } = require('../scripts/mocks/supabaseClient.js');
 import { StorageService } from '../src/services/storage';
 import { getSupabaseClient, getSupabaseSession, getSupabaseAuthUser } from '../src/services/supabaseClient';
 import { PendingRegistration } from '../src/types/auth';
@@ -90,14 +92,16 @@ async function runStage1Verification() {
     countryCode: '+91',
     passwordRaw: regPassword,
     authProvider: 'email',
-    otpCode: '',
     otpExpiresAt: 0,
     otpLastSentAt: 0,
   };
 
   const pendingWithOtp = await AuthService.requestOtpForPhone(pending, regPhone, '+91');
   assert(pendingWithOtp.phone === regPhone, 'Phone number captured');
-  assert(AuthService.verifyOtp(pendingWithOtp, pendingWithOtp.otpCode), 'OTP verified successfully');
+  const simOtp = __getSimulatedDeliveredOtp(pendingWithOtp.challengeId!);
+  assert(Boolean(simOtp), 'Simulated OTP delivered via server dispatch');
+  const isVerified = await AuthService.verifyOtp(pendingWithOtp, simOtp!);
+  assert(isVerified, 'OTP verified successfully');
 
   // Finalize Registration as Contractor
   const regResult = await AuthService.finalizeRegistration(pendingWithOtp, 'contractor');

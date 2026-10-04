@@ -13,7 +13,7 @@ export const TOTAL_RANDOM_CHARS = 8; // 2 chunks of 4 = 8 chars = 40 bits of ent
  * Retrieves cryptographically secure random bytes from available CSPRNG sources.
  * Strictly never relies on insecure pseudo-random generators.
  */
-function getSecureRandomBytes(byteCount: number): Uint8Array {
+export function getSecureRandomBytes(byteCount: number): Uint8Array {
   // 1. Standard Web / DOM / Global Crypto API (available in modern browsers, Expo web, Node 19+)
   if (
     typeof globalThis !== 'undefined' &&

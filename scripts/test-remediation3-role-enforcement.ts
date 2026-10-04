@@ -6,6 +6,8 @@ const path = require('path');
 
 import { StorageService } from '../src/services/storage';
 import { AuthService } from '../src/services/authService';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { __issueTestVerificationToken } = require('../scripts/mocks/supabaseClient.js');
 import { ContractorBackendService, isValidUuid } from '../src/services/contractorBackendService';
 import { ContractorStorageService } from '../src/services/contractorStorageService';
 import { getSupabaseClient, isSupabaseConfigured } from '../src/services/supabaseClient';
@@ -103,10 +105,10 @@ async function runRemediation3Tests() {
     countryCode: '+91',
     passwordRaw: 'SecureClientPass123!',
     authProvider: 'email' as const,
-    otpCode: '123456',
     otpExpiresAt: Date.now() + 600000,
     otpLastSentAt: Date.now(),
     isPhoneVerified: true,
+    verificationToken: __issueTestVerificationToken('9811122233'),
   };
   const regClientResult = await AuthService.finalizeRegistration(pendingEmailClient, 'client');
   assert(regClientResult.user.role === 'client', 'Email registration assigns client role');
@@ -127,10 +129,10 @@ async function runRemediation3Tests() {
     countryCode: '+91',
     passwordRaw: 'SecureContractorPass123!',
     authProvider: 'email' as const,
-    otpCode: '123456',
     otpExpiresAt: Date.now() + 600000,
     otpLastSentAt: Date.now(),
     isPhoneVerified: true,
+    verificationToken: __issueTestVerificationToken('9822233344'),
   };
   const regContractorResult = await AuthService.finalizeRegistration(pendingEmailContractor, 'contractor');
   assert(regContractorResult.user.role === 'contractor', 'Email registration assigns contractor role');
@@ -170,10 +172,10 @@ async function runRemediation3Tests() {
     countryCode: '+91',
     authProvider: 'google' as const,
     googleSub: `sub_g_${Date.now()}`,
-    otpCode: '123456',
     otpExpiresAt: Date.now() + 600000,
     otpLastSentAt: Date.now(),
     isPhoneVerified: true,
+    verificationToken: __issueTestVerificationToken('9833344455'),
   };
   const googleRegResult = await AuthService.finalizeRegistration(pendingGoogleUser, 'contractor');
   assert(googleRegResult.user.role === 'contractor', 'Legitimate RoleSelection flow assigns initial role');
@@ -431,7 +433,7 @@ async function runRemediation3Tests() {
     'assign_user_role() revoked from PUBLIC'
   );
   assert(
-    schemaSql.includes('REVOKE ALL ON FUNCTION complete_user_onboarding(TEXT, TEXT) FROM PUBLIC;'),
+    schemaSql.includes('REVOKE ALL ON FUNCTION complete_user_onboarding(TEXT, TEXT, TEXT) FROM PUBLIC;'),
     'complete_user_onboarding() revoked from PUBLIC'
   );
   assert(

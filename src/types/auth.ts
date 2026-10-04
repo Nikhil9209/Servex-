@@ -27,9 +27,10 @@ export interface PendingRegistration {
   googleSub?: string;
   googleIdToken?: string; // In-memory for Supabase Auth OAuth linking
   avatarUrl?: string;
-  otpCode: string;
-  otpExpiresAt: number;
-  otpLastSentAt: number;
+  challengeId?: string;
+  verificationToken?: string;
+  otpExpiresAt?: number;
+  otpLastSentAt?: number;
   smsDeliveryProvider?: 'twilio' | 'fast2sms' | 'simulation';
   smsDeliveryMessage?: string;
   isPhoneVerified?: boolean;

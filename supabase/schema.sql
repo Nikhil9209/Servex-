@@ -300,7 +300,11 @@ REVOKE ALL ON FUNCTION assign_user_role(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION assign_user_role(TEXT) TO authenticated;
 
 -- complete_user_onboarding: Authorized first-time role selection during legitimate onboarding (e.g. Google OAuth)
-CREATE OR REPLACE FUNCTION complete_user_onboarding(p_role TEXT, p_phone TEXT)
+CREATE OR REPLACE FUNCTION complete_user_onboarding(
+    p_role TEXT,
+    p_phone TEXT,
+    p_verification_token TEXT
+)
 RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -324,6 +328,16 @@ BEGIN
         RAISE EXCEPTION 'Valid phone number is mandatory for account onboarding';
     END IF;
 
+    -- Strict verification token enforcement: mandatory single-use token
+    IF p_verification_token IS NULL OR length(p_verification_token) < 32 THEN
+        RAISE EXCEPTION 'Phone verification token is mandatory for account onboarding';
+    END IF;
+
+    -- Atomically verify and consume the single-use token
+    IF NOT verify_and_consume_phone_token(v_clean_phone, p_verification_token) THEN
+        RAISE EXCEPTION 'Invalid, expired, or already consumed phone verification token. Please verify your phone number again.';
+    END IF;
+
     -- Check if user already has an authoritative role (strictly immutable)
     SELECT role INTO v_existing FROM public.user_roles WHERE id = v_uid;
     IF v_existing IS NOT NULL THEN
@@ -339,8 +353,12 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION complete_user_onboarding(TEXT, TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION complete_user_onboarding(TEXT, TEXT) TO authenticated;
+REVOKE ALL ON FUNCTION complete_user_onboarding(TEXT, TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION complete_user_onboarding(TEXT, TEXT, TEXT) TO authenticated;
+
+-- Obsolete 2-argument overload removed: it created signature ambiguity and could never
+-- verify a phone token. Any stale deployments must drop it explicitly.
+DROP FUNCTION IF EXISTS complete_user_onboarding(TEXT, TEXT);
 
 CREATE OR REPLACE FUNCTION handle_new_user_role()
 RETURNS TRIGGER
@@ -900,3 +918,290 @@ USING (
         AND p.contractor_id = (select auth.uid())
     )
 );
+
+-- ==============================================================================
+-- 11. PHONE OTP CHALLENGES (Remediation 5: Server-Authoritative OTP Security)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS phone_otp_challenges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    phone VARCHAR(32) NOT NULL,
+    country_code VARCHAR(16) NOT NULL DEFAULT '+91',
+    otp_hmac TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    attempts INT NOT NULL DEFAULT 0,
+    max_attempts INT NOT NULL DEFAULT 5,
+    verified_at TIMESTAMPTZ,
+    consumed_at TIMESTAMPTZ,
+    verification_token TEXT UNIQUE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    last_sent_at TIMESTAMPTZ DEFAULT NOW(),
+    locked_at TIMESTAMPTZ
+);
+
+-- Indices for rapid lookup by phone, expiration, and verification token
+CREATE INDEX IF NOT EXISTS idx_otp_challenges_phone ON phone_otp_challenges (phone);
+CREATE INDEX IF NOT EXISTS idx_otp_challenges_expires ON phone_otp_challenges (expires_at);
+CREATE INDEX IF NOT EXISTS idx_otp_challenges_token ON phone_otp_challenges (verification_token);
+
+ALTER TABLE phone_otp_challenges ENABLE ROW LEVEL SECURITY;
+
+-- Explicitly DENY all direct access by clients (anon, authenticated, and public).
+-- Direct reads/writes to OTP challenges and HMACs are strictly prohibited to prevent data leaks.
+CREATE POLICY "otp_challenges_deny_select" ON phone_otp_challenges
+FOR SELECT TO public
+USING (false);
+
+CREATE POLICY "otp_challenges_deny_insert" ON phone_otp_challenges
+FOR INSERT TO public
+WITH CHECK (false);
+
+CREATE POLICY "otp_challenges_deny_update" ON phone_otp_challenges
+FOR UPDATE TO public
+USING (false)
+WITH CHECK (false);
+
+CREATE POLICY "otp_challenges_deny_delete" ON phone_otp_challenges
+FOR DELETE TO public
+USING (false);
+
+REVOKE ALL ON TABLE phone_otp_challenges FROM PUBLIC, anon, authenticated;
+
+-- record_otp_challenge: Server-authoritative function to record an OTP challenge with cooldown & abuse protection
+CREATE OR REPLACE FUNCTION record_otp_challenge(
+    p_phone TEXT,
+    p_country_code TEXT DEFAULT '+91',
+    p_otp_hmac TEXT DEFAULT '',
+    p_cooldown_seconds INT DEFAULT 60,
+    p_expiry_seconds INT DEFAULT 300
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_clean_phone TEXT;
+    v_last_sent TIMESTAMPTZ;
+    v_window_count INT;
+    v_challenge_id UUID;
+    v_expires_at TIMESTAMPTZ;
+BEGIN
+    v_clean_phone := regexp_replace(COALESCE(p_phone, ''), '\D', '', 'g');
+    IF length(v_clean_phone) < 10 OR length(v_clean_phone) > 15 THEN
+        RAISE EXCEPTION 'Invalid phone number length (must be between 10 and 15 digits)';
+    END IF;
+
+    IF p_otp_hmac IS NULL OR length(p_otp_hmac) < 16 THEN
+        RAISE EXCEPTION 'Invalid OTP HMAC digest';
+    END IF;
+
+    -- 1. Resend cooldown enforcement (default 60 seconds)
+    SELECT created_at INTO v_last_sent
+    FROM phone_otp_challenges
+    WHERE phone = v_clean_phone
+    ORDER BY created_at DESC
+    LIMIT 1;
+
+    IF v_last_sent IS NOT NULL AND NOW() < v_last_sent + (p_cooldown_seconds || ' seconds')::INTERVAL THEN
+        RAISE EXCEPTION 'Resend cooldown active. Please wait % seconds before requesting another verification code.',
+            CEIL(EXTRACT(EPOCH FROM (v_last_sent + (p_cooldown_seconds || ' seconds')::INTERVAL - NOW())));
+    END IF;
+
+    -- 2. Sliding-window abuse limit (maximum 5 requests per 15 minutes)
+    SELECT COUNT(*) INTO v_window_count
+    FROM phone_otp_challenges
+    WHERE phone = v_clean_phone
+      AND created_at > NOW() - INTERVAL '15 minutes';
+
+    IF v_window_count >= 5 THEN
+        RAISE EXCEPTION 'Too many verification attempts for this phone number. Please try again after 15 minutes.';
+    END IF;
+
+    -- 3. Invalidate any previous unverified challenges for this phone
+    UPDATE phone_otp_challenges
+    SET expires_at = NOW()
+    WHERE phone = v_clean_phone
+      AND verified_at IS NULL
+      AND expires_at > NOW();
+
+    -- 4. Create new challenge row
+    v_expires_at := NOW() + (p_expiry_seconds || ' seconds')::INTERVAL;
+
+    INSERT INTO phone_otp_challenges (
+        phone,
+        country_code,
+        otp_hmac,
+        expires_at,
+        max_attempts,
+        last_sent_at
+    )
+    VALUES (
+        v_clean_phone,
+        COALESCE(p_country_code, '+91'),
+        p_otp_hmac,
+        v_expires_at,
+        5,
+        NOW()
+    )
+    RETURNING id INTO v_challenge_id;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'challenge_id', v_challenge_id,
+        'expires_at', v_expires_at,
+        'cooldown_seconds', p_cooldown_seconds
+    );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION record_otp_challenge(TEXT, TEXT, TEXT, INT, INT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION record_otp_challenge(TEXT, TEXT, TEXT, INT, INT) TO service_role;
+
+-- verify_phone_otp: Server-authoritative function to verify an OTP against its HMAC with attempt tracking
+CREATE OR REPLACE FUNCTION verify_phone_otp(
+    p_challenge_id UUID,
+    p_otp_hmac TEXT,
+    p_expected_phone TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_challenge RECORD;
+    v_new_attempts INT;
+    v_token TEXT;
+    v_clean_expected TEXT;
+BEGIN
+    IF p_challenge_id IS NULL THEN
+        RETURN jsonb_build_object('verified', false, 'error', 'Invalid verification challenge ID');
+    END IF;
+
+    -- Row-level lock to prevent concurrent verification race conditions
+    SELECT * INTO v_challenge
+    FROM phone_otp_challenges
+    WHERE id = p_challenge_id
+    FOR UPDATE;
+
+    IF v_challenge IS NULL THEN
+        RETURN jsonb_build_object('verified', false, 'error', 'Verification session not found or invalid');
+    END IF;
+
+    -- Identity binding: challenge cannot be switched to another phone
+    IF p_expected_phone IS NOT NULL THEN
+        v_clean_expected := regexp_replace(p_expected_phone, '\D', '', 'g');
+        IF v_challenge.phone != v_clean_expected THEN
+            RETURN jsonb_build_object('verified', false, 'error', 'Challenge identity mismatch: Invalid phone association');
+        END IF;
+    END IF;
+
+    -- Check if challenge is already consumed
+    IF v_challenge.consumed_at IS NOT NULL THEN
+        RETURN jsonb_build_object('verified', false, 'error', 'Verification code already consumed');
+    END IF;
+
+    -- Check if challenge is locked (5 failed attempts)
+    IF v_challenge.attempts >= v_challenge.max_attempts THEN
+        RETURN jsonb_build_object('verified', false, 'error', 'Maximum verification attempts exceeded. Challenge locked.');
+    END IF;
+
+    -- Check expiration
+    IF NOW() > v_challenge.expires_at THEN
+        UPDATE phone_otp_challenges SET expires_at = NOW() WHERE id = p_challenge_id;
+        RETURN jsonb_build_object('verified', false, 'error', 'Verification code has expired. Please request a new code.');
+    END IF;
+
+    -- Increment attempts
+    v_new_attempts := v_challenge.attempts + 1;
+    UPDATE phone_otp_challenges
+    SET attempts = v_new_attempts
+    WHERE id = p_challenge_id;
+
+    -- If this failed attempt reaches max attempts, invalidate challenge and lock
+    IF v_new_attempts >= v_challenge.max_attempts AND v_challenge.otp_hmac != p_otp_hmac THEN
+        UPDATE phone_otp_challenges
+        SET expires_at = NOW()
+        WHERE id = p_challenge_id;
+        RETURN jsonb_build_object('verified', false, 'error', 'Maximum verification attempts exceeded. Challenge locked.');
+    END IF;
+
+    -- Verify HMAC match
+    IF v_challenge.otp_hmac = p_otp_hmac THEN
+        v_token := encode(gen_random_bytes(32), 'hex');
+        UPDATE phone_otp_challenges
+        SET verified_at = NOW(),
+            verification_token = v_token
+        WHERE id = p_challenge_id;
+
+        RETURN jsonb_build_object(
+            'verified', true,
+            'verification_token', v_token
+        );
+    ELSE
+        RETURN jsonb_build_object(
+            'verified', false,
+            'attempts_remaining', (v_challenge.max_attempts - v_new_attempts),
+            'error', 'Incorrect verification code. Please try again.'
+        );
+    END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION verify_phone_otp(UUID, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION verify_phone_otp(UUID, TEXT, TEXT) TO service_role;
+
+-- verify_and_consume_phone_token: Atomically consumes verification token upon onboarding
+CREATE OR REPLACE FUNCTION verify_and_consume_phone_token(
+    p_phone TEXT,
+    p_token TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_challenge RECORD;
+    v_clean_phone TEXT;
+BEGIN
+    IF p_phone IS NULL OR p_token IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    v_clean_phone := regexp_replace(p_phone, '\D', '', 'g');
+
+    SELECT * INTO v_challenge
+    FROM public.phone_otp_challenges
+    WHERE verification_token = p_token
+      AND phone = v_clean_phone
+    FOR UPDATE;
+
+    IF v_challenge IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    IF v_challenge.consumed_at IS NOT NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    IF v_challenge.verified_at IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    -- Token expires after 1 hour
+    IF NOW() > v_challenge.verified_at + INTERVAL '1 hour' THEN
+        RETURN FALSE;
+    END IF;
+
+    UPDATE phone_otp_challenges
+    SET consumed_at = NOW()
+    WHERE id = v_challenge.id;
+
+    RETURN TRUE;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION verify_and_consume_phone_token(TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION verify_and_consume_phone_token(TEXT, TEXT) TO authenticated;

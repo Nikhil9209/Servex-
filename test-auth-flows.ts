@@ -1,5 +1,7 @@
 import { AuthService } from './src/services/authService';
 import { StorageService } from './src/services/storage';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { __getSimulatedDeliveredOtp, __resetOtpMock } = require('./scripts/mocks/supabaseClient.js');
 import { PendingRegistration } from './src/types/auth';
 
 let passed = 0;
@@ -83,7 +85,6 @@ async function runAllTests() {
     countryCode: '+91',
     passwordRaw: 'SecurePass@2026',
     authProvider: 'email',
-    otpCode: '',
     otpExpiresAt: 0,
     otpLastSentAt: 0,
   };
@@ -91,13 +92,13 @@ async function runAllTests() {
   // Step 5a: Request OTP
   const withOtp = await AuthService.requestOtpForPhone(pendingEmailUser, newPhone, '+91');
   assert(withOtp.phone === newPhone, 'Phone number captured in pending registration');
-  assert(withOtp.otpCode.length === 6, '6-digit OTP code generated');
-  assert(withOtp.otpExpiresAt > Date.now(), 'OTP expiry timestamp set 5 minutes ahead');
+  assert(Boolean(withOtp.challengeId), 'Server-side OTP challenge created');
+  assert(withOtp.otpExpiresAt! > Date.now(), 'OTP expiry timestamp set 5 minutes ahead');
 
   // Step 5b: Incorrect OTP rejection
   let badOtpCaught = false;
   try {
-    AuthService.verifyOtp(withOtp, '000000');
+    await AuthService.verifyOtp(withOtp, '000000');
   } catch (err: any) {
     badOtpCaught = true;
     assert(err.message.includes('Incorrect verification code'), 'Rejects incorrect OTP');
@@ -105,18 +106,20 @@ async function runAllTests() {
   assert(badOtpCaught, 'Throws on wrong OTP');
 
   // Step 5c: Expired OTP rejection
-  const expiredPending = { ...withOtp, otpExpiresAt: Date.now() - 1000 };
+  const expiredPending = { ...withOtp, challengeId: 'expired-test-challenge' };
   let expiredOtpCaught = false;
   try {
-    AuthService.verifyOtp(expiredPending, withOtp.otpCode);
+    await AuthService.verifyOtp(expiredPending, '123456');
   } catch (err: any) {
     expiredOtpCaught = true;
-    assert(err.message.includes('expired'), 'Rejects expired OTP');
+    assert(err.message.includes('expired') || err.message.includes('Invalid'), 'Rejects expired OTP');
   }
   assert(expiredOtpCaught, 'Throws on expired OTP');
 
   // Step 5d: Successful OTP verification
-  const isOtpValid = AuthService.verifyOtp(withOtp, withOtp.otpCode);
+  const simOtp = __getSimulatedDeliveredOtp(withOtp.challengeId!);
+  assert(Boolean(simOtp && simOtp.length === 6), '6-digit CSPRNG OTP code generated and delivered');
+  const isOtpValid = await AuthService.verifyOtp(withOtp, simOtp!);
   assert(isOtpValid === true, 'Verifies correct 6-digit OTP');
 
   // Step 5e: Role selection -> Contractor
@@ -137,7 +140,6 @@ async function runAllTests() {
     countryCode: '+91',
     authProvider: 'google',
     googleSub: `gsub_${Date.now()}`,
-    otpCode: '',
     otpExpiresAt: 0,
     otpLastSentAt: 0,
   };
@@ -145,7 +147,8 @@ async function runAllTests() {
   const googlePhone = `98${Math.floor(10000000 + Math.random() * 90000000)}`;
   const googleWithOtp = await AuthService.requestOtpForPhone(pendingGoogleUser, googlePhone, '+91');
   assert(googleWithOtp.phone === googlePhone, 'Captures mandatory phone for Google user');
-  assert(AuthService.verifyOtp(googleWithOtp, googleWithOtp.otpCode), 'Verifies OTP for Google user');
+  const googleSimOtp = __getSimulatedDeliveredOtp(googleWithOtp.challengeId!);
+  assert(await AuthService.verifyOtp(googleWithOtp, googleSimOtp!), 'Verifies OTP for Google user');
 
   // Select Client Role
   const { user: googleClientUser } = await AuthService.finalizeRegistration(
@@ -176,15 +179,12 @@ async function runAllTests() {
   console.log('\n[Test Suite 9] SMS Gateway & Delivery Provider Verification');
   const { SmsService } = await import('./src/services/smsService');
   const simResult = await SmsService.sendOtpSms('9876543210', '+91', '123456');
-  assert(simResult.success === true, 'SmsService dispatches successfully');
-  assert(
-    simResult.provider === 'simulation' || simResult.provider === 'fast2sms' || simResult.provider === 'twilio',
-    'SmsService provider is identified'
-  );
+  assert(simResult.success === false, 'Arbitrary direct SMS dispatch rejected (server-authoritative OTP only)');
+  assert(Boolean(simResult.error), 'SmsService fails closed with error on legacy dispatch');
   assert(withOtp.smsDeliveryProvider !== undefined, 'AuthService stores SMS delivery provider');
 
-  // Test 10: Flow G - Progressive Verification & Verify Later
-  console.log('\n[Test Suite 10] Flow G - Progressive Verification & Verify Later');
+  // Test 10: Flow G - Mandatory Phone Verification (Bypass Blocked)
+  console.log('\n[Test Suite 10] Flow G - Mandatory Phone Verification (Bypass Blocked)');
   const progressiveEmail = `builder_${Date.now()}@servex.com`;
   const pendingBuilder: PendingRegistration = {
     name: 'Vikram Builder',
@@ -193,20 +193,17 @@ async function runAllTests() {
     countryCode: '+91',
     passwordRaw: 'BuilderPass@2026',
     authProvider: 'email',
-    otpCode: '112233',
-    otpExpiresAt: Date.now() + 300000,
-    otpLastSentAt: Date.now(),
-    isPhoneVerified: false, // User tapped "Verify phone later"
+    isPhoneVerified: false,
   };
 
-  const { user: builderUser, session: builderSession } = await AuthService.finalizeRegistration(
-    pendingBuilder,
-    'contractor'
-  );
-  assert(builderUser.name === 'Vikram Builder', 'Builder name saved');
-  assert(builderUser.phone === '9812345678', 'Phone number preserved on profile');
-  assert(builderUser.isPhoneVerified === false, 'Phone marked unverified pending future verification');
-  assert(Boolean(builderSession.token), 'Instant entry session token generated without blocking');
+  let unverifiedBlocked = false;
+  try {
+    await AuthService.finalizeRegistration(pendingBuilder, 'contractor');
+  } catch (err: any) {
+    unverifiedBlocked = true;
+    assert(err.message.includes('Phone verification is compulsory'), 'Rejects unverified registration');
+  }
+  assert(unverifiedBlocked, 'Unverified user blocked from completing registration');
 
   console.log(`\n========================================`);
   console.log(`Results: ${passed} passed, ${failed} failed`);
