@@ -122,10 +122,11 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_project_id ON chat_messages (projec
 -- ==============================================================================
 -- REALTIME ENABLEMENT
 -- ==============================================================================
-ALTER PUBLICATION supabase_realtime ADD TABLE chat_messages;
--- NOTE: projects and attendance_records are intentionally NOT in the realtime
--- publication: postgres_changes broadcasts are not column-scoped and would leak
--- contractor-only financial/attendance details to any project subscriber.
+-- Chat messages are kept out of the realtime publication: postgres_changes
+-- events are not RLS-scoped, so publishing them would leak cross-project chat.
+-- Chat updates propagate through RLS-protected REST reads instead.
+-- In a later hardening phase, chat may move to Supabase Realtime private
+-- channels enforced by realtime.messages RLS policies.
 
 -- ==============================================================================
 -- INITIAL SEED DATA (Servex Skyline Penthouse & Apex Tech Park)

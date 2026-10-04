@@ -94,8 +94,8 @@ async function runRemediation6Tests() {
     'projects removed from realtime publication'
   );
   assert(
-    schemaSql.includes('ALTER PUBLICATION supabase_realtime ADD TABLE chat_messages'),
-    'chat_messages remains realtime-enabled (client-facing tri-party channel)'
+    !schemaSql.includes('ALTER PUBLICATION supabase_realtime ADD TABLE chat_messages'),
+    'chat_messages removed from realtime publication (F-01 fix)'
   );
   assert(
     !backendSrc.includes("table: 'attendance_records'"),
