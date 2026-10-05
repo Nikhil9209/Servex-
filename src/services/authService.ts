@@ -727,6 +727,75 @@ export const AuthService = {
   },
 
   /**
+   * Request Supabase Auth password recovery email
+   * Sends recovery link targeted to deep-link scheme: servex-contractor://reset-password
+   */
+  async requestPasswordReset(emailRaw: string): Promise<{ success: boolean; message: string }> {
+    const email = emailRaw.trim().toLowerCase();
+
+    if (!email) {
+      throw new Error('Please enter your email address.');
+    }
+    if (!this.isValidEmail(email)) {
+      throw new Error('Please enter a valid email address.');
+    }
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: 'servex-contractor://reset-password',
+        });
+        if (error) {
+          if (error.message && error.message.toLowerCase().includes('rate limit')) {
+            throw new Error('Too many requests. Please wait a few minutes before trying again.');
+          }
+          // Generic safe error handling to protect account privacy
+        }
+      } catch (err: any) {
+        if (err.message && err.message.includes('Too many requests')) {
+          throw err;
+        }
+        // Fail-safe offline/mock handling
+      }
+    }
+
+    return {
+      success: true,
+      message: `If an account is associated with ${email}, a password reset link has been sent.`,
+    };
+  },
+
+  /**
+   * Update password in Supabase Auth during active recovery session
+   * Enforces 8+ characters, never logs password, never stores plaintext.
+   */
+  async updateUserPassword(newPasswordRaw: string): Promise<void> {
+    const password = newPasswordRaw;
+
+    if (!password) {
+      throw new Error('Please enter a new password.');
+    }
+    if (password.length < 8) {
+      throw new Error('Password must contain at least 8 characters.');
+    }
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      const { error } = await supabase.auth.updateUser({
+        password,
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update password. Recovery link may have expired.');
+      }
+    }
+
+    // Terminate recovery session to require fresh credential authentication
+    await this.logout();
+  },
+
+  /**
    * Logout user
    */
   async logout(): Promise<void> {

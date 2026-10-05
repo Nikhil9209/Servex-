@@ -144,6 +144,11 @@ function consumeToken(phone, token) {
   return true;
 }
 
+const recoveryRequests = [];
+const updatedPasswords = [];
+const authListeners = new Set();
+let mockSession = null;
+
 const mockClient = {
   functions: {
     invoke: async (name, { body } = {}) => {
@@ -179,9 +184,63 @@ const mockClient = {
     signUp: async () => ({ data: {}, error: new Error('Network unavailable (mock offline)') }),
     signInWithPassword: async () => ({ data: {}, error: new Error('Network unavailable (mock offline)') }),
     signInWithIdToken: async () => ({ data: {}, error: new Error('Network unavailable (mock offline)') }),
-    signOut: async () => ({ error: null }),
-    getSession: async () => ({ data: { session: null }, error: null }),
-    getUser: async () => ({ data: { user: null }, error: null }),
+    signOut: async () => {
+      mockSession = null;
+      for (const cb of authListeners) cb('SIGNED_OUT', null);
+      return { error: null };
+    },
+    getSession: async () => ({ data: { session: mockSession }, error: null }),
+    getUser: async () => ({ data: { user: mockSession?.user || null }, error: null }),
+    resetPasswordForEmail: async (email, options = {}) => {
+      if (!email || !email.includes('@')) {
+        return { data: null, error: new Error('Unable to validate email address: invalid format') };
+      }
+      recoveryRequests.push({ email, options, createdAt: Date.now() });
+      return { data: {}, error: null };
+    },
+    updateUser: async ({ password } = {}) => {
+      if (!password || password.length < 8) {
+        return { data: null, error: new Error('Password should be at least 8 characters') };
+      }
+      updatedPasswords.push(password);
+      return { data: { user: { id: 'mock-user-id', email: 'user@example.com' } }, error: null };
+    },
+    exchangeCodeForSession: async (code) => {
+      if (!code || code === 'expired_code' || code === 'invalid_code') {
+        return { data: { session: null, user: null }, error: new Error('Invalid or expired PKCE authorization code') };
+      }
+      mockSession = {
+        access_token: `mock_tok_${code}`,
+        refresh_token: `mock_ref_${code}`,
+        user: { id: 'mock-recovery-user-id', email: 'user@servex.com' },
+      };
+      for (const cb of authListeners) cb('PASSWORD_RECOVERY', mockSession);
+      return { data: { session: mockSession, user: mockSession.user }, error: null };
+    },
+    setSession: async ({ access_token, refresh_token } = {}) => {
+      if (!access_token || access_token.includes('expired') || access_token.includes('invalid')) {
+        return { data: { session: null, user: null }, error: new Error('Invalid or expired session token') };
+      }
+      mockSession = {
+        access_token,
+        refresh_token,
+        user: { id: 'mock-recovery-user-id', email: 'user@servex.com' },
+      };
+      for (const cb of authListeners) cb('PASSWORD_RECOVERY', mockSession);
+      return { data: { session: mockSession, user: mockSession.user }, error: null };
+    },
+    onAuthStateChange: (callback) => {
+      authListeners.add(callback);
+      return {
+        data: {
+          subscription: {
+            unsubscribe: () => {
+              authListeners.delete(callback);
+            },
+          },
+        },
+      };
+    },
   },
   from: (_table) => {
     const chain = new Proxy(
@@ -205,10 +264,21 @@ const mockClient = {
 module.exports = {
   getSupabaseClient: () => mockClient,
   isSupabaseConfigured: () => false,
-  getSupabaseSession: async () => null,
-  getSupabaseAuthUser: async () => null,
+  getSupabaseSession: async () => mockSession,
+  getSupabaseAuthUser: async () => mockSession?.user || null,
   // ---- test helpers (not part of the real module) ----
-  __resetOtpMock: reset,
+  __resetOtpMock: () => {
+    reset();
+    recoveryRequests.length = 0;
+    updatedPasswords.length = 0;
+    mockSession = null;
+    authListeners.clear();
+  },
+  __getRecoveryRequests: () => [...recoveryRequests],
+  __getUpdatedPasswords: () => [...updatedPasswords],
+  __triggerAuthStateChange: (event, session) => {
+    for (const cb of authListeners) cb(event, session);
+  },
   __getSimulatedDeliveredOtp: (challengeId) => {
     const c = challenges.get(challengeId);
     return c ? c.deliveredOtp : null;

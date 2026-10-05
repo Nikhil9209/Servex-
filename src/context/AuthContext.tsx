@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useState,
 } from 'react';
+import { Linking } from 'react-native';
 import {
   AuthScreenStep,
   PendingRegistration,
@@ -13,7 +14,7 @@ import {
 } from '../types/auth';
 import { AuthService } from '../services/authService';
 import { StorageService } from '../services/storage';
-import { getSupabaseSession } from '../services/supabaseClient';
+import { getSupabaseClient, getSupabaseSession } from '../services/supabaseClient';
 
 interface AuthContextType {
   user: User | null;
@@ -28,6 +29,11 @@ interface AuthContextType {
   setAuthScreenStep: (step: AuthScreenStep) => void;
   clearAuthError: () => void;
   cancelRegistration: () => void;
+
+  // Password Recovery
+  requestPasswordReset: (email: string) => Promise<{ success: boolean; message: string }>;
+  updateUserPassword: (newPassword: string) => Promise<void>;
+  cancelPasswordReset: () => void;
 
   // Actions
   loginWithEmail: (email: string, pass: string) => Promise<void>;
@@ -125,8 +131,111 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     restoreSession();
 
+    // 2. Listen for Supabase Auth state changes (especially PASSWORD_RECOVERY event)
+    const supabase = getSupabaseClient();
+    let authSub: { unsubscribe: () => void } | null = null;
+    if (supabase) {
+      try {
+        const { data: listener } = supabase.auth.onAuthStateChange(async (event) => {
+          if (event === 'PASSWORD_RECOVERY') {
+            setAuthScreenStep('RESET_PASSWORD');
+          }
+        });
+        authSub = listener.subscription;
+      } catch {
+        // Safe mock / test fallback
+      }
+    }
+
+    // 3. Listen for incoming deep links (e.g. servex-contractor://reset-password...)
+    const processIncomingDeepLink = async (url: string | null) => {
+      if (!url) return;
+      if (url.includes('reset-password')) {
+        const client = getSupabaseClient();
+        if (!client) return;
+
+        // Check for error in URL query
+        const queryIndex = url.indexOf('?');
+        if (queryIndex !== -1) {
+          const queryParams = new URLSearchParams(url.substring(queryIndex + 1));
+          const errorDesc = queryParams.get('error_description');
+          const code = queryParams.get('code');
+          if (errorDesc) {
+            setAuthError(decodeURIComponent(errorDesc).replace(/\+/g, ' '));
+            setAuthScreenStep('FORGOT_PASSWORD');
+            return;
+          }
+          if (code) {
+            try {
+              const { error } = await client.auth.exchangeCodeForSession(code);
+              if (error) {
+                setAuthError('This password reset link has expired or is invalid. Please request a new one.');
+                setAuthScreenStep('FORGOT_PASSWORD');
+                return;
+              }
+              setAuthScreenStep('RESET_PASSWORD');
+              return;
+            } catch {
+              setAuthError('Unable to process recovery link. Please try again.');
+              setAuthScreenStep('FORGOT_PASSWORD');
+              return;
+            }
+          }
+        }
+
+        // Check for tokens in hash fragment (#access_token=...&refresh_token=...&type=recovery)
+        const hashIndex = url.indexOf('#');
+        if (hashIndex !== -1) {
+          const hashParams = new URLSearchParams(url.substring(hashIndex + 1));
+          const errorDesc = hashParams.get('error_description');
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+          if (errorDesc) {
+            setAuthError(decodeURIComponent(errorDesc).replace(/\+/g, ' '));
+            setAuthScreenStep('FORGOT_PASSWORD');
+            return;
+          }
+          if (accessToken && refreshToken) {
+            try {
+              const { error } = await client.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+              if (error) {
+                setAuthError('This password reset link has expired or is invalid. Please request a new one.');
+                setAuthScreenStep('FORGOT_PASSWORD');
+                return;
+              }
+              setAuthScreenStep('RESET_PASSWORD');
+              return;
+            } catch {
+              setAuthError('Unable to process recovery link. Please try again.');
+              setAuthScreenStep('FORGOT_PASSWORD');
+              return;
+            }
+          }
+        }
+      }
+    };
+
+    // Cold-start deep link check
+    Linking.getInitialURL().then((initialUrl) => {
+      if (initialUrl && isMounted) {
+        processIncomingDeepLink(initialUrl);
+      }
+    });
+
+    // Warm deep link listener
+    const linkingSub = Linking.addEventListener('url', (evt) => {
+      if (isMounted) {
+        processIncomingDeepLink(evt.url);
+      }
+    });
+
     return () => {
       isMounted = false;
+      if (authSub) authSub.unsubscribe();
+      linkingSub.remove();
     };
   }, []);
 
@@ -135,6 +244,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPendingRegistration(null);
     setAuthError(null);
     setInfoBanner(null);
+    setAuthScreenStep('LOGIN');
+  }, []);
+
+  // Request Password Reset
+  const requestPasswordReset = useCallback(async (email: string) => {
+    setAuthError(null);
+    setIsLoading(true);
+    try {
+      const result = await AuthService.requestPasswordReset(email);
+      setInfoBanner(result.message);
+      return result;
+    } catch (err: any) {
+      setAuthError(err?.message || 'Failed to send password reset email.');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Update Password in Recovery Mode
+  const updateUserPassword = useCallback(async (newPassword: string) => {
+    setAuthError(null);
+    setIsLoading(true);
+    try {
+      await AuthService.updateUserPassword(newPassword);
+      setAuthScreenStep('LOGIN');
+      setInfoBanner('Password updated successfully! Please sign in with your new password.');
+    } catch (err: any) {
+      setAuthError(err?.message || 'Failed to update password.');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Cancel Password Reset
+  const cancelPasswordReset = useCallback(() => {
+    setAuthError(null);
+    setInfoBanner(null);
+    AuthService.logout().catch(() => {});
     setAuthScreenStep('LOGIN');
   }, []);
 
@@ -467,6 +616,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthScreenStep,
     clearAuthError,
     cancelRegistration,
+    requestPasswordReset,
+    updateUserPassword,
+    cancelPasswordReset,
     loginWithEmail,
     startEmailRegistration,
     startGoogleSignIn,

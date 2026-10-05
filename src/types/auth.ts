@@ -55,6 +55,8 @@ export interface CountryCodeItem {
 export type AuthScreenStep =
   | 'LOGIN'
   | 'REGISTER'
+  | 'FORGOT_PASSWORD'
+  | 'RESET_PASSWORD'
   | 'PHONE_COLLECT'
   | 'OTP_VERIFY'
   | 'ROLE_SELECT';

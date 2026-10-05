@@ -9,7 +9,6 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Modal,
   Animated,
   Easing,
 } from 'react-native';
@@ -30,15 +29,13 @@ export const LoginScreen: React.FC = () => {
     setAuthScreenStep,
     authError,
     clearAuthError,
+    infoBanner,
   } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotSent, setForgotSent] = useState(false);
 
   // Animation values: if user already saw the intro, start at 1; otherwise run 2.0s first-load reveal
   const initialProgress = hasViewedParticleIntro ? 1 : 0;
@@ -144,6 +141,14 @@ export const LoginScreen: React.FC = () => {
               <Text style={styles.subtitle}>Sign in to continue</Text>
             </View>
 
+            {/* Success / Info Banner */}
+            {infoBanner ? (
+              <View style={styles.infoBox}>
+                <Text style={styles.infoIcon}>✓</Text>
+                <Text style={styles.infoText}>{infoBanner}</Text>
+              </View>
+            ) : null}
+
             {/* Error Banner */}
             {authError ? (
               <View style={styles.errorBox}>
@@ -233,9 +238,8 @@ export const LoginScreen: React.FC = () => {
             <View style={styles.forgotRow}>
               <Pressable
                 onPress={() => {
-                  setForgotEmail(email);
-                  setForgotSent(false);
-                  setShowForgotModal(true);
+                  clearAuthError();
+                  setAuthScreenStep('FORGOT_PASSWORD');
                 }}
                 hitSlop={8}
               >
@@ -295,63 +299,7 @@ export const LoginScreen: React.FC = () => {
         </Animated.View>
       </View>
     </ScrollView>
-
-      {/* Forgot Password Modal */}
-      <Modal
-        visible={showForgotModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowForgotModal(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Reset Password</Text>
-            <Text style={styles.modalDesc}>
-              Enter your email address and we will send a password reset verification link.
-            </Text>
-            {forgotSent ? (
-              <View style={styles.sentBox}>
-                <Text style={styles.sentText}>✓ Reset link sent to {forgotEmail}</Text>
-              </View>
-            ) : (
-              <View style={styles.fieldGroup}>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter registered email"
-                    placeholderTextColor="#71717A"
-                    selectionColor="#FFFFFF"
-                    cursorColor="#FFFFFF"
-                    value={forgotEmail}
-                    onChangeText={setForgotEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                </View>
-              </View>
-            )}
-            <View style={styles.modalActions}>
-              <Pressable
-                style={styles.modalSecondaryBtn}
-                onPress={() => setShowForgotModal(false)}
-              >
-                <Text style={styles.modalSecondaryText}>Close</Text>
-              </Pressable>
-              {!forgotSent && (
-                <Pressable
-                  style={styles.modalPrimaryBtn}
-                  onPress={() => {
-                    if (forgotEmail) setForgotSent(true);
-                  }}
-                >
-                  <Text style={styles.modalPrimaryText}>Send Link</Text>
-                </Pressable>
-              )}
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </KeyboardAvoidingView>
+  </KeyboardAvoidingView>
   );
 };
 
@@ -409,6 +357,30 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: fonts.body,
     color: '#EF4444',
+    fontSize: 12.5,
+    flex: 1,
+    lineHeight: 17,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.35)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    marginBottom: 14,
+    gap: 8,
+  },
+  infoIcon: {
+    fontSize: 15,
+    color: '#10B981',
+    fontWeight: 'bold',
+  },
+  infoText: {
+    fontFamily: fonts.body,
+    color: '#10B981',
     fontSize: 12.5,
     flex: 1,
     lineHeight: 17,

@@ -49,7 +49,8 @@
     "test:remediation6": "npx tsx scripts/test-remediation6-runner.js",
     "test:realtime-security": "npx tsx scripts/test-realtime-security-runner.js",
     "test:phase1": "npx tsx scripts/test-phase1-runner.js",
-    "test:all": "npm test && npm run test:stage1 && npm run test:stage2 && npm run test:stage3 && npm run test:stage4 && npm run test:backend && npm run test:remediation1 && npm run test:remediation2 && npm run test:remediation3 && npm run test:remediation4 && npm run test:remediation5 && npm run test:remediation6 && npm run test:realtime-security && npm run test:phase1"
+    "test:phase2": "npx tsx scripts/test-phase2-runner.js",
+    "test:all": "npm test && npm run test:stage1 && npm run test:stage2 && npm run test:stage3 && npm run test:stage4 && npm run test:backend && npm run test:remediation1 && npm run test:remediation2 && npm run test:remediation3 && npm run test:remediation4 && npm run test:remediation5 && npm run test:remediation6 && npm run test:realtime-security && npm run test:phase1 && npm run test:phase2"
   },
   "private": true
 }
