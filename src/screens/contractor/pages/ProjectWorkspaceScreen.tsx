@@ -41,6 +41,7 @@ import { DailyWorkVerificationScreen } from './DailyWorkVerificationScreen';
 import { FinancialLedgerScreen } from './FinancialLedgerScreen';
 import { PdfBillModal } from './PdfBillModal';
 import { ProjectChatScreen } from './ProjectChatScreen';
+import { useContractor } from '../../../context/ContractorContext';
 
 interface ProjectWorkspaceScreenProps {
   project: ContractorProjectDetail;
@@ -55,6 +56,7 @@ export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
   onBack,
   onUpdateProject,
 }) => {
+  const { deleteScopeItem, deleteWorker, voidTransaction, deleteTransaction } = useContractor();
   const [subScreen, setSubScreen] = useState<SubScreenType>('overview');
   const [showPdfModal, setShowPdfModal] = useState(false);
 
@@ -167,6 +169,38 @@ export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
     onUpdateProject(updated);
   };
 
+  const handleDeleteScopeItem = async (itemId: string) => {
+    try {
+      await deleteScopeItem(project.id, itemId);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to delete scope item');
+    }
+  };
+
+  const handleDeleteWorker = async (workerId: string) => {
+    try {
+      await deleteWorker(project.id, workerId);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to delete worker');
+    }
+  };
+
+  const handleVoidTransaction = async (transactionId: string, reason?: string) => {
+    try {
+      await voidTransaction(project.id, transactionId, reason);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to void transaction');
+    }
+  };
+
+  const handleDeleteTransaction = async (transactionId: string) => {
+    try {
+      await deleteTransaction(project.id, transactionId);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to delete transaction');
+    }
+  };
+
   // Sub-screens routing
   if (subScreen === 'scope') {
     return (
@@ -174,6 +208,7 @@ export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
         project={project}
         onBack={() => setSubScreen('overview')}
         onAddScopeItem={handleAddScopeItem}
+        onDeleteScopeItem={handleDeleteScopeItem}
       />
     );
   }
@@ -184,6 +219,7 @@ export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
         project={project}
         onBack={() => setSubScreen('overview')}
         onAddWorker={handleAddWorker}
+        onDeleteWorker={handleDeleteWorker}
         onUpdateAttendance={handleUpdateAttendance}
       />
     );
@@ -205,6 +241,8 @@ export const ProjectWorkspaceScreen: React.FC<ProjectWorkspaceScreenProps> = ({
         project={project}
         onBack={() => setSubScreen('overview')}
         onAddTransaction={handleAddTransaction}
+        onVoidTransaction={handleVoidTransaction}
+        onDeleteTransaction={handleDeleteTransaction}
       />
     );
   }

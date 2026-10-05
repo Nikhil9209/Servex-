@@ -7,6 +7,8 @@ import {
   Pressable,
   Alert,
   TextInput,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { fonts } from '../../theme/tokens';
@@ -16,7 +18,7 @@ import { AuthService } from '../../services/authService';
 import { useContractor } from '../../context/ContractorContext';
 import { PdfBillModal } from '../contractor/pages/PdfBillModal';
 import { ContractorProjectDetail } from '../../types/contractor';
-import { FileTextIcon } from '../../components/ContractorIcons';
+import { FileTextIcon, LinkIcon, CloseIcon } from '../../components/ContractorIcons';
 
 interface ClientHomeScreenProps {
   user: User;
@@ -24,9 +26,41 @@ interface ClientHomeScreenProps {
 }
 
 export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogout }) => {
-  const { projects } = useContractor();
+  const { projects, joinProjectByCode } = useContractor();
   const [searchQuery, setSearchQuery] = useState('');
   const [billModalProject, setBillModalProject] = useState<ContractorProjectDetail | null>(null);
+
+  // Client project-code joining state (Task 8)
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [clientCodeInput, setClientCodeInput] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+
+  const activeProjects = projects.filter((p) => p.status !== 'archived');
+
+  const handleJoinProject = async () => {
+    const code = clientCodeInput.trim().toUpperCase();
+    if (!code) {
+      setJoinError('Please enter your project invite code.');
+      return;
+    }
+    setIsJoining(true);
+    setJoinError(null);
+    try {
+      const joined = await joinProjectByCode(code);
+      if (joined) {
+        setShowJoinModal(false);
+        setClientCodeInput('');
+        Alert.alert('Site Connected', `Successfully connected to ${joined.projectName}.`);
+      } else {
+        setJoinError('Invalid or expired project code. Please check and try again.');
+      }
+    } catch (err: any) {
+      setJoinError(err.message || 'Failed to link construction site.');
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   const handleLogoutPress = () => {
     Alert.alert('Confirm Logout', 'Are you sure you want to log out of your Servex account?', [
@@ -117,14 +151,48 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogo
         </View>
 
         {/* My Contracted Construction Sites (Connected from Backend Store) */}
-        {projects.length > 0 && (
-          <View style={styles.clientSitesSection}>
-            <View style={styles.sectionHeader}>
+        <View style={styles.clientSitesSection}>
+          <View style={styles.sectionHeader}>
+            <View>
               <Text style={styles.sectionTitle}>My Construction Sites</Text>
-              <Text style={styles.sectionSubtitle}>{projects.length} sites</Text>
+              <Text style={styles.sectionSubtitle}>
+                {activeProjects.length > 0 ? `${activeProjects.length} sites connected` : 'No sites connected'}
+              </Text>
             </View>
+            <Pressable
+              style={styles.joinSiteHeaderBtn}
+              onPress={() => {
+                setJoinError(null);
+                setClientCodeInput('');
+                setShowJoinModal(true);
+              }}
+              hitSlop={8}
+            >
+              <LinkIcon size={12} color="#FFFFFF" />
+              <Text style={styles.joinSiteHeaderBtnText}>Link Site Code</Text>
+            </Pressable>
+          </View>
 
-            {projects.slice(0, 2).map((p) => {
+          {activeProjects.length === 0 ? (
+            <Pressable
+              style={styles.emptyJoinCard}
+              onPress={() => {
+                setJoinError(null);
+                setClientCodeInput('');
+                setShowJoinModal(true);
+              }}
+            >
+              <Text style={styles.emptyJoinIcon}>🏗️</Text>
+              <Text style={styles.emptyJoinTitle}>Have a Contractor Invite Code?</Text>
+              <Text style={styles.emptyJoinDesc}>
+                Enter the project code shared by your contractor to track live site progress, daily reports, and running account bills.
+              </Text>
+              <View style={styles.emptyJoinActionPill}>
+                <Text style={styles.emptyJoinActionText}>Enter Project Code ➔</Text>
+              </View>
+            </Pressable>
+          ) : (
+            activeProjects.map((p) => {
               const totalScope = p.scopeItems.reduce((acc, s) => acc + s.totalAmount, 0);
               const doneValue = p.scopeItems.reduce((acc, s) => acc + s.completedQuantity * s.ratePerUnit, 0);
               const pct = totalScope > 0 ? Math.round((doneValue / totalScope) * 100) : 0;
@@ -180,9 +248,9 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogo
                   </View>
                 </View>
               );
-            })}
-          </View>
-        )}
+            })
+          )}
+        </View>
 
         {/* Active Booking Banner */}
         <View style={styles.sectionHeader}>
@@ -252,6 +320,90 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ user, onLogo
           onClose={() => setBillModalProject(null)}
         />
       )}
+
+      {/* Join Project by Code Modal (Task 8) */}
+      <Modal
+        visible={showJoinModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          if (!isJoining) {
+            setShowJoinModal(false);
+            setJoinError(null);
+          }
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalTopRow}>
+              <View style={styles.modalIconBox}>
+                <LinkIcon size={16} color="#38BDF8" />
+              </View>
+              <Pressable
+                onPress={() => {
+                  if (!isJoining) {
+                    setShowJoinModal(false);
+                    setJoinError(null);
+                  }
+                }}
+                hitSlop={8}
+                disabled={isJoining}
+              >
+                <CloseIcon size={16} color="#8E8E93" />
+              </Pressable>
+            </View>
+
+            <Text style={styles.modalTitle}>Link Construction Site</Text>
+            <Text style={styles.modalSub}>
+              Enter the unique invite code shared by your contractor to track live site progress and RA bills.
+            </Text>
+
+            <Text style={styles.inputLabel}>Contractor Project Code</Text>
+            <TextInput
+              style={styles.codeInput}
+              placeholder="e.g. SVX-7890"
+              placeholderTextColor="#686870"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              value={clientCodeInput}
+              onChangeText={(text) => {
+                setClientCodeInput(text.toUpperCase());
+                if (joinError) setJoinError(null);
+              }}
+              editable={!isJoining}
+              maxLength={20}
+            />
+
+            {joinError ? (
+              <Text style={styles.modalErrorText}>{joinError}</Text>
+            ) : null}
+
+            <View style={styles.modalActions}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={() => {
+                  setShowJoinModal(false);
+                  setJoinError(null);
+                }}
+                disabled={isJoining}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.confirmBtn, isJoining && { opacity: 0.7 }]}
+                onPress={handleJoinProject}
+                disabled={isJoining}
+              >
+                {isJoining ? (
+                  <ActivityIndicator size="small" color="#000000" />
+                ) : (
+                  <Text style={styles.confirmBtnText}>Connect Site</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -728,5 +880,167 @@ const styles = StyleSheet.create({
     fontFamily: fonts.displayBold,
     color: '#000000',
     fontSize: 12,
+  },
+  joinSiteHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E293B',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+    gap: 6,
+  },
+  joinSiteHeaderBtnText: {
+    fontFamily: fonts.displayBold,
+    color: '#38BDF8',
+    fontSize: 11,
+    letterSpacing: 0.2,
+  },
+  emptyJoinCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+    padding: 22,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderStyle: 'dashed',
+    marginTop: 8,
+  },
+  emptyJoinIcon: {
+    fontSize: 32,
+    marginBottom: 10,
+  },
+  emptyJoinTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#F8FAFC',
+    fontSize: 15,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  emptyJoinDesc: {
+    fontFamily: fonts.body,
+    color: '#94A3B8',
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  emptyJoinActionPill: {
+    backgroundColor: '#38BDF8',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+  },
+  emptyJoinActionText: {
+    fontFamily: fonts.displayBold,
+    color: '#000000',
+    fontSize: 12,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 390,
+    backgroundColor: '#17171B',
+    borderRadius: 20,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#23232A',
+  },
+  modalTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#1C2433',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalTitle: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  modalSub: {
+    fontFamily: fonts.body,
+    color: '#8E8E93',
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontFamily: fonts.displayBold,
+    color: '#8E8E93',
+    fontSize: 10.5,
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  codeInput: {
+    backgroundColor: '#101013',
+    borderWidth: 1,
+    borderColor: '#23232A',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#FFFFFF',
+    fontFamily: fonts.displayBold,
+    fontSize: 16,
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  modalErrorText: {
+    fontFamily: fonts.body,
+    color: '#EF4444',
+    fontSize: 12,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#23232A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtnText: {
+    fontFamily: fonts.displayBold,
+    color: '#FFFFFF',
+    fontSize: 13,
+  },
+  confirmBtn: {
+    flex: 1.5,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#38BDF8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmBtnText: {
+    fontFamily: fonts.displayBold,
+    color: '#000000',
+    fontSize: 13,
   },
 });

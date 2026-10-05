@@ -19,7 +19,6 @@ import {
   BarChartTabIcon,
   ChatTabIcon,
   CloseIcon,
-  LinkIcon,
   PlusIcon,
   CheckIcon,
 } from '../../components/ContractorIcons';
@@ -56,14 +55,11 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
     selectedProject,
     createProject,
     updateProject,
-    joinProjectByCode,
   } = useContractor();
 
   const [activeTab, setActiveTab] = useState<TabType>('home');
 
-  // Modals for Join & Create Project
-  const [showJoinModal, setShowJoinModal] = useState(false);
-  const [clientCodeInput, setClientCodeInput] = useState('');
+  // Modal for Create Project
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newClientName, setNewClientName] = useState('');
@@ -85,28 +81,6 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
       </SafeAreaView>
     );
   }
-
-  const handleJoinByCode = async () => {
-    const code = clientCodeInput.trim().toUpperCase();
-    if (!code) {
-      Alert.alert('Missing Code', 'Please enter the client project code.');
-      return;
-    }
-
-    try {
-      const joined = await joinProjectByCode(code);
-      if (joined) {
-        Alert.alert('Project Linked', `Opening workspace for ${joined.projectName}.`);
-        setShowJoinModal(false);
-        setClientCodeInput('');
-        setSelectedProjectId(joined.id);
-        return;
-      }
-      Alert.alert('Invalid Code', 'The project code entered is invalid or expired.');
-    } catch (err: any) {
-      Alert.alert('Unable to Link', err.message || 'Invalid or expired project code.');
-    }
-  };
 
   const handleCreateNewProject = async () => {
     if (!newProjectName.trim() || !newClientName.trim()) {
@@ -155,7 +129,6 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
           <JobsListView
             projects={projects}
             onSelectProject={(id) => setSelectedProjectId(id)}
-            onOpenJoinModal={() => setShowJoinModal(true)}
             onOpenCreateModal={() => setShowCreateModal(true)}
           />
         )}
@@ -240,52 +213,7 @@ export const ContractorHomeScreen: React.FC<ContractorHomeScreenProps> = ({
         <View style={styles.homeIndicator} />
       </View>
 
-      {/* MODAL 1: JOIN BY CLIENT CODE */}
-      <Modal
-        visible={showJoinModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowJoinModal(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalTopRow}>
-              <View style={styles.modalIconBox}>
-                <LinkIcon size={16} color="#1A73E8" />
-              </View>
-              <Pressable onPress={() => setShowJoinModal(false)} hitSlop={8}>
-                <CloseIcon size={16} color="#8E8E93" />
-              </Pressable>
-            </View>
-
-            <Text style={styles.modalTitle}>Join via Client Code</Text>
-            <Text style={styles.modalSub}>
-              Enter the unique project code shared by your client to connect to their site workspace.
-            </Text>
-
-            <Text style={styles.inputLabel}>Client Project Code</Text>
-            <TextInput
-              style={styles.codeInput}
-              placeholder="e.g. SRX-8K9M-2P4W"
-              placeholderTextColor="#686870"
-              autoCapitalize="characters"
-              value={clientCodeInput}
-              onChangeText={setClientCodeInput}
-            />
-
-            <View style={styles.modalActions}>
-              <Pressable style={styles.cancelBtn} onPress={() => setShowJoinModal(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </Pressable>
-              <Pressable style={styles.confirmBtn} onPress={handleJoinByCode}>
-                <Text style={styles.confirmBtnText}>Connect Job</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* MODAL 2: CREATE NEW PROJECT */}
+      {/* MODAL: CREATE NEW PROJECT */}
       <Modal
         visible={showCreateModal}
         transparent={true}

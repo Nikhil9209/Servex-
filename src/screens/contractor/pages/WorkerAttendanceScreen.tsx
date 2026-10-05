@@ -28,6 +28,7 @@ interface WorkerAttendanceScreenProps {
   project: ContractorProjectDetail;
   onBack: () => void;
   onAddWorker: (newWorker: Omit<WorkerRecord, 'id'>) => void;
+  onDeleteWorker?: (workerId: string) => void;
   onUpdateAttendance: (attendanceList: AttendanceEntry[]) => void;
 }
 
@@ -43,6 +44,7 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
   project,
   onBack,
   onAddWorker,
+  onDeleteWorker,
   onUpdateAttendance,
 }) => {
   const attendance = project.todayAttendance;
@@ -202,6 +204,30 @@ export const WorkerAttendanceScreen: React.FC<WorkerAttendanceScreenProps> = ({
                   <Text style={styles.earnedVal}>₹{entry.wageCalculated.toLocaleString('en-IN')}</Text>
                   <Text style={styles.earnedLabel}>Pay Calculated</Text>
                 </View>
+
+                {onDeleteWorker && (
+                  <SpringPressable
+                    style={styles.workerDeleteBtn}
+                    onPress={() => {
+                      Alert.alert(
+                        'Remove Worker',
+                        `Are you sure you want to remove ${entry.workerName} from the project roster? Historical attendance records will be preserved.`,
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Remove',
+                            style: 'destructive',
+                            onPress: () => onDeleteWorker(entry.workerId),
+                          },
+                        ]
+                      );
+                    }}
+                    scaleTo={0.9}
+                    hitSlop={8}
+                  >
+                    <CloseIcon size={13} color="#EF4444" />
+                  </SpringPressable>
+                )}
               </View>
 
               {/* Status Segmented Buttons */}
@@ -631,6 +657,17 @@ const styles = StyleSheet.create({
     color: '#636366',
     fontSize: 10,
     marginTop: 2,
+  },
+  workerDeleteBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#221212',
+    borderWidth: 1,
+    borderColor: '#3D1C1C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
   },
 
   // STATUS SELECTOR (CAPSULE ROW)

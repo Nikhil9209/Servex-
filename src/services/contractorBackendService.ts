@@ -183,6 +183,9 @@ export const ContractorBackendService = {
               note: tx.note,
               recipientOrPayer: tx.recipient_or_payer,
               referenceNo: tx.reference_no,
+              isVoided: Boolean(tx.is_voided),
+              voidReason: tx.void_reason || '',
+              voidedAt: tx.voided_at || undefined,
             })),
             chatState: {
               workerMessagingAllowed: Boolean(cp.worker_messaging_allowed),
@@ -404,7 +407,10 @@ export const ContractorBackendService = {
             type: t.type,
             note: t.note,
             recipient_or_payer: t.recipientOrPayer,
-            reference_no: t.referenceNo,
+            referenceNo: t.referenceNo,
+            is_voided: Boolean(t.isVoided),
+            void_reason: t.voidReason || '',
+            voided_at: t.voidedAt || null,
           }));
           await supabase.from('ledger_transactions').upsert(txRows, { onConflict: 'id' });
         }
@@ -520,8 +526,27 @@ export const ContractorBackendService = {
             scopeItems: data.scope_items || [],
             workers: data.workers || [],
             todayAttendance: data.attendance_records || [],
-            dailyReports: data.daily_work_reports || [],
-            transactions: data.ledger_transactions || [],
+            dailyReports: (data.daily_work_reports || []).map((dr: any) => ({
+              id: dr.id,
+              date: dr.date,
+              submittedAt: dr.submitted_at,
+              notes: dr.notes,
+              supervisorSignature: dr.supervisor_signature,
+              verified: Boolean(dr.verified),
+              items: dr.items || [],
+            })),
+            transactions: (data.ledger_transactions || []).map((tx: any) => ({
+              id: tx.id,
+              date: tx.date,
+              amount: Number(tx.amount),
+              type: tx.type,
+              note: tx.note,
+              recipientOrPayer: tx.recipient_or_payer,
+              referenceNo: tx.reference_no,
+              isVoided: Boolean(tx.is_voided),
+              voidReason: tx.void_reason || '',
+              voidedAt: tx.voided_at || undefined,
+            })),
             chatState: {
               workerMessagingAllowed: Boolean(data.worker_messaging_allowed),
               messages: data.chat_messages || [],
@@ -607,7 +632,15 @@ export const ContractorBackendService = {
     projectId: string,
     item: Omit<ProjectScopeItem, 'id' | 'completedQuantity'>
   ): Promise<ContractorProjectDetail | null> {
-    const { uid } = await getAuthenticatedSupabaseIdentity();
+    const { uid, role } = await getAuthenticatedSupabaseIdentity();
+    if (uid && role === 'client') {
+      throw new Error('Unauthorized: Clients cannot add scope requirements');
+    }
+
+    if (item.quantity < 0 || item.ratePerUnit < 0) {
+      throw new Error('Quantity and rate per unit must be non-negative');
+    }
+
     const updated = await ContractorStorageService.addScopeItem(projectId, item, uid);
     if (!updated) return null;
 
@@ -636,13 +669,48 @@ export const ContractorBackendService = {
   },
 
   /**
+   * Deletes a scope requirement item and syncs deletion to cloud.
+   */
+  async deleteScopeItem(
+    projectId: string,
+    itemId: string
+  ): Promise<ContractorProjectDetail | null> {
+    const { uid, role } = await getAuthenticatedSupabaseIdentity();
+    if (uid && role === 'client') {
+      throw new Error('Unauthorized: Clients cannot delete scope requirements');
+    }
+
+    const updated = await ContractorStorageService.deleteScopeItem(projectId, itemId, uid);
+    if (!updated) return null;
+
+    const supabase = getSupabaseClient();
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        await supabase
+          .from('scope_items')
+          .delete()
+          .eq('id', itemId)
+          .eq('project_id', projectId);
+      } catch {
+        // Safe offline queue
+      }
+    }
+
+    return updated;
+  },
+
+  /**
    * Adds a worker and initial attendance.
    */
   async addWorker(
     projectId: string,
     worker: Omit<WorkerRecord, 'id'>
   ): Promise<ContractorProjectDetail | null> {
-    const { uid } = await getAuthenticatedSupabaseIdentity();
+    const { uid, role } = await getAuthenticatedSupabaseIdentity();
+    if (uid && role === 'client') {
+      throw new Error('Unauthorized: Clients cannot enroll workers');
+    }
+
     const updated = await ContractorStorageService.addWorker(projectId, worker, uid);
     if (!updated) return null;
 
@@ -662,6 +730,37 @@ export const ContractorBackendService = {
         } catch {
           // Ignore
         }
+      }
+    }
+
+    return updated;
+  },
+
+  /**
+   * Deletes a worker from project roster and syncs to cloud while preserving attendance history.
+   */
+  async deleteWorker(
+    projectId: string,
+    workerId: string
+  ): Promise<ContractorProjectDetail | null> {
+    const { uid, role } = await getAuthenticatedSupabaseIdentity();
+    if (uid && role === 'client') {
+      throw new Error('Unauthorized: Clients cannot delete workers');
+    }
+
+    const updated = await ContractorStorageService.deleteWorker(projectId, workerId, uid);
+    if (!updated) return null;
+
+    const supabase = getSupabaseClient();
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        await supabase
+          .from('workers')
+          .delete()
+          .eq('id', workerId)
+          .eq('project_id', projectId);
+      } catch {
+        // Safe offline queue
       }
     }
 
@@ -704,44 +803,49 @@ export const ContractorBackendService = {
   },
 
   /**
-   * Saves daily report and updates scope quantities.
+   * Atomically saves audited daily work report and updates scope quantities.
+   * Uses PostgreSQL RPC submit_daily_work_audit when connected, enforcing server-side over-completion constraints.
    */
   async saveDailyReport(
     projectId: string,
     report: DailyWorkReport
   ): Promise<ContractorProjectDetail | null> {
-    const { uid } = await getAuthenticatedSupabaseIdentity();
-    const updated = await ContractorStorageService.saveDailyReport(projectId, report, uid);
+    const { uid, role } = await getAuthenticatedSupabaseIdentity();
+    if (uid && role === 'client') {
+      throw new Error('Unauthorized: Clients cannot submit daily work verification audits');
+    }
 
     const supabase = getSupabaseClient();
-    if (supabase) {
+    if (supabase && isSupabaseConfigured()) {
       try {
-        await supabase.from('daily_work_reports').insert({
-          id: report.id,
-          project_id: projectId,
-          date: report.date,
-          verified_by: report.verifiedBy,
-          items_json: JSON.stringify(report.items),
-          total_work_value_today: report.totalWorkValueToday,
-          total_worker_wage_today: report.totalWorkerWageToday,
-          contractor_margin_today: report.contractorMarginToday,
-          is_verified: report.isVerified,
+        const { error } = await supabase.rpc('submit_daily_work_audit', {
+          p_project_id: projectId,
+          p_report_id: report.id,
+          p_date: report.date,
+          p_verified_by: report.verifiedBy,
+          p_items: report.items,
+          p_total_work_value: report.totalWorkValueToday,
+          p_total_worker_wage: report.totalWorkerWageToday,
+          p_contractor_margin: report.contractorMarginToday,
         });
 
-        // Sync updated scope completed quantities
-        if (updated) {
-          for (const item of updated.scopeItems) {
-            await supabase.from('scope_items').update({
-              completed_quantity: item.completedQuantity,
-            }).eq('id', item.id);
-          }
+        if (error) {
+          throw new Error(error.message);
         }
-      } catch {
-        // Ignore
+      } catch (err: any) {
+        if (
+          err.message &&
+          (err.message.includes('exceed agreed scope quantity') ||
+            err.message.includes('Unauthorized') ||
+            err.message.includes('negative'))
+        ) {
+          throw err;
+        }
+        // Fallback to local offline atomic save
       }
     }
 
-    return updated;
+    return await ContractorStorageService.saveDailyReport(projectId, report, uid);
   },
 
   /**
@@ -769,6 +873,8 @@ export const ContractorBackendService = {
             note: added.note,
             recipient_or_payer: added.recipientOrPayer,
             reference_no: added.referenceNo,
+            is_voided: false,
+            void_reason: '',
           });
         } catch {
           // Ignore
@@ -777,6 +883,184 @@ export const ContractorBackendService = {
     }
 
     return updated;
+  },
+
+  /**
+   * Voids a transaction in the ledger, preserving financial audit history.
+   */
+  async voidTransaction(
+    projectId: string,
+    transactionId: string,
+    reason: string = 'Voided by contractor'
+  ): Promise<ContractorProjectDetail | null> {
+    const { uid, role } = await getAuthenticatedSupabaseIdentity();
+    if (uid && role === 'client') {
+      throw new Error('Unauthorized: Clients cannot void financial transactions');
+    }
+
+    const supabase = getSupabaseClient();
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        const { error } = await supabase.rpc('void_ledger_transaction', {
+          p_project_id: projectId,
+          p_transaction_id: transactionId,
+          p_reason: reason,
+        });
+        if (error) {
+          throw new Error(error.message);
+        }
+      } catch (err: any) {
+        if (err.message && (err.message.includes('Unauthorized') || err.message.includes('already voided'))) {
+          throw err;
+        }
+        // Safe offline queue
+      }
+    }
+
+    return await ContractorStorageService.voidTransaction(projectId, transactionId, reason, uid);
+  },
+
+  /**
+   * Deletes a transaction from the ledger.
+   */
+  async deleteTransaction(
+    projectId: string,
+    transactionId: string
+  ): Promise<ContractorProjectDetail | null> {
+    const { uid, role } = await getAuthenticatedSupabaseIdentity();
+    if (uid && role === 'client') {
+      throw new Error('Unauthorized: Clients cannot delete financial transactions');
+    }
+
+    const updated = await ContractorStorageService.deleteTransaction(projectId, transactionId, uid);
+    if (!updated) return null;
+
+    const supabase = getSupabaseClient();
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        await supabase
+          .from('ledger_transactions')
+          .delete()
+          .eq('id', transactionId)
+          .eq('project_id', projectId);
+      } catch {
+        // Safe offline queue
+      }
+    }
+
+    return updated;
+  },
+
+  /**
+   * Returns server-authoritative financial aggregates for a project.
+   * Respects client privacy: clients only see received client funds; worker payroll is masked.
+   */
+  async getProjectFinancialSummary(
+    projectId: string
+  ): Promise<{ totalReceived: number; totalWagesPaid: number; netBalance: number; isRestricted: boolean }> {
+    const supabase = getSupabaseClient();
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.rpc('get_project_financial_summary', {
+          p_project_id: projectId,
+        });
+        if (!error && data) {
+          return {
+            totalReceived: Number(data.total_received || 0),
+            totalWagesPaid: Number(data.total_wages_paid || 0),
+            netBalance: Number(data.net_balance || 0),
+            isRestricted: Boolean(data.is_restricted),
+          };
+        }
+      } catch {
+        // Fall through to local authoritative calculation
+      }
+    }
+
+    const { uid, role } = await getAuthenticatedSupabaseIdentity();
+    const project = await ContractorStorageService.getProjectById(projectId, uid);
+    if (!project) {
+      return { totalReceived: 0, totalWagesPaid: 0, netBalance: 0, isRestricted: role === 'client' };
+    }
+
+    const activeTransactions = project.transactions.filter((t) => !t.isVoided);
+    const totalReceived = activeTransactions
+      .filter((t) => t.type === 'received_from_client')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const isClient = role === 'client';
+    if (isClient) {
+      return {
+        totalReceived,
+        totalWagesPaid: 0,
+        netBalance: totalReceived,
+        isRestricted: true,
+      };
+    }
+
+    const totalWagesPaid = activeTransactions
+      .filter((t) => t.type === 'paid_to_worker')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    return {
+      totalReceived,
+      totalWagesPaid,
+      netBalance: totalReceived - totalWagesPaid,
+      isRestricted: false,
+    };
+  },
+
+  /**
+   * Archives a project in local storage and syncs to cloud.
+   */
+  async archiveProject(projectId: string): Promise<ContractorProjectDetail | null> {
+    const { uid, role } = await getAuthenticatedSupabaseIdentity();
+    if (uid && role === 'client') {
+      throw new Error('Unauthorized: Clients cannot archive projects');
+    }
+
+    const updated = await ContractorStorageService.archiveProject(projectId, uid);
+
+    const supabase = getSupabaseClient();
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        await supabase.rpc('archive_project', { p_project_id: projectId });
+      } catch {
+        try {
+          await supabase
+            .from('projects')
+            .update({ status: 'archived', updated_at: new Date().toISOString() })
+            .eq('id', projectId);
+        } catch {
+          // Safe offline queue
+        }
+      }
+    }
+
+    return updated;
+  },
+
+  /**
+   * Deletes a project from local storage and cloud.
+   */
+  async deleteProject(projectId: string): Promise<boolean> {
+    const { uid, role } = await getAuthenticatedSupabaseIdentity();
+    if (uid && role === 'client') {
+      throw new Error('Unauthorized: Clients cannot delete projects');
+    }
+
+    await ContractorStorageService.deleteProject(projectId, uid);
+
+    const supabase = getSupabaseClient();
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        await supabase.from('projects').delete().eq('id', projectId);
+      } catch {
+        // Safe offline queue
+      }
+    }
+
+    return true;
   },
 
   /**

@@ -454,6 +454,22 @@ export const ContractorStorageService = {
   },
 
   /**
+   * Archives a project by marking its status as 'archived' and recording archivedAt.
+   */
+  async archiveProject(id: string, userId?: string | null): Promise<ContractorProjectDetail | null> {
+    const project = await this.getProjectById(id, userId);
+    if (!project) return null;
+
+    const updated: ContractorProjectDetail = {
+      ...project,
+      status: 'archived',
+      archivedAt: new Date().toISOString(),
+    };
+
+    return await this.updateProject(updated, userId);
+  },
+
+  /**
    * Looks up a project by its client code strictly in caller's user-scoped storage
    * or unowned demonstration seed catalog.
    * NEVER inspects other users' private caches.
@@ -723,6 +739,10 @@ export const ContractorStorageService = {
     const project = await this.getProjectById(projectId, userId);
     if (!project) return null;
 
+    if (item.quantity < 0 || item.ratePerUnit < 0) {
+      throw new Error('Quantity and rate per unit must be non-negative');
+    }
+
     const newItem: ProjectScopeItem = {
       ...item,
       id: `sc-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -732,6 +752,25 @@ export const ContractorStorageService = {
     const updated: ContractorProjectDetail = {
       ...project,
       scopeItems: [...project.scopeItems, newItem],
+    };
+
+    return await this.updateProject(updated, userId);
+  },
+
+  /**
+   * Deletes an itemized scope requirement from a project.
+   */
+  async deleteScopeItem(
+    projectId: string,
+    itemId: string,
+    userId?: string | null
+  ): Promise<ContractorProjectDetail | null> {
+    const project = await this.getProjectById(projectId, userId);
+    if (!project) return null;
+
+    const updated: ContractorProjectDetail = {
+      ...project,
+      scopeItems: project.scopeItems.filter((i) => i.id !== itemId),
     };
 
     return await this.updateProject(updated, userId);
@@ -780,6 +819,26 @@ export const ContractorStorageService = {
   },
 
   /**
+   * Deletes a worker from project roster while preserving historical attendance records.
+   */
+  async deleteWorker(
+    projectId: string,
+    workerId: string,
+    userId?: string | null
+  ): Promise<ContractorProjectDetail | null> {
+    const project = await this.getProjectById(projectId, userId);
+    if (!project) return null;
+
+    const updated: ContractorProjectDetail = {
+      ...project,
+      workers: project.workers.filter((w) => w.id !== workerId),
+      // Historical attendance records are preserved per data model integrity
+    };
+
+    return await this.updateProject(updated, userId);
+  },
+
+  /**
    * Updates today's crew attendance records.
    */
   async updateAttendance(
@@ -800,6 +859,7 @@ export const ContractorStorageService = {
 
   /**
    * Saves an audited daily work report and updates completed quantities on scope items.
+   * Enforces server-side over-completion constraint (completedQuantity <= quantity).
    */
   async saveDailyReport(
     projectId: string,
@@ -808,6 +868,21 @@ export const ContractorStorageService = {
   ): Promise<ContractorProjectDetail | null> {
     const project = await this.getProjectById(projectId, userId);
     if (!project) return null;
+
+    // Validate over-completion across all items
+    for (const reportItem of report.items) {
+      const match = project.scopeItems.find((s) => s.id === reportItem.scopeItemId);
+      if (match) {
+        if (reportItem.qtyDoneToday < 0) {
+          throw new Error(`Quantity done today cannot be negative: ${reportItem.qtyDoneToday}`);
+        }
+        if (match.completedQuantity + reportItem.qtyDoneToday > match.quantity) {
+          throw new Error(
+            `Completed quantity would exceed agreed scope quantity for item "${match.name}" (max: ${match.quantity}, current: ${match.completedQuantity}, adding: ${reportItem.qtyDoneToday})`
+          );
+        }
+      }
+    }
 
     const updatedScope = project.scopeItems.map((item) => {
       const match = report.items.find((i) => i.scopeItemId === item.id);
@@ -843,6 +918,7 @@ export const ContractorStorageService = {
     const created: ClientTransaction = {
       ...tx,
       id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      isVoided: false,
     };
 
     const updated: ContractorProjectDetail = {
@@ -852,6 +928,58 @@ export const ContractorStorageService = {
 
     return await this.updateProject(updated, userId);
   },
+
+  /**
+   * Voids a financial transaction in the ledger preserving audit history.
+   */
+  async voidTransaction(
+    projectId: string,
+    transactionId: string,
+    reason: string = 'Voided by contractor',
+    userId?: string | null
+  ): Promise<ContractorProjectDetail | null> {
+    const project = await this.getProjectById(projectId, userId);
+    if (!project) return null;
+
+    const updatedTransactions = project.transactions.map((t) => {
+      if (t.id === transactionId) {
+        return {
+          ...t,
+          isVoided: true,
+          voidReason: reason,
+          voidedAt: new Date().toISOString(),
+        };
+      }
+      return t;
+    });
+
+    const updated: ContractorProjectDetail = {
+      ...project,
+      transactions: updatedTransactions,
+    };
+
+    return await this.updateProject(updated, userId);
+  },
+
+  /**
+   * Deletes a financial transaction from the ledger.
+   */
+  async deleteTransaction(
+    projectId: string,
+    transactionId: string,
+    userId?: string | null
+  ): Promise<ContractorProjectDetail | null> {
+    const project = await this.getProjectById(projectId, userId);
+    if (!project) return null;
+
+    const updated: ContractorProjectDetail = {
+      ...project,
+      transactions: project.transactions.filter((t) => t.id !== transactionId),
+    };
+
+    return await this.updateProject(updated, userId);
+  },
+
 
   /**
    * Appends a chat message to the project chat channel.

@@ -59,6 +59,9 @@ export interface ClientTransaction {
   note: string;
   recipientOrPayer: string;
   referenceNo: string;
+  isVoided?: boolean;
+  voidReason?: string;
+  voidedAt?: string;
 }
 
 export type ChatSenderRole = 'contractor' | 'client' | 'worker';
@@ -85,7 +88,7 @@ export interface ContractorProjectDetail {
   clientPhone: string;
   siteAddress: string;
   startDate: string;
-  status: 'active' | 'upcoming' | 'completed';
+  status: 'active' | 'upcoming' | 'completed' | 'archived';
   contractorId?: string | null;
   clientId?: string | null;
   scopeItems: ProjectScopeItem[];
@@ -95,5 +98,7 @@ export interface ContractorProjectDetail {
   transactions: ClientTransaction[];
   codeCreatedAt?: string | null;
   codeExpiresAt?: string | null;
+  archivedAt?: string | null;
   chatState?: ProjectChatState;
 }
+

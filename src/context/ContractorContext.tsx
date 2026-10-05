@@ -16,7 +16,8 @@ import {
   ClientTransaction,
   ProjectChatMessage,
 } from '../types/contractor';
-import { ContractorBackendService } from '../services/contractorBackendService';
+import { ContractorBackendService, isValidUuid } from '../services/contractorBackendService';
+import { getSupabaseClient, isSupabaseConfigured } from '../services/supabaseClient';
 import { useAuth } from './AuthContext';
 
 interface ContractorContextValue {
@@ -40,10 +41,12 @@ interface ContractorContextValue {
     projectId: string,
     item: Omit<ProjectScopeItem, 'id' | 'completedQuantity'>
   ) => Promise<void>;
+  deleteScopeItem: (projectId: string, itemId: string) => Promise<void>;
   addWorker: (
     projectId: string,
     worker: Omit<WorkerRecord, 'id'>
   ) => Promise<void>;
+  deleteWorker: (projectId: string, workerId: string) => Promise<void>;
   updateAttendance: (
     projectId: string,
     attendanceList: AttendanceEntry[]
@@ -56,6 +59,20 @@ interface ContractorContextValue {
     projectId: string,
     tx: Omit<ClientTransaction, 'id'>
   ) => Promise<void>;
+  voidTransaction: (
+    projectId: string,
+    transactionId: string,
+    reason?: string
+  ) => Promise<void>;
+  deleteTransaction: (
+    projectId: string,
+    transactionId: string
+  ) => Promise<void>;
+  getProjectFinancialSummary: (
+    projectId: string
+  ) => Promise<{ totalReceived: number; totalWagesPaid: number; netBalance: number; isRestricted: boolean }>;
+  archiveProject: (projectId: string) => Promise<void>;
+  deleteProject: (projectId: string) => Promise<void>;
   sendChatMessage: (
     projectId: string,
     message: ProjectChatMessage
@@ -130,6 +147,81 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
 
     return () => {
       isMounted = false;
+    };
+  }, [user]);
+
+  // Task 9: Realtime Linked-Project Updates
+  useEffect(() => {
+    if (!user || !user.id || !isValidUuid(user.id)) return;
+
+    const supabase = getSupabaseClient();
+    if (!supabase || !isSupabaseConfigured()) return;
+
+    const isClient = user.role === 'client';
+    const filter = isClient ? `client_id=eq.${user.id}` : `contractor_id=eq.${user.id}`;
+    const channelName = `realtime_projects_${user.id}_${Date.now()}`;
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects',
+          filter,
+        },
+        async (payload: any) => {
+          if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              setProjects((prev) => prev.filter((p) => p.id !== deletedId));
+              setSelectedProjectId((curr) => (curr === deletedId ? null : curr));
+            }
+          } else if (payload.eventType === 'INSERT') {
+            const newRow = payload.new;
+            if (newRow?.id) {
+              const fullProjects = await ContractorBackendService.getAllProjects(user.id);
+              setProjects(fullProjects);
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedRow = payload.new;
+            if (updatedRow?.id) {
+              setProjects((prev) =>
+                prev.map((p) =>
+                  p.id === updatedRow.id
+                    ? {
+                        ...p,
+                        projectName: updatedRow.project_name || p.projectName,
+                        clientCode: updatedRow.client_code || p.clientCode,
+                        clientName: updatedRow.client_name || p.clientName,
+                        clientPhone: updatedRow.client_phone || p.clientPhone,
+                        siteAddress: updatedRow.site_address || p.siteAddress,
+                        startDate: updatedRow.start_date || p.startDate,
+                        status: updatedRow.status || p.status,
+                        contractorId: updatedRow.contractor_id ?? p.contractorId,
+                        clientId: updatedRow.client_id ?? p.clientId,
+                        archivedAt: updatedRow.archived_at ?? p.archivedAt,
+                        chatState: {
+                          ...p.chatState,
+                          workerMessagingAllowed:
+                            updatedRow.worker_messaging_allowed !== undefined
+                              ? Boolean(updatedRow.worker_messaging_allowed)
+                              : p.chatState?.workerMessagingAllowed || false,
+                          messages: p.chatState?.messages || [],
+                        },
+                      }
+                    : p
+                )
+              );
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
   }, [user]);
 
@@ -224,12 +316,32 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
     []
   );
 
+  const handleDeleteScopeItem = useCallback(
+    async (projectId: string, itemId: string): Promise<void> => {
+      const updated = await ContractorBackendService.deleteScopeItem(projectId, itemId);
+      if (updated) {
+        setProjects((prev) => prev.map((p) => (p.id === projectId ? updated : p)));
+      }
+    },
+    []
+  );
+
   const handleAddWorker = useCallback(
     async (
       projectId: string,
       worker: Omit<WorkerRecord, 'id'>
     ): Promise<void> => {
       const updated = await ContractorBackendService.addWorker(projectId, worker);
+      if (updated) {
+        setProjects((prev) => prev.map((p) => (p.id === projectId ? updated : p)));
+      }
+    },
+    []
+  );
+
+  const handleDeleteWorker = useCallback(
+    async (projectId: string, workerId: string): Promise<void> => {
+      const updated = await ContractorBackendService.deleteWorker(projectId, workerId);
       if (updated) {
         setProjects((prev) => prev.map((p) => (p.id === projectId ? updated : p)));
       }
@@ -276,6 +388,52 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
     []
   );
 
+  const handleVoidTransaction = useCallback(
+    async (projectId: string, transactionId: string, reason?: string): Promise<void> => {
+      const updated = await ContractorBackendService.voidTransaction(projectId, transactionId, reason);
+      if (updated) {
+        setProjects((prev) => prev.map((p) => (p.id === projectId ? updated : p)));
+      }
+    },
+    []
+  );
+
+  const handleDeleteTransaction = useCallback(
+    async (projectId: string, transactionId: string): Promise<void> => {
+      const updated = await ContractorBackendService.deleteTransaction(projectId, transactionId);
+      if (updated) {
+        setProjects((prev) => prev.map((p) => (p.id === projectId ? updated : p)));
+      }
+    },
+    []
+  );
+
+  const handleGetFinancialSummary = useCallback(
+    async (projectId: string) => {
+      return await ContractorBackendService.getProjectFinancialSummary(projectId);
+    },
+    []
+  );
+
+  const handleArchiveProject = useCallback(
+    async (projectId: string): Promise<void> => {
+      const updated = await ContractorBackendService.archiveProject(projectId);
+      if (updated) {
+        setProjects((prev) => prev.map((p) => (p.id === projectId ? updated : p)));
+      }
+    },
+    []
+  );
+
+  const handleDeleteProject = useCallback(
+    async (projectId: string): Promise<void> => {
+      await ContractorBackendService.deleteProject(projectId);
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      setSelectedProjectId((curr) => (curr === projectId ? null : curr));
+    },
+    []
+  );
+
   const handleSendChatMessage = useCallback(
     async (
       projectId: string,
@@ -315,10 +473,17 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
     joinProjectByCode: handleJoinProjectByCode,
     rotateProjectCode: handleRotateProjectCode,
     addScopeItem: handleAddScopeItem,
+    deleteScopeItem: handleDeleteScopeItem,
     addWorker: handleAddWorker,
+    deleteWorker: handleDeleteWorker,
     updateAttendance: handleUpdateAttendance,
     saveDailyReport: handleSaveDailyReport,
     addTransaction: handleAddTransaction,
+    voidTransaction: handleVoidTransaction,
+    deleteTransaction: handleDeleteTransaction,
+    getProjectFinancialSummary: handleGetFinancialSummary,
+    archiveProject: handleArchiveProject,
+    deleteProject: handleDeleteProject,
     sendChatMessage: handleSendChatMessage,
     toggleWorkerAuthority: handleToggleWorkerAuthority,
     refreshProjects: loadAllProjects,
@@ -334,10 +499,17 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
     handleJoinProjectByCode,
     handleRotateProjectCode,
     handleAddScopeItem,
+    handleDeleteScopeItem,
     handleAddWorker,
+    handleDeleteWorker,
     handleUpdateAttendance,
     handleSaveDailyReport,
     handleAddTransaction,
+    handleVoidTransaction,
+    handleDeleteTransaction,
+    handleGetFinancialSummary,
+    handleArchiveProject,
+    handleDeleteProject,
     handleSendChatMessage,
     handleToggleWorkerAuthority,
     loadAllProjects,
@@ -357,3 +529,4 @@ export function useContractor(): ContractorContextValue {
   }
   return context;
 }
+

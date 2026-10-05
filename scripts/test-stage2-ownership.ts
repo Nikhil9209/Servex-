@@ -161,6 +161,8 @@ async function runStage2OwnershipTests() {
 
   // Test 6: Child records retain project_id relationship without redundant foreign keys
   console.log('\n[Test 6] Child Records Retain project_id Relationship (Anchor Pattern)');
+  await AuthService.logout();
+  await AuthService.loginWithEmail('contractor@servex.com', 'Servex@2026');
   const projectId = createdByContractor.id;
 
   // Add scope item

@@ -26,6 +26,7 @@ interface ScopeRequirementsScreenProps {
   project: ContractorProjectDetail;
   onBack: () => void;
   onAddScopeItem: (newItem: Omit<ProjectScopeItem, 'id' | 'completedQuantity'>) => void;
+  onDeleteScopeItem?: (itemId: string) => void;
 }
 
 const AVAILABLE_UNITS: { label: string; value: UnitType }[] = [
@@ -40,6 +41,7 @@ export const ScopeRequirementsScreen: React.FC<ScopeRequirementsScreenProps> = (
   project,
   onBack,
   onAddScopeItem,
+  onDeleteScopeItem,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [itemName, setItemName] = useState('');
@@ -206,6 +208,30 @@ export const ScopeRequirementsScreen: React.FC<ScopeRequirementsScreenProps> = (
                     </Text>
                     <Text style={styles.itemTotalSub}>Contract Val</Text>
                   </View>
+
+                  {onDeleteScopeItem && (
+                    <SpringPressable
+                      style={styles.itemDeleteBtn}
+                      onPress={() => {
+                        Alert.alert(
+                          'Delete Scope Item',
+                          `Are you sure you want to remove "${item.name}" from contract scope?`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: () => onDeleteScopeItem(item.id),
+                            },
+                          ]
+                        );
+                      }}
+                      scaleTo={0.9}
+                      hitSlop={8}
+                    >
+                      <CloseIcon size={13} color="#EF4444" />
+                    </SpringPressable>
+                  )}
                 </View>
 
                 {/* Measurements Grid */}
@@ -625,6 +651,17 @@ const styles = StyleSheet.create({
     color: '#636366',
     fontSize: 10,
     marginTop: 2,
+  },
+  itemDeleteBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#221212',
+    borderWidth: 1,
+    borderColor: '#3D1C1C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
   },
 
   // DIMENSIONS ROW

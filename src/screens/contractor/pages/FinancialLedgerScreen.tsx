@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,18 +21,52 @@ import {
   FadeInSlide,
   SpringPressable,
 } from '../../../components/AnimatedComponents';
+import { useContractor } from '../../../context/ContractorContext';
 
 interface FinancialLedgerScreenProps {
   project: ContractorProjectDetail;
   onBack: () => void;
   onAddTransaction: (tx: Omit<ClientTransaction, 'id'>) => void;
+  onVoidTransaction?: (transactionId: string, reason?: string) => void;
+  onDeleteTransaction?: (transactionId: string) => void;
 }
 
 export const FinancialLedgerScreen: React.FC<FinancialLedgerScreenProps> = ({
   project,
   onBack,
   onAddTransaction,
+  onVoidTransaction,
+  onDeleteTransaction,
 }) => {
+  const { getProjectFinancialSummary } = useContractor();
+  const [serverSummary, setServerSummary] = useState<{
+    totalReceived: number;
+    totalWagesPaid: number;
+    netBalance: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (getProjectFinancialSummary) {
+      getProjectFinancialSummary(project.id)
+        .then((res) => {
+          if (active && res) {
+            setServerSummary({
+              totalReceived: res.totalReceived,
+              totalWagesPaid: res.totalWagesPaid,
+              netBalance: res.netBalance,
+            });
+          }
+        })
+        .catch(() => {
+          // Keep local calculation fallback
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [project.id, project.transactions, getProjectFinancialSummary]);
+
   const [filterType, setFilterType] = useState<'all' | 'client' | 'worker'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [txType, setTxType] = useState<ClientTransaction['type']>('received_from_client');
@@ -40,15 +74,21 @@ export const FinancialLedgerScreen: React.FC<FinancialLedgerScreenProps> = ({
   const [noteStr, setNoteStr] = useState('');
   const [payerRecipient, setPayerRecipient] = useState('');
 
-  const totalReceivedFromClient = project.transactions
+  const unvoidedTransactions = project.transactions.filter((t) => !t.isVoided);
+
+  const localTotalReceived = unvoidedTransactions
     .filter((t) => t.type === 'received_from_client')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalPaidToWorkers = project.transactions
+  const localTotalPaidToWorkers = unvoidedTransactions
     .filter((t) => t.type === 'paid_to_worker')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const netCashflowBalance = totalReceivedFromClient - totalPaidToWorkers;
+  const localNetCashflowBalance = localTotalReceived - localTotalPaidToWorkers;
+
+  const totalReceivedFromClient = serverSummary?.totalReceived ?? localTotalReceived;
+  const totalPaidToWorkers = serverSummary?.totalWagesPaid ?? localTotalPaidToWorkers;
+  const netCashflowBalance = serverSummary?.netBalance ?? localNetCashflowBalance;
 
   const filteredTransactions = project.transactions.filter((t) => {
     if (filterType === 'client') return t.type === 'received_from_client';
@@ -216,33 +256,77 @@ export const FinancialLedgerScreen: React.FC<FinancialLedgerScreenProps> = ({
                     <View
                       style={[
                         styles.txBadge,
-                        isInflow ? styles.txBadgeInflow : styles.txBadgeOutflow,
+                        tx.isVoided
+                          ? styles.txBadgeVoided
+                          : isInflow
+                          ? styles.txBadgeInflow
+                          : styles.txBadgeOutflow,
                       ]}
                     >
                       <Text
                         style={[
                           styles.txBadgeText,
-                          isInflow ? styles.txBadgeTextInflow : styles.txBadgeTextOutflow,
+                          tx.isVoided
+                            ? styles.txBadgeTextVoided
+                            : isInflow
+                            ? styles.txBadgeTextInflow
+                            : styles.txBadgeTextOutflow,
                         ]}
                       >
-                        {isInflow ? 'CLIENT INFLOW' : 'CREW OUTFLOW'}
+                        {tx.isVoided ? 'VOIDED / REVERSED' : isInflow ? 'CLIENT INFLOW' : 'CREW OUTFLOW'}
                       </Text>
                     </View>
                     <Text style={styles.txRefText}>{tx.referenceNo}</Text>
                   </View>
 
-                  <Text style={[styles.txAmount, isInflow ? styles.txAmountGreen : styles.txAmountAmber]}>
-                    {isInflow ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
+                  <Text
+                    style={[
+                      styles.txAmount,
+                      tx.isVoided
+                        ? styles.txAmountVoided
+                        : isInflow
+                        ? styles.txAmountGreen
+                        : styles.txAmountAmber,
+                    ]}
+                  >
+                    {tx.isVoided ? '₹' : isInflow ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
                   </Text>
                 </View>
 
-                <Text style={styles.txNoteText}>{tx.note}</Text>
+                <Text style={[styles.txNoteText, tx.isVoided && styles.txNoteVoided]}>
+                  {tx.isVoided ? `[VOIDED: ${tx.voidReason || 'Reversed'}] ${tx.note}` : tx.note}
+                </Text>
 
                 <View style={styles.txFooterRow}>
                   <Text style={styles.txRecipientText} numberOfLines={1}>
                     {tx.recipientOrPayer}
                   </Text>
-                  <Text style={styles.txDateText}>{tx.date}</Text>
+                  <View style={styles.txFooterRight}>
+                    <Text style={styles.txDateText}>{tx.date}</Text>
+                    {onVoidTransaction && !tx.isVoided && (
+                      <SpringPressable
+                        style={styles.txVoidBtn}
+                        onPress={() => {
+                          Alert.alert(
+                            'Void Transaction',
+                            `Are you sure you want to void ${tx.referenceNo} (₹${tx.amount.toLocaleString('en-IN')})? This will reverse its financial impact while preserving the audit record.`,
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              {
+                                text: 'Void Entry',
+                                style: 'destructive',
+                                onPress: () => onVoidTransaction(tx.id, 'Voided by contractor'),
+                              },
+                            ]
+                          );
+                        }}
+                        scaleTo={0.9}
+                        hitSlop={8}
+                      >
+                        <Text style={styles.txVoidBtnText}>Void</Text>
+                      </SpringPressable>
+                    )}
+                  </View>
                 </View>
               </View>
             </FadeInSlide>
@@ -607,6 +691,10 @@ const styles = StyleSheet.create({
   txBadgeOutflow: {
     backgroundColor: 'rgba(245, 158, 11, 0.15)',
   },
+  txBadgeVoided: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
   txBadgeText: {
     fontFamily: fonts.displayBold,
     fontSize: 9.5,
@@ -617,6 +705,9 @@ const styles = StyleSheet.create({
   },
   txBadgeTextOutflow: {
     color: '#F59E0B',
+  },
+  txBadgeTextVoided: {
+    color: '#EF4444',
   },
   txRefText: {
     fontFamily: fonts.body,
@@ -634,12 +725,20 @@ const styles = StyleSheet.create({
   txAmountAmber: {
     color: '#F59E0B',
   },
+  txAmountVoided: {
+    color: '#636366',
+    textDecorationLine: 'line-through',
+  },
   txNoteText: {
     fontFamily: fonts.bodyMedium,
     color: '#FFFFFF',
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 12,
+  },
+  txNoteVoided: {
+    color: '#8E8E93',
+    fontStyle: 'italic',
   },
   txFooterRow: {
     flexDirection: 'row',
@@ -648,6 +747,24 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#1F1F24',
     paddingTop: 10,
+  },
+  txFooterRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  txVoidBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: '#261414',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#4A1D1D',
+  },
+  txVoidBtnText: {
+    fontFamily: fonts.displayBold,
+    color: '#EF4444',
+    fontSize: 10,
   },
   txRecipientText: {
     fontFamily: fonts.body,

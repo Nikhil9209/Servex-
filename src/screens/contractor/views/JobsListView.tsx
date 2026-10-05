@@ -24,7 +24,7 @@ import {
 interface JobsListViewProps {
   projects: ContractorProjectDetail[];
   onSelectProject: (projectId: string) => void;
-  onOpenJoinModal: () => void;
+  onOpenJoinModal?: () => void;
   onOpenCreateModal: () => void;
 }
 
@@ -71,14 +71,16 @@ export const JobsListView: React.FC<JobsListViewProps> = ({
             </View>
 
             <View style={styles.headerActions}>
-              <SpringPressable
-                style={styles.circleHeaderBtn}
-                onPress={onOpenJoinModal}
-                scaleTo={0.92}
-                hitSlop={8}
-              >
-                <LinkIcon size={16} color="#FFFFFF" />
-              </SpringPressable>
+              {onOpenJoinModal && (
+                <SpringPressable
+                  style={styles.circleHeaderBtn}
+                  onPress={onOpenJoinModal}
+                  scaleTo={0.92}
+                  hitSlop={8}
+                >
+                  <LinkIcon size={16} color="#FFFFFF" />
+                </SpringPressable>
+              )}
 
               <SpringPressable
                 style={styles.circleHeaderBtn}
